@@ -1,0 +1,60 @@
+name: Jak Living Sky Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+# A newer push makes a running build pointless
+concurrency:
+  group: living-sky-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Windows Clang Static
+    runs-on: windows-2022
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Install NASM
+        run: choco install nasm --source="${{ github.workspace }}/third-party/nasm"
+
+      - name: Setup sccache
+        uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          variant: sccache
+          key: windows-2022-living-sky-${{ github.sha }}
+          restore-keys: windows-2022-living-sky
+          max-size: 1000M
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      # https://github.com/actions/runner-images/issues/5459
+      - name: Remove Strawberry Perl from PATH
+        run: |
+          $env:PATH = $env:PATH -replace "C:\\Strawberry\\c\\bin;", ""
+          "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: CMake Generation
+        shell: cmd
+        run: cmake -B build --preset=Release-windows-clang-static -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache .
+
+      - name: Build Project
+        shell: cmd
+        run: cmake --build build --parallel %NUMBER_OF_PROCESSORS%
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: jak-living-sky-windows
+          if-no-files-found: error
+          path: |
+            build/bin/gk.exe
+            build/bin/goalc.exe
+            build/bin/extractor.exe
+            build/bin/decompiler.exe
