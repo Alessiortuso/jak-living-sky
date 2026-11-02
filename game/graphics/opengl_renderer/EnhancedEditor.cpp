@@ -6503,6 +6503,25 @@ bool enhanced_has_piazza();
 const std::vector<EnhancedPlace>& enhanced_places() {
   static const std::vector<EnhancedPlace> places = [] {
     std::vector<EnhancedPlace> out;
+    // (Jak Living Sky: Jak 1's own places, the areas by the order they're met)
+    if (g_game_version == GameVersion::Jak1) {
+      out = {{"Geyser Rock", "training-start"},
+             {"Sandover Village", "village1-hut"},
+             {"Forbidden Jungle", "jungle-start"},
+             {"Misty Island", "misty-start"},
+             {"Fire Canyon", "firecanyon-start"},
+             {"Rock Village", "village2-warp"},
+             {"Lost Precursor City", "sunken-start"},
+             {"Boggy Swamp", "swamp-start"},
+             {"Precursor Basin", "rolling-start"},
+             {"Mountain Pass", "ogre-start"},
+             {"Volcanic Crater", "village3-warp"},
+             {"Spider Cave", "maincave-start"},
+             {"Snowy Mountain", "snow-start"},
+             {"Lava Tube", "lavatube-start"},
+             {"Gol and Maia's Citadel", "citadel-start"}};
+      return out;
+    }
     // (the plaza only where it's built)
     if (enhanced_has_piazza()) {
       out.push_back({"Plaza (Jak 2)", "piazza-start"});
