@@ -186,7 +186,7 @@
 (defun soul-hit-of ((proc process))
   (if (and *soul-on* proc *target* (type-type? (-> proc type) nav-enemy))
     (case (-> *target* current-level name)
-      (('village2 'sunken 'sunkenb 'swamp 'rolling 'ogre) 2.0)
+      (('village2 'sunken 'sunkenb 'swamp 'rolling 'ogre 'brume) 2.0)
       (('village3 'maincave 'darkcave 'robocave 'snow 'lavatube 'citadel 'finalboss) 3.0)
       (else 1.0))
     1.0))
