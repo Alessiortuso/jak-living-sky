@@ -1,3 +1,21 @@
+
+#include <unordered_map>
+#include "kmachine.h"
+
+#include <iostream>
+#include <list>
+#include <map>
+#include <mutex>
+#include <thread>
+#include <chrono>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <random>
+
 #define MINIAUDIO_IMPLEMENTATION
 // NOTE - this is needed, because on macOS, there is a file called `MacTypes.h`
 // inside it, it defines something named `Ptr`
@@ -23,15 +41,6 @@ namespace MiniAudioLib {
 #include "third-party/miniaudio.h"
 #endif
 }  // namespace MiniAudioLib
-
-#include <unordered_map>
-#include "kmachine.h"
-
-#include <iostream>
-#include <list>
-#include <map>
-#include <mutex>
-#include <thread>
 
 #include "game/sound/common/enhanced_ambience.h"
 
