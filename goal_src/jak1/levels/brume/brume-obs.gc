@@ -1,8 +1,6 @@
 ;;-*-Lisp-*-
 (in-package goal)
 
-;; Jak Living Sky: its own sounds are not in the mod yet
-(defun play-sound-file ((name string) (volume int)) (none))
 
 
 (def-actor test-actor2 :bounds (0 0 0 50))
