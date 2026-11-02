@@ -4830,6 +4830,13 @@ void EnhancedPost::do_ssao(GLuint src_fbo,
   if (m_settings.ssao_debug && (debug_counter % 300) == 1) {
     lg::info("[enhanced] rt ao {} ready {} levels {}", m_settings.rt_ao, m_rt_ready, m_rt_count);
   }
+  // Jak Living Sky: no occlusion, but the depth and the sun above are what the clouds, the weather
+  // and the fog stand on (without them the fog takes everything for far away)
+  if (!m_settings.ssao) {
+    m_ssao_ready = true;
+    glBindVertexArray(0);
+    return;
+  }
   glBindFramebuffer(GL_FRAMEBUFFER, m_ao_fbo[0]);
   if (ao_phase >= 0 && ao_phase < 3) {
     glBeginQuery(GL_TIME_ELAPSED, ao_probe.query);
@@ -4929,7 +4936,7 @@ void EnhancedPost::prepare(GLuint scene_tex,
   }
   // the levels' ray tracing hierarchies (occlusion, reflections)
   ENH_TIMED("enh-rt-update", update_rt(render_state));
-  if (m_settings.ssao) {
+  {
     ENH_TIMED("enh-ssao", do_ssao(scene_fbo, w, h, screen_vao, render_state, prof));
     // (the auto quality sets aside the volume first, then the indirect light, then the god rays)
     if (m_settings.volume && m_fade_volume > 0.f && m_ssao_ready && m_fog > 0.01f) {
@@ -5249,7 +5256,7 @@ Shader& EnhancedPost::activate_composite(SharedRenderState* render_state, int w,
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, m_settings.bloom && m_levels[0].tex ? m_levels[0].tex : m_black_tex);
   glActiveTexture(GL_TEXTURE2);
-  glBindTexture(GL_TEXTURE_2D, m_ssao_ready ? m_ao_tex[0] : m_white_tex);
+  glBindTexture(GL_TEXTURE_2D, m_ssao_ready && m_settings.ssao ? m_ao_tex[0] : m_white_tex);
   // depth for the depth of field (only valid when the occlusion pass copied it this frame)
   glActiveTexture(GL_TEXTURE3);
   glBindTexture(GL_TEXTURE_2D, m_ssao_ready ? m_depth_tex : m_black_tex);
@@ -6214,7 +6221,7 @@ void EnhancedPost::apply_living_sky() {
   s.shadow_casters = false;
   s.sun_shadows = false;
   s.soft_shadows = false;
-  s.ssao = false;
+  s.ssao = false;  // (only its occlusion: do_ssao still takes the depth and the sun)
   s.gi = false;
   s.dof = false;
   s.cine_dof = false;

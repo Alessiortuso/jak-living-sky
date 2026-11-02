@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "sourceName": "Jak Living Sky",
-  "lastUpdated": "2026-11-02T00:00:00Z",
+  "lastUpdated": "2026-11-02T12:00:00Z",
   "mods": {
     "jak-living-sky": {
       "displayName": "Jak Living Sky",
@@ -21,6 +21,18 @@
       "coverArtUrl": null,
       "thumbnailArtUrl": null,
       "versions": [
+        {
+          "version": "0.2",
+          "publishedDate": "2026-11-02T12:00:00Z",
+          "assets": {
+            "windows": "https://github.com/Alessiortuso/jak-living-sky/releases/download/v0.2/Jak-Living-Sky-v0.2.zip",
+            "linux": null,
+            "macos": null
+          },
+          "supportedGames": [
+            "jak1"
+          ]
+        },
         {
           "version": "0.1",
           "publishedDate": "2026-11-02T00:00:00Z",
