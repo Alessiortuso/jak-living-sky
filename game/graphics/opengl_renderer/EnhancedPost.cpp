@@ -694,8 +694,12 @@ GLuint make_1x1(u32 rgba) {
   return tex;
 }
 
-// the game's vertex shaders scale y by SCISSOR_ADJUST * HEIGHT_SCALE (jak 2/3 values, Shader.cpp)
-constexpr float kScissorHeightScale = (512.f / 416.f) * 0.5f;
+// the game's vertex shaders scale y by SCISSOR_ADJUST * HEIGHT_SCALE (Shader.cpp)
+// (Jak Living Sky: Jak 1's own values: with Jak 2/3's every position worked out from the depth was
+// off by almost 2x in height, and the sea's horizon fell far under the one on screen)
+static float scissor_height_scale() {
+  return g_game_version == GameVersion::Jak1 ? 512.f / 448.f : (512.f / 416.f) * 0.5f;
+}
 // GOAL distance units per meter
 constexpr float kMeter = 4096.f;
 
@@ -2912,7 +2916,7 @@ void EnhancedPost::apply_to_scene(GLuint render_fbo,
   }
 
   m_prev_camera = cam;
-  m_prev_fy = cam.fy * kScissorHeightScale;
+  m_prev_fy = cam.fy * scissor_height_scale();
 
   // the end of this frame's 3D and post work, for the auto quality
   if (m_gpu_query_open) {
@@ -4719,7 +4723,7 @@ void EnhancedPost::do_ssao(GLuint src_fbo,
   glViewport(0, 0, aw, ah);
 
   const auto& cam = g_enhanced_camera;
-  const float fy = cam.fy * kScissorHeightScale;
+  const float fy = cam.fy * scissor_height_scale();
   m_last_proj = {cam.depth_a, cam.depth_b, cam.fx, fy};
 
   // occlusion

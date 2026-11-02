@@ -2028,6 +2028,7 @@ void main() {
   float seabed_d = d;
   bool water_deep = true;
   bool water_decal = false;  // something flat lying on the water (splash and ripple discs)
+  bool far_sea = false;      // past the near sea: the same water, on the sea's level
   if (water_strength > 0.0) {
     float wd = texture(tex_T5, uv).r;
     float fd = texture(tex_T6, uv).r;
@@ -2052,6 +2053,20 @@ void main() {
         if (above > 0.0 && above < (scene_level ? 0.4 : 0.12) * 4096.0) {
           wsurf = ws;
           water_decal = true;
+        }
+      }
+    }
+    // Jak Living Sky: one sea by one formula. In Jak 1 the near sea ends a few dozen meters out and the
+    // far one's depth can't be used as a surface, so past the line nothing was water. Where the far sea
+    // still shows (nothing drawn over it since) and the view looks down, the surface is worked out from
+    // the sea's level (world y = 0, the ocean map's)
+    if (wsurf == 0.0 && d > 1e-7 && fd > 1e-7 && abs(fd - d) < 1e-7 && cam_pos.y > 0.0) {
+      vec3 wr = world_dir(ray);
+      if (wr.y < -0.0005) {
+        float sea_z = ray.z * cam_pos.y / -wr.y;
+        if (sea_z > 0.0) {
+          wsurf = (proj.y / sea_z + 1.0 + proj.x) * 0.5;
+          far_sea = true;
         }
       }
     }
@@ -2281,6 +2296,8 @@ void main() {
     // the swell: long waves in open water, faded out with distance (they'd shimmer) and depth
     float swell_amt = (pond_here ? 0.0 : water_swell_strength) * smoothstep(1.0, 6.0, depth_m) *
                       (1.0 - smoothstep(0.3, 1.5, water_foot));
+    // (Jak Living Sky: near only: further out, at this grazing angle, they drew thin stripes)
+    swell_amt *= 1.0 - smoothstep(5.0 * 4096.0, 20.0 * 4096.0, z);
     if (swell_amt > 0.0) {
       float s0 = water_swell(world, t);
       slope += swell_amt * vec2(water_swell(world + vec2(0.5, 0.0), t) - s0,
@@ -2498,26 +2515,13 @@ void main() {
       wc = mix(wc, vec3(0.9, 0.93, 0.92) * (0.35 + 0.65 * clamp(sky_sun.w * 2.5, 0.0, 1.0)),
                lace * min(wake_foam, 1.0) * 0.8);
     }
-    // Jak Living Sky: the near sea ends in a hard line that follows the camera, the game's far sea
-    // past it. Looking up the screen for where it ends, this water eases into the far sea's color
-    // over the last stretch before the line
-    for (int i = 1; i <= 12; i++) {
-      vec2 fq = uv + vec2(0.0, float(i) * 0.012);
-      if (fq.y >= 1.0) {
-        break;
-      }
-      float fsd = texture(tex_T3, fq).r;
-      if (abs(texture(tex_T5, fq).r - texture(tex_T14, fq).r) < 1e-7 && abs(texture(tex_T6, fq).r - fsd) < 1e-7) {
-        float ease = 1.0 - float(i - 1) / 12.0;
-        wc = mix(wc, texture(tex_T0, fq).rgb, ease * ease * (3.0 - 2.0 * ease));
-        break;
-      }
-    }
     // the game's effects drawn over the water (foam, splashes, wakes) show through where they're
     // clearly brighter than our water; on a disc lying on the water, anything brighter does
+    // (Jak Living Sky: only close by, where foam and splashes are seen: further out the game's bright
+    // near water came back, and with it the line where it ends)
     const vec3 luma = vec3(0.299, 0.587, 0.114);
     float over = dot(c, luma) - dot(wc, luma);
-    c = water_decal ? max(wc, c) : mix(wc, c, smoothstep(0.06, 0.2, over));
+    c = water_decal ? max(wc, c) : far_sea ? wc : mix(wc, c, smoothstep(0.06, 0.2, over) * (1.0 - smoothstep(15.0 * 4096.0, 30.0 * 4096.0, z)));
   }
 
   // cutscenes: a real depth of field around what the camera looks at (autofocus on the middle of
