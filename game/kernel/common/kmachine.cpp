@@ -1,5 +1,37 @@
+#define MINIAUDIO_IMPLEMENTATION
+// NOTE - this is needed, because on macOS, there is a file called `MacTypes.h`
+// inside it, it defines something named `Ptr`
+// Our `Ptr` is not namespaced, so there is ambiguity.
+//
+// Second fix is because miniaudio redefines functions in the stdlib based on bad pre-processor
+// assumptions AppleClang apparently does not define POSIX macros, leading to future ambiguity
+namespace MiniAudioLib {
+#if defined(__APPLE__)
+#if !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200809L
+#include "third-party/miniaudio.h"
+#undef _POSIX_C_SOURCE
+#else
+// It should work if it's defined, but for some reason it didn't this is the unlikely branch
+// but lets maintain the original value
+#define NOT_REAL_OLD_POSIX_C_SOURCE _POSIX_C_SOURCE
+#include "third-party/miniaudio.h"
+#define _POSIX_C_SOURCE NOT_REAL_OLD_POSIX_C_SOURCE
+#undef NOT_REAL_OLD_POSIX_C_SOURCE
+#endif
+#else
+#include "third-party/miniaudio.h"
+#endif
+}  // namespace MiniAudioLib
+
 #include <unordered_map>
 #include "kmachine.h"
+
+#include <iostream>
+#include <list>
+#include <map>
+#include <mutex>
+#include <thread>
 
 #include "game/sound/common/enhanced_ambience.h"
 
@@ -54,6 +86,11 @@ u32 vblank_interrupt_handler = 0;
 
 Timer ee_clock_timer;
 
+// Jak Living Sky: music and sounds from files (OpenGOAL's mod base, for Brume Village)
+MiniAudioLib::ma_engine maEngine;
+std::map<std::string, std::list<MiniAudioLib::ma_sound>> maSoundMap;
+MiniAudioLib::ma_sound* mainMusicSound;
+
 void kmachine_init_globals_common() {
   memset(pad_dma_buf, 0, sizeof(pad_dma_buf));
   isodrv = fakeiso;  // changed. fakeiso is the only one that works in opengoal.
@@ -62,6 +99,10 @@ void kmachine_init_globals_common() {
   vif1_interrupt_handler = 0;
   vblank_interrupt_handler = 0;
   ee_clock_timer = Timer();
+#ifdef _WIN32  // only do this on windows, because it only works on windows?
+  MiniAudioLib::ma_engine_uninit(&maEngine);
+#endif
+  MiniAudioLib::ma_engine_init(NULL, &maEngine);
 }
 
 /*!
@@ -161,6 +202,172 @@ u64 CPadOpen(u64 cpad_info, s32 pad_number) {
     cpad->state = 0;
   }
   return cpad_info;
+}
+
+
+// Mutex to synchronize access to activeMusics
+std::mutex activeMusicsMutex;
+
+// Declare a mutex for synchronizing access to mainMusicInstance
+std::mutex mainMusicMutex;
+
+
+// Function to stop all instances of specific sound by filepath
+void stopMP3(u32 filePathu32) {
+  std::string filePath = Ptr<String>(filePathu32).c()->data();
+  std::cout << "Trying to stop file: " << filePath << std::endl;
+
+  std::lock_guard<std::mutex> lock(activeMusicsMutex);
+  auto it = maSoundMap.find(filePath);
+  if (it == maSoundMap.end()) {
+    std::cerr << "Couldn't find sound to stop: " << filePath << std::endl;
+  } else {
+    // stop all instances of this sound
+    for (auto sound : it->second) {
+      if (MiniAudioLib::ma_sound_stop(&sound) != MiniAudioLib::MA_SUCCESS) {
+        std::cerr << "Failed to stop sound: " << filePath << std::endl;
+      }
+      // let the thread finish and handle ma_sound_uninit
+    }
+    // clear list of sounds for this filepath
+    it->second.clear();
+  }
+}
+
+// Function to stop all currently playing sounds.
+void stopAllSounds() {
+  for (auto& pair : maSoundMap) {
+    // stop all instances of this sound
+    for (auto sound : pair.second) {
+      MiniAudioLib::ma_sound_stop(&sound);
+    }
+    pair.second.clear();
+  }
+  maSoundMap.clear();
+}
+
+// Function to get the names of currently playing files.
+std::vector<std::string> getPlayingFileNames() {
+  std::vector<std::string> playingFileNames;
+  for (const auto& pair : maSoundMap) {
+    playingFileNames.push_back(pair.first);
+  }
+  return playingFileNames;
+}
+
+u64 playMP3_internal(u32 filePathu32, u32 volume, bool isMainMusic) {
+  std::string filePath = Ptr<String>(filePathu32).c()->data();
+  std::string fullFilePath = fs::path(file_util::get_jak_project_dir() / "custom_assets" /
+                                  game_version_names[g_game_version] / "audio" / filePath).string();
+  
+  if (!file_util::file_exists(fullFilePath)) {
+    // file doesn't exist, let GOAL side know we didn't find it
+    return bool_to_symbol(false);
+  }
+
+  std::thread thread([=]() {
+
+    std::cout << "Playing file: " << filePath << std::endl;
+
+    MiniAudioLib::ma_result result;
+    MiniAudioLib::ma_sound sound;
+
+    result = MiniAudioLib::ma_sound_init_from_file(&maEngine, fullFilePath.c_str(), 0, NULL, NULL,
+                                                    &sound);
+    if (result != MiniAudioLib::MA_SUCCESS) {
+      std::cout << "Failed to load: " << filePath << std::endl;
+      return;
+    }
+
+    MiniAudioLib::ma_sound_set_volume(&sound, ((float)volume) / 100.0);
+
+    if (isMainMusic) {
+      MiniAudioLib::ma_sound_set_looping(&sound, MA_TRUE);
+      mainMusicMutex.lock();
+      mainMusicSound = &sound;
+      mainMusicMutex.unlock();
+    }
+
+    MiniAudioLib::ma_sound_start(&sound);
+
+    if (!isMainMusic) {
+      std::lock_guard<std::mutex> lock(activeMusicsMutex);
+      if (maSoundMap.find(filePath) == maSoundMap.end()) {
+        maSoundMap.insert(std::make_pair(filePath, std::list<MiniAudioLib::ma_sound>()));
+      }
+      maSoundMap[filePath].push_back(sound);
+    }
+
+    // sleep/loop until we're no longer main music, or non-looping sound is stopped/ends
+    while (mainMusicSound == &sound || MiniAudioLib::ma_sound_is_playing(&sound)) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    MiniAudioLib::ma_sound_stop(&sound);
+    MiniAudioLib::ma_sound_uninit(&sound);
+    std::cout << "Finished playing file: " << filePath << std::endl;
+
+    if (!isMainMusic) {
+      std::lock_guard<std::mutex> lock(activeMusicsMutex);
+      if (maSoundMap.find(filePath) != maSoundMap.end()) {
+        maSoundMap[filePath].remove_if(
+            [&](MiniAudioLib::ma_sound l_sound) { return &sound == &l_sound; });
+      }
+    }
+  });
+
+  thread.detach();
+  return bool_to_symbol(true);
+}
+
+u64 playMP3(u32 filePathu32, u32 volume) {
+  return playMP3_internal(filePathu32, volume, false);
+}
+
+// Function to stop the Main Music.
+void stopMainMusic() {
+  mainMusicMutex.lock();
+  if (mainMusicSound && MiniAudioLib::ma_sound_is_playing(mainMusicSound)) {
+    std::cout << "Stopping Main Music..." << std::endl;
+    MiniAudioLib::ma_sound_stop(mainMusicSound);
+    mainMusicSound = NULL;
+    std::cout << "Stopped Main Music " << std::endl;
+  }
+  mainMusicMutex.unlock();
+}
+
+// Function to play the Main Music.
+void playMainMusic(u32 filePathu32, u32 volume) {
+  stopMainMusic();
+
+  std::cout << "Playing Main Music" << std::endl;
+
+  playMP3_internal(filePathu32, volume, true);
+}
+
+void pauseMainMusic() {
+  mainMusicMutex.lock();
+  if (mainMusicSound && MiniAudioLib::ma_sound_is_playing(mainMusicSound)) {
+    MiniAudioLib::ma_sound_stop(mainMusicSound);
+  }
+  mainMusicMutex.unlock();
+}
+
+void resumeMainMusic() {
+  mainMusicMutex.lock();
+  if (mainMusicSound && !MiniAudioLib::ma_sound_is_playing(mainMusicSound)) {
+    MiniAudioLib::ma_sound_start(mainMusicSound);
+  }
+  mainMusicMutex.unlock();
+}
+
+// Function to change the volume of the Main Music.
+void changeMainMusicVolume(u32 volume) {
+  mainMusicMutex.lock();
+  if (mainMusicSound) {
+    MiniAudioLib::ma_sound_set_volume(mainMusicSound, ((float)volume) / 100.0);
+  }
+  mainMusicMutex.unlock();
 }
 
 /*!
@@ -1751,6 +1958,14 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-enhanced-strike-hit", (void*)pc_enhanced_strike_hit);
   make_func_symbol_func("pc-enhanced-fov", (void*)pc_enhanced_fov);
   make_func_symbol_func("pc-enhanced-denied", (void*)pc_enhanced_denied);
+  make_func_symbol_func("play-sound-file", (void*)playMP3);
+  make_func_symbol_func("stop-sound-file", (void*)stopMP3);
+  make_func_symbol_func("stop-all-sounds", (void*)stopAllSounds);
+  make_func_symbol_func("play-main-music", (void*)playMainMusic);
+  make_func_symbol_func("pause-main-music", (void*)pauseMainMusic);
+  make_func_symbol_func("stop-main-music", (void*)stopMainMusic);
+  make_func_symbol_func("resume-main-music", (void*)resumeMainMusic);
+  make_func_symbol_func("main-music-volume", (void*)changeMainMusicVolume);
   make_func_symbol_func("pc-enhanced-hard-rules", (void*)pc_enhanced_hard_rules);
   make_func_symbol_func("pc-enhanced-subtitle-size", (void*)pc_enhanced_subtitle_size);
   make_func_symbol_func("pc-enhanced-minimap-size", (void*)pc_enhanced_minimap_size);
