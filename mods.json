@@ -1,138 +1,36 @@
 {
   "schemaVersion": "1.0.0",
-  "sourceName": "Jak Enhanced",
-  "lastUpdated": "2026-10-31T15:58:18Z",
+  "sourceName": "Jak Living Sky",
+  "lastUpdated": "2026-11-02T00:00:00Z",
   "mods": {
-    "jak-enhanced-light": {
-      "displayName": "Jak Enhanced Light",
-      "description": "New lighting and graphics for the game as it is: real-time sun and shadows, ambient occlusion, reflections on water and wet streets, rain, fog, sandstorms and a night sky, HD pause maps, and an in-game menu to tune it all (F1). Gameplay is untouched. The single-game version of Jak Enhanced Trilogy (the full one, with the three games in one program, is on GitHub).",
+    "jak-living-sky": {
+      "displayName": "Jak Living Sky",
+      "description": "Only the weather, the sky and the light that comes from it for Jak and Daxter: changing weather, clouds, mist, rain, snow, day and night. Based on Jak Enhanced Trilogy by stichlola. Gameplay is untouched.",
       "authors": [
+        "Alessiortuso",
         "stichlola"
       ],
       "tags": [
-        "graphics",
         "visual",
         "weather"
       ],
       "supportedGames": [
-        "jak1",
-        "jak2",
-        "jak3"
+        "jak1"
       ],
-      "websiteUrl": "https://github.com/stichlola/jak-enhanced-trilogy",
-      "coverArtUrl": "https://raw.githubusercontent.com/stichlola/jak-enhanced-trilogy/main/game/assets/enhanced/art/cover.jpg",
-      "thumbnailArtUrl": "https://raw.githubusercontent.com/stichlola/jak-enhanced-trilogy/main/game/assets/enhanced/art/banner-1280x640.png",
+      "websiteUrl": "https://github.com/Alessiortuso/jak-living-sky",
+      "coverArtUrl": null,
+      "thumbnailArtUrl": null,
       "versions": [
         {
-          "version": "0.12",
-          "publishedDate": "2026-10-31T15:58:18Z",
+          "version": "0.1",
+          "publishedDate": "2026-11-02T00:00:00Z",
           "assets": {
-            "windows": "https://github.com/stichlola/jak-enhanced-trilogy/releases/download/v0.12/Jak-Enhanced-Light-v0.12.zip",
+            "windows": "https://github.com/Alessiortuso/jak-living-sky/releases/download/v0.1/Jak-Living-Sky-v0.1.zip",
             "linux": null,
             "macos": null
           },
           "supportedGames": [
-            "jak1",
-            "jak2",
-            "jak3"
-          ]
-        },
-        {
-          "version": "0.11",
-          "publishedDate": "2026-10-31T14:26:52Z",
-          "assets": {
-            "windows": "https://github.com/stichlola/jak-enhanced-trilogy/releases/download/v0.11/Jak-Enhanced-Light-v0.11.zip",
-            "linux": null,
-            "macos": null
-          },
-          "supportedGames": [
-            "jak1",
-            "jak2",
-            "jak3"
-          ]
-        },
-        {
-          "version": "0.10",
-          "publishedDate": "2026-10-30T18:50:26Z",
-          "assets": {
-            "windows": "https://github.com/stichlola/jak-enhanced-trilogy/releases/download/v0.10/Jak-Enhanced-Light-v0.10.zip",
-            "linux": null,
-            "macos": null
-          },
-          "supportedGames": [
-            "jak1",
-            "jak2",
-            "jak3"
-          ]
-        },
-        {
-          "version": "0.9.1",
-          "publishedDate": "2026-10-30T07:51:00Z",
-          "assets": {
-            "windows": "https://github.com/stichlola/jak-enhanced-trilogy/releases/download/v0.9.1/Jak-Enhanced-Light-v0.9.1.zip",
-            "linux": null,
-            "macos": null
-          },
-          "supportedGames": [
-            "jak1",
-            "jak2",
-            "jak3"
-          ]
-        },
-        {
-          "version": "0.9",
-          "publishedDate": "2026-10-29T16:53:00Z",
-          "assets": {
-            "windows": "https://github.com/stichlola/jak-enhanced-trilogy/releases/download/v0.9/Jak-Enhanced-Light-v0.9.zip",
-            "linux": null,
-            "macos": null
-          },
-          "supportedGames": [
-            "jak1",
-            "jak2",
-            "jak3"
-          ]
-        },
-        {
-          "version": "0.8",
-          "publishedDate": "2026-10-28T14:01:15Z",
-          "assets": {
-            "windows": "https://github.com/stichlola/jak-enhanced-trilogy/releases/download/v0.8/Jak-Enhanced-Light-v0.8.zip",
-            "linux": null,
-            "macos": null
-          },
-          "supportedGames": [
-            "jak1",
-            "jak2",
-            "jak3"
-          ]
-        },
-        {
-          "version": "0.7.1",
-          "publishedDate": "2026-10-28T11:36:46Z",
-          "assets": {
-            "windows": "https://github.com/stichlola/jak-enhanced-trilogy/releases/download/v0.7.1/Jak-Enhanced-Light-v0.7.1.zip",
-            "linux": null,
-            "macos": null
-          },
-          "supportedGames": [
-            "jak1",
-            "jak2",
-            "jak3"
-          ]
-        },
-        {
-          "version": "0.7",
-          "publishedDate": "2026-10-28T11:01:56Z",
-          "assets": {
-            "windows": "https://github.com/stichlola/jak-enhanced-trilogy/releases/download/v0.7/Jak-Enhanced-Light-v0.7.zip",
-            "linux": null,
-            "macos": null
-          },
-          "supportedGames": [
-            "jak1",
-            "jak2",
-            "jak3"
+            "jak1"
           ]
         }
       ]

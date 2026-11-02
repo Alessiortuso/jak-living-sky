@@ -16,6 +16,8 @@ jobs:
     name: Windows Clang Static
     runs-on: windows-2022
     timeout-minutes: 180
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -57,3 +59,14 @@ jobs:
           name: jak-living-sky-windows
           if-no-files-found: error
           path: out/release/Jak-Living-Sky-v0.1.zip
+
+      # the version mods.json lists: each build replaces its ZIP
+      - name: Publish the ZIP
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1
+          name: Jak Living Sky v0.1
+          body: Test version. Only the weather, the sky and the light that comes from it, based on Jak Enhanced Trilogy by stichlola.
+          prerelease: true
+          overwrite_files: true
+          files: out/release/Jak-Living-Sky-v0.1.zip
