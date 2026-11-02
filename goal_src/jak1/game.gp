@@ -1661,6 +1661,12 @@
 ;; the DGO file
 (custom-level-cgo "TSZ.DGO" "test-zone/testzone.gd")
 
+;; Jak Living Sky: Brume Village, by Cuttlefishthesage (github.com/Cuttlefishthesage/BrumeVillage)
+(build-custom-level "brume")
+(custom-level-cgo "BRU.DGO" "brume/brume.gd")
+(build-actor "test-actor2" :gen-mesh #t)
+(build-actor "brumesteamcap" :gen-mesh #t)
+
 ;; generate the art group for a custom actor.
 ;; requires a .glb model file in custom_assets/jak1/models/custom_levels
 ;; options:
@@ -2124,6 +2130,8 @@
 (goal-src "pc/debug/pc-debug-common.gc" "pckernel-impl" "entity-h" "game-info-h" "level-h" "settings-h" "gsound-h" "target-util")
 (goal-src "pc/debug/pc-debug-methods.gc" "pc-debug-common")
 (goal-src "levels/test-zone/test-zone-obs.gc" "process-drawable")
+(goal-src "engine/common-obs/linear-plat.gc" "process-drawable")
+(goal-src "levels/brume/brume-obs.gc" "process-drawable" "linear-plat")
 
 (group-list "all-code"
   `(,@(reverse *all-gc*))

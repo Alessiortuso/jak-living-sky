@@ -15,6 +15,7 @@
   ;; GAME-TEXT-ID ENUM BEGINS
   (zero 0)
   (one 1)
+  (press-hide-seek #x102)
   (confirm #x103)
   (press-to-talk #x104)
   (press-to-use #x105)
@@ -797,7 +798,17 @@
   (input-opts-controller-pressure-sensitivity #x1618)
   (input-opts-analog-sensitivity #x1619)
   ;; GAME-TEXT-ID ENUM ENDS
-  )
+  
+  ;;BRUME;;
+  (brume #x4647)
+  (brume-buzzer #x4648)
+  (brume-muse-hide-3 #x4620)
+  (brume-oracle-1 #x4621)
+  (brume-oracle-2 #x4622)
+  (brume-findcell-1 #x4623)
+  (brume-restore-power #x4624)
+
+)
 
 ;; DECOMP BEGINS
 

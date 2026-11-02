@@ -104,25 +104,32 @@
               (print-game-text (lookup-text! *common-text* (text-id press-to-use) #f) gp-0 #f 128 22))))
         (suspend))))
 
+;; Jak Living Sky: slot 5 is Brume Village, from Rock Village's gate and its own
+(defun warp-slot-open? ((arg0 warp-gate) (arg1 int))
+  (and (!= arg1 (-> arg0 level-slot))
+       (if (= arg1 5)
+         (or (= (-> arg0 level-slot) 2) (= (-> arg0 level-slot) 5))
+         (<= arg1 (-> arg0 max-slot)))))
+
 (defun get-next-slot-up ((arg0 warp-gate) (arg1 int))
-  (let ((v0-0 (+ arg1 1)))
-    (if (< (-> arg0 max-slot) v0-0) (set! v0-0 (-> arg0 min-slot)))
-    (if (= v0-0 (-> arg0 level-slot)) (+! v0-0 1))
-    (if (< (-> arg0 max-slot) v0-0) (set! v0-0 (-> arg0 min-slot)))
+  (let ((v0-0 arg1))
+    (dotimes (i 6)
+      (set! v0-0 (if (>= v0-0 5) 0 (+ v0-0 1)))
+      (if (warp-slot-open? arg0 v0-0) (return v0-0)))
     v0-0))
 
 (defun get-next-slot-down ((arg0 warp-gate) (arg1 int))
-  (let ((v0-0 (+ arg1 -1)))
-    (if (< v0-0 (-> arg0 min-slot)) (set! v0-0 (-> arg0 max-slot)))
-    (if (= v0-0 (-> arg0 level-slot)) (+! v0-0 -1))
-    (if (< v0-0 (-> arg0 min-slot)) (set! v0-0 (-> arg0 max-slot)))
+  (let ((v0-0 arg1))
+    (dotimes (i 6)
+      (set! v0-0 (if (<= v0-0 0) 5 (+ v0-0 -1)))
+      (if (warp-slot-open? arg0 v0-0) (return v0-0)))
     v0-0))
 
 (defun print-level-name ((arg0 int) (arg1 font-context) (arg2 int) (arg3 int))
   (let ((s5-0 (if arg3 arg2 (- arg2))))
     (+! (-> arg1 origin x) (the float s5-0))
     (let ((f30-0 (- 1.0 (* 0.0033333334 (the float arg2)))))
-      (print-game-text-scaled (lookup-text! *common-text* (the-as text-id (+ arg0 286)) #f)
+      (print-game-text-scaled (lookup-text! *common-text* (the-as text-id (if (= arg0 5) #x4647 (+ arg0 286))) #f)
                               f30-0
                               arg1
                               (the int (* 128.0 f30-0))))
@@ -310,6 +317,7 @@
             ((= v1-11 'village2) 2)
             ((= v1-11 'village3) 3)
             ((or (= v1-11 'citadel) (= v1-11 'lavatube)) 4)
+            ((= v1-11 'brume) 5)
             (else -1))))
   (set! (-> self max-slot)
         (cond

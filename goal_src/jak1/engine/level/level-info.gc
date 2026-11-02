@@ -2469,6 +2469,92 @@
             default-level))
 
 ;;;;;;;;; CUSTOM LEVELS
+(define brume
+  (new 'static
+       'level-load-info
+       :index 28
+       :name 'brume
+       :visname 'brume-vis
+       ;; name + -vis
+       :nickname 'bru
+       ;; nickname
+       :packages
+       '()
+       :sound-banks
+       '()
+       :music-bank #f
+       :ambient-sounds
+       '()
+       :mood '*snow-mood*
+       :mood-func 'update-mood-snow
+       :ocean '*ocean-map-village1*
+       :sky #t
+       :sun-fade 1.0
+       :continues
+       '((new 'static
+             'continue-point
+             :name "brume-start"
+             :level 'brume
+             :trans
+             (new 'static 'vector :x (meters -2024.16) :y (meters 179.41) :z (meters 206.81) :w 1.0) ;; 0.16   6.41 370.81
+             :quat
+             (new 'static 'quaternion :w 1.0)
+             :camera-trans
+             (new 'static 'vector :x 0.0 :y 4096.0 :z 0.0 :w 1.0)
+             :camera-rot
+             (new 'static 'array float 9 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0)
+             :load-commands
+             '()
+
+             :lev0 'brume
+             :disp0 'display
+             :lev1 #f
+             :disp1 #f)
+
+     (new 'static 'continue-point
+        :name "brume-warp"
+        :level 'brume
+        :flags (continue-flags warp)
+        :trans (new 'static 'vector :x (meters -2027.35) :y (meters 179.00) :z (meters 203.48) :w 1.0)
+        :quat (new 'static 'quaternion :x -0.0492 :y -0.9320 :z -0.1470 :w -0.3310)
+        :camera-trans (new 'static 'vector :x 0.0 :y 4096.0 :z 0.0 :w 1.0)
+        :camera-rot (new 'static 'array float 9 -0.2092 -0.0000 0.9778 -0.1159 0.9929 -0.0248 -0.9709 -0.1185 -0.2077)
+                                              :load-commands '()
+
+                                              :lev0 'brume
+                                              :disp0 'display
+                                              :lev1 #f
+                                              :disp1 #f
+                                              )
+     (new 'static 'continue-point
+        :name "brume-checkpoint1"
+        :level 'brume
+        :trans (new 'static 'vector :x (meters -1749.68) :y (meters 199.77) :z (meters 321.56) :w 1.0)
+        :quat (new 'static 'quaternion :x -0.0492 :y -0.9320 :z -0.1470 :w -0.3310)
+        :camera-trans (new 'static 'vector :x 0.0 :y 4096.0 :z 0.0 :w 1.0)
+        :camera-rot (new 'static 'array float 9 0.0378 0.0000 -0.9992 0.1149 0.9933 0.0043 0.9926 -0.1150 0.0376)
+                                              :load-commands '()
+
+                                              :lev0 'brume
+                                              :disp0 'display
+                                              :lev1 #f
+                                              :disp1 #f
+                                              ))
+       :tasks
+       '()
+       :priority 100
+       :load-commands
+       '()
+       :alt-load-commands
+       '()
+       :bsp-mask #xffffffffffffffff
+       :bsphere
+       (new 'static 'sphere :w 167772160000.0)
+       :bottom-height (meters -20)
+       :run-packages
+       '()
+       :wait-for-load #t))
+
 (define test-zone
   (new 'static
        'level-load-info
@@ -2526,3 +2612,4 @@
        :wait-for-load #t))
 
 (cons! *level-load-list* 'test-zone)
+(cons! *level-load-list* 'brume)
