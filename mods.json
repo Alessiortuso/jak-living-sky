@@ -22,6 +22,18 @@
       "thumbnailArtUrl": null,
       "versions": [
         {
+          "version": "1.1",
+          "publishedDate": "2026-11-02T23:30:00Z",
+          "assets": {
+            "windows": "https://github.com/Alessiortuso/jak-living-sky/releases/download/v1.1/Jak-Living-Sky-v1.1.zip",
+            "linux": null,
+            "macos": null
+          },
+          "supportedGames": [
+            "jak1"
+          ]
+        },
+        {
           "version": "1.0",
           "publishedDate": "2026-11-02T23:00:00Z",
           "assets": {
