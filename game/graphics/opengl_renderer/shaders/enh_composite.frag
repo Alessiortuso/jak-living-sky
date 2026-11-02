@@ -1218,7 +1218,9 @@ vec3 night_sky(vec3 dv, vec3 base, float px) {
     vec3 blood = vec3(0.62, 0.17, 0.07) * (0.55 + 0.45 * limb) * (1.0 - 0.35 * seas) *
                  (0.7 + 0.3 * smoothstep(-1.0, 1.0, mq.x + mq.y));
     moon = mix(moon, blood, sky_kind.z);
-    float halo = (pow(md, 60.0) * 0.25 + pow(md, 12.0) * 0.06) * (1.0 + 0.8 * full) * (1.0 - 0.6 * sky_kind.z);
+    // (fading out by md = 0.9: cut off there, the halo's wide part drew a hard-edged oval on the dark sky)
+    float halo = (pow(md, 60.0) * 0.25 + pow(md, 12.0) * 0.06) * (1.0 + 0.8 * full) * (1.0 - 0.6 * sky_kind.z) *
+                 smoothstep(0.9, 0.98, md);
     add = mix(add, moon, disk * mclear * smoothstep(0.0, 0.05, up));
     add += mix(vec3(0.6, 0.68, 0.85), vec3(0.7, 0.25, 0.15), sky_kind.z) * halo * (0.4 + 0.6 * mclear);
   }
