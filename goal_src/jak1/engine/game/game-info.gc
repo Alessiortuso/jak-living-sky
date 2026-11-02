@@ -141,6 +141,15 @@
 ;; Enhanced: filled from JAK_ENHANCED_START
 (define *enhanced-start-name* (new 'global 'string 64 (the-as string #f)))
 
+;; Jak Living Sky: Jak's white eco stays behind (any left there from before is lost)
+(defun soul-drop-eco ((this game-info))
+  (when (and *soul-on* *target* (= (-> this mode) 'play))
+    (set! (-> *soul-pile* w) 0.0)
+    (when (< 0.0 *soul-eco*)
+      (set! (-> *soul-pile* quad) (-> *target* control last-known-safe-ground quad))
+      (set! (-> *soul-pile* w) *soul-eco*)
+      (set! *soul-eco* 0.0))))
+
 (defmethod initialize! ((this game-info) (cause symbol) (save-to-load game-save) (continue-point-override string))
   "Initialize the game-info.
     The cause can be 'dead if you die, or 'game to reset everything.
@@ -153,6 +162,7 @@
      (+! (-> this total-deaths) 1)
      (+! (-> this continue-deaths) 1)
      (+! (-> this fuel-cell-deaths) 1)
+     (soul-drop-eco this)
      (when *target*
        (let ((lev-info (-> *target* current-level info)))
          (set! v0-0
@@ -188,6 +198,9 @@
      (set! (-> this auto-save-count) 0)
      (set! (-> *setting-control* default auto-save) #f)
      (set! (-> this money) 0.0)
+     (set! (-> *soul-pile* w) 0.0)
+     (set! *soul-eco* 0.0)
+     (set! *soul-life* 0.0)
      (set! (-> this fuel) 0.0)
      (set! (-> this money-total) 0.0)
      (set! (-> this buzzer-total) 0.0)

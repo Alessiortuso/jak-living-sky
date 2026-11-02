@@ -197,3 +197,18 @@
     (set! *game-info* temp)))
 
 (define-extern game-task->string (function game-task string))
+
+;; Jak Living Sky: the harder rules.
+;; Enemies give white eco when they die, more the bigger they are. Dying leaves it at the last safe
+;; ground (xyz, w: how many); dying again before getting it back loses it for good (unlike the orbs
+;; it's not finite: they respawn). Jak takes 2 hits, more when bought with it at a hub's warp gate
+;; (for good: dying keeps them). Enemies run faster and leave no green eco.
+(define *soul-on* #t)
+(define *soul-pile* (new 'static 'vector))
+(define *soul-eco* 0.0)
+(define *soul-hit* 1.0)
+(define *soul-life* 0.0)
+(define *soul-shop-open* #f)
+(define *soul-shop-cursor* 0)
+(define *soul-enemy-speed* 1.25)
+(define *soul-tick* 0)

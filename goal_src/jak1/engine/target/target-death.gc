@@ -602,7 +602,7 @@
                 (pickup-collectable! (-> self fact) (pickup-type eco-green) (- (-> *FACT-bank* health-single-inc)) (the-as handle #f))
                 (if (and (= (-> self game mode) 'play) (>= 0.0 (-> self fact health))) (go target-death (-> gp-0 mode))))
                (else
-                (pickup-collectable! (-> self fact) (pickup-type eco-green) (- (-> *FACT-bank* health-single-inc)) (the-as handle #f))))
+                (pickup-collectable! (-> self fact) (pickup-type eco-green) (- *soul-hit*) (the-as handle #f))))
              (target-hit-effect gp-0))
             (else
              (case (-> gp-0 mode)

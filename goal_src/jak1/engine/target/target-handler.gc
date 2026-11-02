@@ -207,8 +207,8 @@
       (logior! (-> self attack-info-rec mask) (attack-mask attacker)))
     (cond
       ((and (logtest? (-> self attack-info-rec mask) (attack-mask mode))
-            (and (= (-> self attack-info-rec mode) 'damage) (not (and (= (-> self game mode) 'play) (>= 1.0 (-> self fact health))))))
-       (pickup-collectable! (-> self fact) (pickup-type eco-green) (- (-> *FACT-bank* health-single-inc)) (the-as handle #f))
+            (and (= (-> self attack-info-rec mode) 'damage) (not (and (= (-> self game mode) 'play) (>= *soul-hit* (-> self fact health))))))
+       (pickup-collectable! (-> self fact) (pickup-type eco-green) (- *soul-hit*) (the-as handle #f))
        (process-spawn part-tracker
                       :init
                       part-tracker-init
@@ -231,7 +231,7 @@
        #t)
       (else
        (logior! (-> self state-flags) (state-flags being-attacked))
-       (if (and (= (-> self game mode) 'play) (and (>= 1.0 (-> self fact health)) (= arg0 'attack)))
+       (if (and (= (-> self game mode) 'play) (and (>= *soul-hit* (-> self fact health)) (= arg0 'attack)))
          (logior! (-> self state-flags) (state-flags dying)))
        (go arg4 arg0 (-> self attack-info-rec))))))
 

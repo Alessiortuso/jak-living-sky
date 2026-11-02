@@ -5,7 +5,7 @@
   "mods": {
     "jak-living-sky": {
       "displayName": "Jak Living Sky",
-      "description": "New graphics and living weather for Jak and Daxter: clouds, mist, rain, snow, day and night, sun and shadows, reflections, vegetation. Based on Jak Enhanced Trilogy by stichlola, with fixes for the shadow and sea lines and the missing eco particles. Gameplay is untouched.",
+      "description": "New graphics and living weather for Jak and Daxter: clouds, mist, rain, snow, day and night, sun and shadows, reflections, vegetation. Based on Jak Enhanced Trilogy by stichlola, with fixes for the shadow and sea lines and the missing eco particles. Adds optional harder rules: white eco from enemies, lost when you die, spent at the warp gates.",
       "authors": [
         "Alessiortuso",
         "stichlola"
@@ -21,6 +21,18 @@
       "coverArtUrl": null,
       "thumbnailArtUrl": null,
       "versions": [
+        {
+          "version": "0.7",
+          "publishedDate": "2026-11-02T20:00:00Z",
+          "assets": {
+            "windows": "https://github.com/Alessiortuso/jak-living-sky/releases/download/v0.7/Jak-Living-Sky-v0.7.zip",
+            "linux": null,
+            "macos": null
+          },
+          "supportedGames": [
+            "jak1"
+          ]
+        },
         {
           "version": "0.6",
           "publishedDate": "2026-11-02T16:00:00Z",

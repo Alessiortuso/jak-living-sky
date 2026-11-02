@@ -279,7 +279,158 @@
   0
   (none))
 
+;; Jak Living Sky: life as a pie of 5 slices, one a hit: lit, faded when lost, dark past what Jak can take
+(defpartgroup group-part-hud-soul-life-1
+  :id 715
+  :flags (screen-space)
+  :bounds (static-bspherem 0 0 0 100)
+  :parts ((sp-item 2989 :flags (launch-asap))))
+
+(defpart 2989
+  :init-specs
+  ((:texture (hud-health01 effects))
+   (:num 1.0)
+   (:scale-x (meters 2.6))
+   (:rot-z (degrees -0.0))
+   (:scale-y :copy scale-x)
+   (:r 128.0)
+   (:g 128.0)
+   (:b 128.0)
+   (:a 128.0)
+   (:timer (seconds -0.005))
+   (:flags (bit9))
+   (:userdata 1.0)
+   (:func 'part-hud-soul-life-func)))
+
+(defpartgroup group-part-hud-soul-life-2
+  :id 716
+  :flags (screen-space)
+  :bounds (static-bspherem 0 0 0 100)
+  :parts ((sp-item 2990 :flags (launch-asap))))
+
+(defpart 2990
+  :init-specs
+  ((:texture (hud-health01 effects))
+   (:num 1.0)
+   (:scale-x (meters 2.6))
+   (:rot-z (degrees -72.0))
+   (:scale-y :copy scale-x)
+   (:r 128.0)
+   (:g 128.0)
+   (:b 128.0)
+   (:a 128.0)
+   (:timer (seconds -0.005))
+   (:flags (bit9))
+   (:userdata 2.0)
+   (:func 'part-hud-soul-life-func)))
+
+(defpartgroup group-part-hud-soul-life-3
+  :id 717
+  :flags (screen-space)
+  :bounds (static-bspherem 0 0 0 100)
+  :parts ((sp-item 2991 :flags (launch-asap))))
+
+(defpart 2991
+  :init-specs
+  ((:texture (hud-health01 effects))
+   (:num 1.0)
+   (:scale-x (meters 2.6))
+   (:rot-z (degrees -144.0))
+   (:scale-y :copy scale-x)
+   (:r 128.0)
+   (:g 128.0)
+   (:b 128.0)
+   (:a 128.0)
+   (:timer (seconds -0.005))
+   (:flags (bit9))
+   (:userdata 3.0)
+   (:func 'part-hud-soul-life-func)))
+
+(defpartgroup group-part-hud-soul-life-4
+  :id 718
+  :flags (screen-space)
+  :bounds (static-bspherem 0 0 0 100)
+  :parts ((sp-item 2992 :flags (launch-asap))))
+
+(defpart 2992
+  :init-specs
+  ((:texture (hud-health01 effects))
+   (:num 1.0)
+   (:scale-x (meters 2.6))
+   (:rot-z (degrees -216.0))
+   (:scale-y :copy scale-x)
+   (:r 128.0)
+   (:g 128.0)
+   (:b 128.0)
+   (:a 128.0)
+   (:timer (seconds -0.005))
+   (:flags (bit9))
+   (:userdata 4.0)
+   (:func 'part-hud-soul-life-func)))
+
+(defpartgroup group-part-hud-soul-life-5
+  :id 719
+  :flags (screen-space)
+  :bounds (static-bspherem 0 0 0 100)
+  :parts ((sp-item 2993 :flags (launch-asap))))
+
+(defpart 2993
+  :init-specs
+  ((:texture (hud-health01 effects))
+   (:num 1.0)
+   (:scale-x (meters 2.6))
+   (:rot-z (degrees -288.0))
+   (:scale-y :copy scale-x)
+   (:r 128.0)
+   (:g 128.0)
+   (:b 128.0)
+   (:a 128.0)
+   (:timer (seconds -0.005))
+   (:flags (bit9))
+   (:userdata 5.0)
+   (:func 'part-hud-soul-life-func)))
+
+(defun part-hud-soul-life-func ((arg0 sparticle-system) (arg1 sparticle-cpuinfo) (arg2 matrix))
+  (cond
+    ((or (not *target*) (< (-> *target* fact health-max) (-> arg1 user-float)))
+     (set-vector! (-> arg2 vector 2) 22.0 22.0 22.0 110.0))
+    ((< (-> *target* fact health) (-> arg1 user-float))
+     (set-vector! (-> arg2 vector 2) 128.0 128.0 128.0 36.0))
+    (else
+     (set-vector! (-> arg2 vector 2) 128.0 128.0 128.0 128.0)))
+  (none))
+
 (defmethod init-particles! ((this hud-health) (arg0 int))
+  (set! *soul-on* (!= 0 (pc-enhanced-hard-rules)))
+  (when *soul-on*
+    (dotimes (i 5)
+      (when (< (-> this nb-of-particles) (-> this max-nb-of-particles))
+        (let ((n (-> this nb-of-particles)))
+          ;; (each its own: the same one five times would be moved five times when the heap is compacted)
+          (set! (-> this particles n)
+                (case i
+                  ((0) (new 'static 'hud-particle))
+                  ((1) (new 'static 'hud-particle))
+                  ((2) (new 'static 'hud-particle))
+                  ((3) (new 'static 'hud-particle))
+                  (else (new 'static 'hud-particle))))
+          (set! (-> this particles n part)
+                (create-launch-control (case i
+                                         ((0) group-part-hud-soul-life-1)
+                                         ((1) group-part-hud-soul-life-2)
+                                         ((2) group-part-hud-soul-life-3)
+                                         ((3) group-part-hud-soul-life-4)
+                                         (else group-part-hud-soul-life-5))
+                                       this))
+          (set! (-> this particles n init-pos x) 62.0)
+          (set! (-> this particles n init-pos y) 62.0)
+          (set! (-> this particles n init-pos z) 5.0)
+          (set! (-> this particles n part matrix) (sprite-allocate-user-hvdf)))
+        (+! (-> this nb-of-particles) 1)))
+    (set! (-> this x-sgn) -1)
+    (set! (-> this y-sgn) -1)
+    (set! (-> this friend) 0)
+    (return (the-as none 0)))
   (when (< (-> this nb-of-particles) (-> this max-nb-of-particles))
     (let ((s5-0 (-> this nb-of-particles)))
       (set! (-> this particles s5-0) (new 'static 'hud-particle))
@@ -317,6 +468,8 @@
   (none))
 
 (defmethod set-pos-and-scale ((this hud-health) (arg0 symbol) (arg1 symbol))
+  (when *soul-on*
+    (return (the-as none 0)))
   (cond
     (arg0
      (set! (-> this particles 0 init-pos x) 65.0)
@@ -653,6 +806,89 @@
 
 (defmethod get-icon-scale-y ((this hud-money))
   -0.011)
+
+;; Jak Living Sky: the white eco, with the other collectables: bottom center, a ball of white light
+(defpartgroup group-part-hud-soul-eco
+  :id 714
+  :flags (screen-space)
+  :bounds (static-bspherem 0 0 0 100)
+  :parts ((sp-item 2987 :flags (launch-asap)) (sp-item 2988 :flags (launch-asap))))
+
+(defpart 2987
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:scale-x (meters 1.6))
+   (:scale-y :copy scale-x)
+   (:r 255.0)
+   (:g 255.0)
+   (:b 255.0)
+   (:a 128.0)
+   (:timer (seconds -0.005))
+   (:flags (bit2 bit9))))
+
+(defpart 2988
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:scale-x (meters 0.8))
+   (:scale-y :copy scale-x)
+   (:r 255.0)
+   (:g 255.0)
+   (:b 255.0)
+   (:a 128.0)
+   (:timer (seconds -0.005))
+   (:flags (bit2 bit9))))
+
+(deftype hud-soul-eco (hud-money) ())
+
+(define *soul-hud* (the-as (pointer hud) #f))
+
+(defmethod deactivate ((this hud-soul-eco))
+  (set! *soul-hud* (the-as (pointer hud) #f))
+  ((method-of-type hud deactivate) this)
+  (none))
+
+(defmethod draw-hud ((this hud-soul-eco))
+  (let ((t9-0 (method-of-type hud draw-hud))) (t9-0 this))
+  (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id debug))
+    (draw-string-xy (string-format "~D" (-> this value))
+                    buf
+                    (+ (-> this text-x) (* (-> this x-sgn) (-> this offset)))
+                    (/ (* (+ (-> this text-y) (* (-> this y-sgn) (-> this offset)) (-> this y-offset))
+                          (the int (-> *video-parms* relative-y-scale)))
+                       2)
+                    (font-color white)
+                    (font-flags shadow kerning large)))
+  0
+  (none))
+
+(defmethod hud-update ((this hud-soul-eco))
+  (if *target* (tally-value this (the int *soul-eco*) 0))
+  0
+  (none))
+
+(defmethod init-particles! ((this hud-soul-eco) (arg0 int))
+  (when (< (-> this nb-of-particles) (-> this max-nb-of-particles))
+    (let ((s5-1 (-> this nb-of-particles)))
+      (set! (-> this particles s5-1) (new 'static 'hud-particle))
+      (set! (-> this particles s5-1 part) (create-launch-control group-part-hud-soul-eco this))
+      (set! (-> this particles s5-1 init-pos x) 236.0)
+      (set! (-> this particles s5-1 init-pos y) 402.0)
+      (set! (-> this particles s5-1 init-pos z) 2.0)
+      (set! (-> this particles s5-1 part matrix) (sprite-allocate-user-hvdf)))
+    (+! (-> this nb-of-particles) 1))
+  (set! (-> this text-x) 256)
+  (set! (-> this text-y) 389)
+  (set! (-> this x-sgn) 0)
+  (set! (-> this y-sgn) 1)
+  (set! (-> this increment-on-event) #f)
+  0
+  (none))
+
+(defmethod set-pos-and-scale ((this hud-soul-eco) (arg0 symbol) (arg1 symbol))
+  0
+  (none))
 
 (defskelgroup *fuelcell-naked-sg*
   fuelcell-naked
@@ -1416,6 +1652,7 @@
 (defun activate-hud ((arg0 process))
   (set! (-> *hud-parts* pickups) (process-spawn hud-pickups :init hud-init-by-other 0 :to arg0))
   (set! (-> *hud-parts* money) (process-spawn hud-money :init hud-init-by-other 0 :to arg0))
+  (set! *soul-hud* (the-as (pointer hud) (process-spawn hud-soul-eco :init hud-init-by-other 0 :to arg0)))
   (set! (-> *hud-parts* fuel-cell) (process-spawn hud-fuel-cell :init hud-init-by-other 0 :to arg0))
   (set! (-> *hud-parts* health) (process-spawn hud-health :init hud-init-by-other 0 :to arg0))
   (set! (-> *hud-parts* buzzers) (process-spawn hud-buzzers :init hud-init-by-other 0 :to arg0))
@@ -1428,6 +1665,7 @@
 
 (defun hide-hud ()
   (when *target*
+    (if *soul-hud* (send-event (ppointer->process *soul-hud*) 'hide))
     (dotimes (gp-0 9)
       (if (-> *hud-parts* parts gp-0) (send-event (ppointer->process (-> *hud-parts* parts gp-0)) 'hide))))
   0

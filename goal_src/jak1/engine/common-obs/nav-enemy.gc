@@ -1129,7 +1129,7 @@ nav-enemy-default-event-handler
   (set! (-> this enemy-info)
         (new 'process 'fact-info-enemy this (pickup-type eco-pill-random) (-> *FACT-bank* default-pill-inc)))
   (set! (-> this reaction-time) (nav-enemy-rnd-int-range (seconds 0.1) (seconds 0.8)))
-  (set! (-> this speed-scale) 1.0)
+  (set! (-> this speed-scale) *soul-enemy-speed*)
   (logior! (-> this nav-enemy-flags) (nav-enemy-flags enable-rotate enable-travel navenmf5 navenmf6 navenmf12))
   0
   (none))

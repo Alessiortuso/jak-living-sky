@@ -674,3 +674,14 @@
 (defconstant group-sunken-heatpipe-242 (-> *part-group-id-table* 426))
 (defconstant group-sunken-heatpipe-243 (-> *part-group-id-table* 427))
 
+;; Jak Living Sky: where Jak's white eco was left, and white eco flying to him
+(defconstant group-soul-vent (-> *part-group-id-table* 711))
+(defconstant group-soul-eco-collect (-> *part-group-id-table* 712))
+(defconstant group-soul-collect (-> *part-group-id-table* 713))
+(defconstant group-part-hud-soul-eco (-> *part-group-id-table* 714))
+(defconstant group-part-hud-soul-life-1 (-> *part-group-id-table* 715))
+(defconstant group-part-hud-soul-life-2 (-> *part-group-id-table* 716))
+(defconstant group-part-hud-soul-life-3 (-> *part-group-id-table* 717))
+(defconstant group-part-hud-soul-life-4 (-> *part-group-id-table* 718))
+(defconstant group-part-hud-soul-life-5 (-> *part-group-id-table* 719))
+(defconstant group-soul-wisp (-> *part-group-id-table* 710))

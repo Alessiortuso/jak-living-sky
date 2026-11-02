@@ -30,6 +30,8 @@ std::atomic<float> g_target[kLayers] = {};
 std::atomic<float> g_volume{0.7f};
 std::atomic<int> g_sfx_volume{0x400};
 std::atomic<bool> g_paused{false};
+std::vector<s16> g_denied;     // interleaved stereo
+std::atomic<int> g_denied_pos{-1};  // in frames, -1: not playing
 
 // the samples of a 48 kHz stereo 16-bit WAV (empty when it isn't one)
 std::vector<s16> read_wav(const fs::path& path) {
@@ -76,6 +78,7 @@ void load() {
     // the layers start apart, so two loops of the same length don't repeat together
     g_loops[i].pos = g_loops[i].samples.empty() ? 0 : (i * 48000 * 3) % (g_loops[i].samples.size() / 2);
   }
+  g_denied = read_wav(dir / "denied.wav");
   int count = 0;
   for (auto& l : g_loops) {
     count += !l.samples.empty();
@@ -97,6 +100,10 @@ void set_targets(const float (&gain)[kLayers]) {
   }
 }
 
+void play_denied() {
+  g_denied_pos = 0;
+}
+
 void set_volume(float volume) {
   g_volume = std::clamp(volume, 0.f, 1.f);
 }
@@ -112,6 +119,16 @@ void set_paused(bool paused) {
 void mix(s16Output* out, int frames) {
   if (!g_ready || frames <= 0) {
     return;
+  }
+  int denied = g_denied_pos;
+  if (denied >= 0) {
+    const float g = 0.8f * std::clamp(g_sfx_volume.load() / 1024.f, 0.f, 1.f);
+    const int len = (int)(g_denied.size() / 2);
+    for (int f = 0; f < frames && denied < len; f++, denied++) {
+      const s16* s = &g_denied[denied * 2];
+      out[f] += s16Output{(s16)(s[0] * g), (s16)(s[1] * g)};
+    }
+    g_denied_pos = denied < len ? denied : -1;
   }
   const float master = g_paused ? 0.f
                                 : kMix * g_volume.load() *

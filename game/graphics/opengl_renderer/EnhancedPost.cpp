@@ -6098,6 +6098,12 @@ void EnhancedPost::draw_menu() {
       g_enhanced_menu.fov = fov;
     }
   }
+  if (ImGui::CollapsingHeader("Gameplay", ImGuiTreeNodeFlags_DefaultOpen)) {
+    bool hard_rules = g_enhanced_menu.hard_rules;
+    if (ImGui::Checkbox("Hard rules (white eco, fewer hits, after a restart)", &hard_rules)) {
+      g_enhanced_menu.hard_rules = hard_rules;
+    }
+  }
   save_menu_settings();
   if (ImGui::CollapsingHeader("Time of day", ImGuiTreeNodeFlags_DefaultOpen)) {
     struct Hour {
@@ -6255,6 +6261,7 @@ std::string EnhancedPost::menu_settings_json() const {
   j["vivid"] = s.vivid;
   j["population"] = m_population;
   j["fov"] = g_enhanced_menu.fov.load();
+  j["hard_rules"] = g_enhanced_menu.hard_rules.load();
   j["subtitle_size"] = g_enhanced_menu.subtitle_size.load();
   j["show_minimap"] = g_enhanced_menu.minimap.load();
   j["minimap_size"] = g_enhanced_menu.minimap_size.load();
@@ -6356,6 +6363,9 @@ void EnhancedPost::apply_menu_settings(const std::string& text) {
     int fov = g_enhanced_menu.fov;
     get("fov", fov);
     g_enhanced_menu.fov = fov;
+    bool hard_rules = g_enhanced_menu.hard_rules;
+    get("hard_rules", hard_rules);
+    g_enhanced_menu.hard_rules = hard_rules;
     int subtitle_size = g_enhanced_menu.subtitle_size;
     get("subtitle_size", subtitle_size);
     g_enhanced_menu.subtitle_size = subtitle_size;

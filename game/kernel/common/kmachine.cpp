@@ -1,6 +1,8 @@
 #include <unordered_map>
 #include "kmachine.h"
 
+#include "game/sound/common/enhanced_ambience.h"
+
 #include <algorithm>
 #include <chrono>
 #include <cstring>
@@ -1411,6 +1413,16 @@ u64 pc_enhanced_fov() {
   return (u64)std::clamp(g_enhanced_menu.fov.load(), 70, 150);
 }
 
+// Jak Living Sky: the shop's refusal sound
+void pc_enhanced_denied() {
+  snd::ambience::play_denied();
+}
+
+// Jak Living Sky: the harder rules on (the Enhanced menu)
+u64 pc_enhanced_hard_rules() {
+  return g_enhanced_menu.hard_rules.load() ? 1 : 0;
+}
+
 // Enhanced: play another game of the trilogy (1..3; for the start menu to come), the
 // same process booting it; that game then picks its newest save up (pc-enhanced-switch-restore)
 
@@ -1738,6 +1750,8 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-enhanced-strike", (void*)pc_enhanced_strike);
   make_func_symbol_func("pc-enhanced-strike-hit", (void*)pc_enhanced_strike_hit);
   make_func_symbol_func("pc-enhanced-fov", (void*)pc_enhanced_fov);
+  make_func_symbol_func("pc-enhanced-denied", (void*)pc_enhanced_denied);
+  make_func_symbol_func("pc-enhanced-hard-rules", (void*)pc_enhanced_hard_rules);
   make_func_symbol_func("pc-enhanced-subtitle-size", (void*)pc_enhanced_subtitle_size);
   make_func_symbol_func("pc-enhanced-minimap-size", (void*)pc_enhanced_minimap_size);
   make_func_symbol_func("pc-enhanced-storm-drag", (void*)pc_enhanced_storm_drag);

@@ -715,7 +715,10 @@
                                   *null-kernel-context*))))))
   (none))
 
+(define-extern soul-pile-update (function none))
+
 (defbehavior enhanced-player-update target ()
+  (soul-pile-update)
   (enhanced-menu-update)
   (enhanced-strike-update)
   (when *enhanced-blast-test*

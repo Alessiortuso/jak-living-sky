@@ -31,6 +31,9 @@ void set_targets(const float (&gain)[kLayers]);
 // the ambience's own volume (the menu's slider, 0..1)
 void set_volume(float volume);
 
+// Jak Living Sky: the shop's refusal, once (game/assets/enhanced/sounds/denied.wav, any thread)
+void play_denied();
+
 // audio thread (Player): the game's sfx volume (0..0x400) and pause (the sfx group paused: the
 // pause menu), then add the layers to the game's mix
 void set_sfx_volume(int volume);
