@@ -1127,7 +1127,9 @@ void EnhancedPost::update_auto_quality() {
   m_last_frame = now;
   // slow: under ~58 fps for 3 s in a row, but not under 40 (a level loading: the CPU, not the
   // graphics card, and the GPU's clock then counts the waits for it)
-  const bool under = m_frame_ms > 17.2f && m_frame_ms < 25.f;
+  // (Jak Living Sky: lower than 40 too when the post pass itself takes that long: a slow graphics
+  // card, not a level loading, which stayed at full quality at 10 fps)
+  const bool under = m_frame_ms > 17.2f && (m_frame_ms < 25.f || m_gpu_post_ms > 12.f);
   if (!under) {
     m_slow_since = -1.0;
   } else if (m_slow_since < 0.0) {
@@ -6231,7 +6233,7 @@ void EnhancedPost::apply_living_sky() {
   s.light_spill = 0.f;
   s.lit_smoke = 0.f;
   s.fire = false;
-  s.geometry_normals = false;
+  s.geometry_normals = true;  // (wet ground rebuilt from the depth alone shows hard-edged patches)
   s.prints = 0.f;
   s.desert_lamp = false;
   s.far_view = false;
@@ -6242,7 +6244,7 @@ void EnhancedPost::apply_living_sky() {
   s.char_detail = 0.f;
   s.ray_traced = 0;
   s.rt_ao = false;
-  s.water_reflections = false;
+  s.water_reflections = true;  // (the sky on the sea; without it the near sea is see-through in blocks)
   s.water_swell = 0.f;
   s.water_refraction = 0.f;
   s.water_caustics = 0.f;

@@ -25,7 +25,7 @@ uniform mat4 light_mvp;          // world (game units) -> shadow map
 in vec2 tex_coord;
 out vec4 color;
 
-const int STEPS = 24;
+const int STEPS = 14;
 const float METER = 4096.0;
 
 float hash(vec3 p) {

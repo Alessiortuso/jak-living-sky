@@ -18,7 +18,7 @@ uniform vec4 proj;   // a, b, fx, fy (see enh_ssao.frag)
 in vec2 tex_coord;
 out vec4 color;
 
-const int STEPS = 64;  // (fewer shimmered as the sky's bright edges moved)
+const int STEPS = 36;  // (fewer shimmered as the sky's bright edges moved)
 
 float haze_lit(float noise) {
   float d0 = texture(tex_T1, tex_coord).r;
