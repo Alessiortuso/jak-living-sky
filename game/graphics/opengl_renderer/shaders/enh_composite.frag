@@ -2005,6 +2005,16 @@ float flare_ghost(vec2 at, float aspect, float rad) {
   return (1.0 - smoothstep(rad * 0.5, rad, d)) * 0.07;
 }
 
+// Jak Living Sky: can the water at distance z see this spot of the screen? (sky, or further than it)
+bool env_clear(vec2 q, float z) {
+  // (under the horizon it's the sea or the shore: they don't stand in a ray going up)
+  if (dot(up_view, vec3((q * 2.0 - 1.0) / proj.zw, 1.0)) < 0.0) {
+    return true;
+  }
+  float q_d = texture(tex_T3, clamp(q, vec2(0.0), vec2(1.0))).r;
+  return q_d <= 1e-7 || view_z(q_d) >= z;
+}
+
 void main() {
   if (cloud_pass == 1) {
     color = cloud_march();
@@ -2039,9 +2049,7 @@ void main() {
     if (wd > d + 1e-7 && !covered) {
       wsurf = wd;
       water_deep = under_is_sea || d <= 1e-7;
-    } else if (under_is_sea) {
-      wsurf = fd;
-    } else {
+    } else if (!under_is_sea) {
       // a flat effect a few cm over the water (splashes draw see-through discs that write depth):
       // still water, with the game's color only where it's brighter (the foam)
       // (the near sea only: the far one is a plane under the whole level, docks included)
@@ -2056,19 +2064,17 @@ void main() {
         }
       }
     }
-    // Jak Living Sky: one sea by one formula. In Jak 1 the near sea ends a few dozen meters out and the
-    // far one's depth can't be used as a surface, so past the line nothing was water. Where the far sea
-    // still shows (nothing drawn over it since) and the view looks down, the surface is worked out from
+    // Jak Living Sky: one sea by one formula. The far sea's depth is a coarse mesh that follows the
+    // camera: taken as the surface, the waves on it jumped as the camera moved. Where the far sea
+    // still shows (nothing drawn over it since), the surface is worked out from
     // the sea's level (world y = 0, the ocean map's)
-    if (wsurf == 0.0 && d > 1e-7 && fd > 1e-7 && abs(fd - d) < 1e-7 && cam_pos.y > 0.0) {
-      vec3 wr = world_dir(ray);
-      if (wr.y < -0.0005) {
-        float sea_z = ray.z * cam_pos.y / -wr.y;
-        if (sea_z > 0.0) {
-          wsurf = (proj.y / sea_z + 1.0 + proj.x) * 0.5;
-          far_sea = true;
-        }
-      }
+    // (and its last ring, at the horizon, which writes no depth: nothing there, under the horizon)
+    bool sea_ring = d <= 1e-7 && world_dir(ray).y < 0.0;
+    if (wsurf == 0.0 && (sea_ring || (d > 1e-7 && fd > 1e-7 && abs(fd - d) < 1e-7)) && cam_pos.y > 0.0) {
+      // (up to the very horizon: what the far sea shows there is sea, whatever the angle says)
+      float sea_z = ray.z * cam_pos.y / max(-world_dir(ray).y, 0.0005);
+      wsurf = (proj.y / sea_z + 1.0 + proj.x) * 0.5;
+      far_sea = true;
     }
     if (wsurf > 0.0) {
       d = wsurf;
@@ -2392,9 +2398,58 @@ void main() {
     // reflection. Far away: the screen where the reflected ray vanishes (sky, distant hills).
     // Near: trace the ray through the depth buffer (which has no water) to catch nearby things.
     vec3 refl = fog_color;
-    if (r.z > 1e-3) {
-      vec2 env_uv = clamp(0.5 * vec2(proj.z * r.x, proj.w * r.y) / r.z + 0.5, vec2(0.002), vec2(0.998));
-      refl = texture(tex_T0, env_uv).rgb;
+    // (Jak Living Sky: further out the view grazes the water and the slightest ripple threw this ray
+    // across the horizon, the sea flickering: there the plain mirror, and never under the horizon)
+    vec3 env_r = normalize(mix(r, reflect(vdir, up_view), smoothstep(40.0 * 4096.0, 150.0 * 4096.0, z)));
+    if (dot(up_view, env_r) < 0.01) {
+      env_r = reflect(vdir, up_view);
+    }
+    if (env_r.z > 1e-3) {
+      vec2 env_uv = clamp(0.5 * vec2(proj.z * env_r.x, proj.w * env_r.y) / env_r.z + 0.5, vec2(0.002), vec2(0.998));
+      // (Jak Living Sky: not what stands closer than this water, as the palms on the shore: the ray
+      // leaves away from them. Close to them, the sky of the same height, as it is across the screen:
+      // no shapes left in the water, no outlines from their soft edges)
+      float env_near = 0.0;
+      float env_far = 0.0;
+      for (int i = 0; i < 4; i++) {
+        vec2 env_o = vec2(i < 2 ? (i == 0 ? 1.0 : -1.0) : 0.0, i < 2 ? 0.0 : (i == 2 ? 1.0 : -1.0));
+        env_near += env_clear(env_uv + env_o * vec2(0.006, 0.01), z) ? 1.0 : 0.0;
+        env_far += env_clear(env_uv + env_o * vec2(0.03, 0.05), z) ? 1.0 : 0.0;
+      }
+      float env_sharp = env_near == 4.0 && env_clear(env_uv, z) ? smoothstep(0.0, 1.0, env_far / 4.0) : 0.0;
+      // (by day the sky in the water is ours for this direction, not read from the screen: walking, the
+      // trees crossing what was read changed the color of the whole sea, all the time)
+      float env_day = clouds.x * (1.0 - clouds.w * (1.0 - sky_day));
+      vec3 env_open = env_day > 0.0 ? sky_color(env_r) : vec3(0.0);
+      if (env_sharp > 0.0) {
+        refl = texture(tex_T0, env_uv).rgb;
+        float env_z = view_z(texture(tex_T3, env_uv).r);
+        if (env_z == 0.0 || env_z > 2800.0 * 4096.0) {
+          refl = mix(refl, env_open, env_day);
+        }
+      }
+      if (env_sharp < 1.0) {
+        vec3 env_row = fog_color;
+        if (env_day < 1.0) {
+          vec3 env_sum = vec3(0.0);
+          float env_w = 0.0;
+          for (int row = 0; row < 4 && env_w == 0.0; row++) {
+            float env_y = min(env_uv.y + float(row) * 0.1, 0.998);
+            for (int i = 0; i < 12; i++) {
+              vec2 env_q = vec2((float(i) + 0.5) / 12.0, env_y);
+              if (env_clear(env_q, z) && env_clear(env_q + vec2(0.0, 0.01), z) && env_clear(env_q - vec2(0.0, 0.01), z)) {
+                float env_k = exp(-sq((env_q.x - env_uv.x) / 0.3)) + 0.001;
+                env_sum += texture(tex_T0, env_q).rgb * env_k;
+                env_w += env_k;
+              }
+            }
+          }
+          if (env_w > 0.0) {
+            env_row = env_sum / env_w;
+          }
+        }
+        refl = mix(mix(env_row, env_open, env_day), refl, env_sharp);
+      }
     }
     vec3 ssr = refl;
     float ssr_hit = 0.0;
