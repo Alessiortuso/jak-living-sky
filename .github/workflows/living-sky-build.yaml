@@ -51,22 +51,22 @@ jobs:
         run: cmake --build build --parallel %NUMBER_OF_PROCESSORS%
 
       - name: Make the mod's ZIP
-        run: python scripts/enhanced/make_living_sky.py --bin build/bin --version v0.9
+        run: python scripts/enhanced/make_living_sky.py --bin build/bin --version v1.0
 
       - name: Upload the ZIP
         uses: actions/upload-artifact@v7
         with:
           name: jak-living-sky-windows
           if-no-files-found: error
-          path: out/release/Jak-Living-Sky-v0.9.zip
+          path: out/release/Jak-Living-Sky-v1.0.zip
 
       # the version mods.json lists: each build replaces its ZIP
       - name: Publish the ZIP
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.9
-          name: Jak Living Sky v0.9
+          tag_name: v1.0
+          name: Jak Living Sky v1.0
           body: Test version. The Jak 1 effects of Jak Enhanced Trilogy by stichlola, with fixes for the shadow and sea lines and the missing eco particles.
           prerelease: true
           overwrite_files: true
-          files: out/release/Jak-Living-Sky-v0.9.zip
+          files: out/release/Jak-Living-Sky-v1.0.zip

@@ -5,6 +5,8 @@ and living weather. It is based on
 [Jak Enhanced Trilogy](https://github.com/stichlola/jak-enhanced-trilogy) by stichlola, whose README
 follows.
 
+**Brume Village** and its levels are by [Cuttlefishthesage](https://github.com/Cuttlefishthesage/BrumeVillage), used with their permission. Reach it from Rock Village's warp gate.
+
 ---
 
 # Jak Enhanced Trilogy
