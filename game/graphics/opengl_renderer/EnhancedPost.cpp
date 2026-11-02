@@ -777,7 +777,7 @@ void sun_world(float out[3], bool sky = false) {
 }  // namespace
 
 EnhancedPost::EnhancedPost() {
-  lg::info("[enhanced] Jak Enhanced Trilogy by stichlola - https://github.com/stichlola/jak-enhanced-trilogy");
+  lg::info("[enhanced] Jak Living Sky, based on Jak Enhanced Trilogy by stichlola - https://github.com/stichlola/jak-enhanced-trilogy");
   // the menu's choices from the last session first, the test switches below win over them
   try {
     auto path = file_util::get_user_settings_dir(g_game_version) / "enhanced-settings.json";
@@ -804,6 +804,7 @@ EnhancedPost::EnhancedPost() {
     // test boots: 0 Classic, 1 Medium, 2 Maximum, 3 Performance
     apply_preset(std::clamp(std::atoi(preset), 0, 3));
   }
+  apply_living_sky();
   if (const char* pop = std::getenv("JAK_ENHANCED_POPULATION")) {
     // the game reads the same variable at boot
     m_population = std::clamp(std::atoi(pop), 0, 3);
@@ -5781,7 +5782,7 @@ void EnhancedPost::draw_menu() {
   }
   drawn_frame = ImGui::GetFrameCount();
   // no close button: \ or F1 closes it (and gives the mouse back to the camera); Select + R3 on a pad
-  if (!ImGui::Begin("Jak Enhanced Trilogy by stichlola  ( \\, F1 or Select+R3 closes )", nullptr,
+  if (!ImGui::Begin("Jak Living Sky  ( \\, F1 or Select+R3 closes )", nullptr,
                     ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::End();
     return;
@@ -5824,16 +5825,6 @@ void EnhancedPost::draw_menu() {
     ImGui::TextDisabled("Close this menu (F1), then F2 takes the picture (in your OpenGOAL screenshots folder).");
   }
   if (ImGui::CollapsingHeader("Graphics", ImGuiTreeNodeFlags_DefaultOpen)) {
-    // (in the menu's order: Performance sits between Classic and Medium)
-    static const char* presets[] = {"Classic", "Performance", "Medium", "Maximum"};
-    static const int preset_ids[] = {0, 3, 1, 2};
-    ImGui::TextUnformatted("Preset:");
-    for (int i = 0; i < 4; i++) {
-      ImGui::SameLine();
-      if (ImGui::Button(presets[i], ImVec2(110, 0))) {
-        apply_preset(preset_ids[i]);
-      }
-    }
     // the game's nap window (and the beds, the report: not in Enhanced Light)
     if (!enhanced_light() && ImGui::Button("Nap...  (N, Select)")) {
       g_enhanced_menu.ask(12, "");
@@ -5889,9 +5880,9 @@ void EnhancedPost::draw_menu() {
             "and settings go with it (a window opens over the game: Alt+Tab if you don't see it)");
       }
     }
-    ImGui::Checkbox("Enhanced graphics (all)", &s.enabled);
+    ImGui::Checkbox("Living Sky (all)", &s.enabled);
     ImGui::BeginDisabled(!s.enabled);
-    // two columns of switches
+    // two columns of switches: only the weather, the sky and the light that comes from it
     int n = 0;
     auto check = [&](const char* label, bool* value) {
       if (n++ % 2) {
@@ -5900,232 +5891,41 @@ void EnhancedPost::draw_menu() {
       return ImGui::Checkbox(label, value);
     };
     check("Antialiasing (TAA)", &s.taa);
+    check("Clouds", &s.clouds);
+    check("Cloud shadows", &s.cloud_shadows);
     check("Volumetric mist", &s.volume);
-    check("Sun shadows", &s.shadow_map);
-    check("Character and tree shadows", &s.shadow_casters);
-    check("Contact shadows", &s.sun_shadows);
-    check("Ambient occlusion (SSAO)", &s.ssao);
-    check("Indirect light (SSGI)", &s.gi);
-    check("Character lighting", &g_enhanced_merc.enabled);
-    check("Bloom", &s.bloom);
     check("God rays", &s.shafts);
-    check("Depth of field", &s.dof);
-    bool blur = s.motion_blur > 0.f;
-    if (check("Motion blur", &blur)) {
-      s.motion_blur = blur ? 0.3f : 0.f;
-    }
-    check("Dynamic lights", &s.lights);
-    check("Fires (heat, embers)", &s.fire);
-    bool light_shadows = s.light_shadow > 0.f;
-    if (check("Light shadows", &light_shadows)) {
-      s.light_shadow = light_shadows ? 0.85f : 0.f;
-    }
-    check("Geometry normals", &s.geometry_normals);
-    bool prints = s.prints > 0.f;
-    if (check("Footprints in the sand", &prints)) {
-      s.prints = prints ? 1.f : 0.f;
-    }
+    check("Sun shadows", &s.shadow_map);
+    check("Bloom", &s.bloom);
+    check("Color grade per area", &s.area_grading);
     bool dark = s.dark_nights > 0.f;
     if (check("Dark nights", &dark)) {
       s.dark_nights = dark ? 1.f : 0.f;
     }
-    bool spill = s.light_spill > 0.f;
-    if (check("Light spill at night", &spill)) {
-      s.light_spill = spill ? 1.f : 0.f;
-    }
-    check("Cloud shadows", &s.cloud_shadows);
     bool flare = s.lens_flare > 0.f;
     if (check("Lens flare", &flare)) {
       s.lens_flare = flare ? 0.6f : 0.f;
     }
-    check("Jak's lantern in the desert", &s.desert_lamp);
-    bool smoke = s.lit_smoke > 0.f;
-    if (check("Lit smoke", &smoke)) {
-      s.lit_smoke = smoke ? 0.8f : 0.f;
-    }
-    check("Extended draw distance", &s.far_view);
-    bool relief = s.relief > 0.f;
-    if (check("Surface relief", &relief)) {
-      s.relief = relief ? 1.f : 0.f;
-    }
-    bool mats = s.materials > 0.f;
-    bool traced = s.ray_traced > 0;
-    if (check("Ray-traced reflections", &traced)) {
-      s.ray_traced = traced ? 1 : 0;
-    }
-    check("Ray-traced ambient occlusion", &s.rt_ao);
-    if (check("Reflective metal and glass", &mats)) {
-      s.materials = mats ? 1.f : 0.f;
-    }
-    check("Wind on the grass", &g_enhanced_wind.enabled);
-    check("Grass bends away", &g_enhanced_wind.push);
-    check("Color grade per area", &s.area_grading);
-    check("Soft shadows", &s.soft_shadows);
     check("Auto quality (keeps 60 fps)", &s.auto_quality);
     if (ImGui::IsItemHovered()) {
       ImGui::SetTooltip(
-          "Where the graphics card can't keep 60 fps (Haven at night...), the mist volume, the\n"
-          "indirect light, the god rays and the soft shadows are set aside one at a time, then the\n"
-          "resolution is lowered, and they come back when there is room again. Now: %s",
-          m_auto_level == 0 ? "everything on"
-          : m_auto_level == 1 ? "mist volume off"
-          : m_auto_level == 2 ? "mist volume and indirect light off"
-          : m_auto_level == 3 ? "mist volume, indirect light, god rays and soft shadows off"
-          : m_auto_level == 4 ? "those off, and 85% resolution"
-                              : "those off, and 72% resolution");
-    }
-    check("Clouds", &s.clouds);
-    check("Cutscene depth of field", &s.cine_dof);
-    bool sparks = s.blast_sparks > 0.f;
-    if (check("Explosion sparks", &sparks)) {
-      s.blast_sparks = sparks ? 1.f : 0.f;
-    }
-    bool motes = s.motes > 0.f;
-    if (check("Fireflies and pollen", &motes)) {
-      s.motes = motes ? 1.f : 0.f;
-    }
-    ImGui::SetNextItemWidth(200);
-    ImGui::SliderFloat("Vivid colors", &s.vivid, 0.f, 1.f, "%.2f");
-    ImGui::SetNextItemWidth(200);
-    ImGui::SliderFloat("Ambient sounds", &s.ambience, 0.f, 1.f, "%.2f");
-    ImGui::SetNextItemWidth(200);
-    ImGui::SliderFloat("Snow on the ground", &s.snow_cover, 0.f, 1.f, "%.2f");
-    // the subtitles' size (accessibility): the default is smaller than the PS2's
-    {
-      static const int kSizes[] = {100, 120, 138, 170};
-      int pick = 0;
-      for (int i = 0; i < 4; i++) {
-        if (g_enhanced_menu.subtitle_size >= kSizes[i]) {
-          pick = i;
-        }
-      }
-      static const char* const kSizeNames[] = {"Small", "Medium", "Large (original)", "Extra large"};
-      ImGui::SetNextItemWidth(200);
-      if (ImGui::Combo("Subtitle size", &pick, kSizeNames, 4)) {
-        g_enhanced_menu.subtitle_size = kSizes[pick];
-      }
+          "Where the graphics card can't keep 60 fps, the mist volume and the god rays are set\n"
+          "aside, then the resolution is lowered, and they come back when there is room again.");
     }
     weather_menu(s, "Weather");
     ImGui::SetNextItemWidth(200);
-    ImGui::Combo("Vegetation", &g_enhanced_vegetation, "Classic\0Moderate\0Lush\0");
+    ImGui::SliderFloat("Morning fog", &s.dawn_fog, 0.f, 1.f, "%.2f");
     ImGui::SetNextItemWidth(200);
-    ImGui::SliderFloat("Detailed scenery", &g_enhanced_scenery_dist, 0.f, 120.f, "%.0f m");
-    {
-      bool smooth = g_enhanced_smooth_chars > 0;
-      if (ImGui::Checkbox("Smoother characters (after a restart)", &smooth)) {
-        g_enhanced_smooth_chars = smooth ? 1 : 0;
-      }
-    }
-    ImGui::BeginDisabled(!s.lights);
+    ImGui::SliderFloat("Rays through the clouds", &s.cloud_rays, 0.f, 1.f, "%.2f");
     ImGui::SetNextItemWidth(200);
-    ImGui::SliderFloat("Lamp strength", &s.lamp_strength, 0.f, 3.f, "%.2f");
-    if (ImGui::TreeNode("Place a light")) {
-      // a light of your own where Jak stands, 2.5 m up (saved in game/assets/enhanced/lights.json)
-      static float color[3] = {1.f, 0.62f, 0.32f};
-      static float radius = 8.f;
-      static bool flicker = false;
-      ImGui::SetNextItemWidth(200);
-      ImGui::ColorEdit3("Color##ml", color);
-      ImGui::SetNextItemWidth(200);
-      ImGui::SliderFloat("Radius (m)##ml", &radius, 2.f, 40.f, "%.0f");
-      ImGui::Checkbox("Flickers like a fire##ml", &flicker);
-      auto& list = g_manual_lights[game_index()];
-      const auto& pl = g_enhanced_player;
-      if (ImGui::Button("Add a light here") && pl.valid) {
-        ManualLight l;
-        l.note = g_enhanced_scene.level;
-        l.pos[0] = pl.pos[0];
-        l.pos[1] = pl.pos[1] + 2.5f * 4096.f;
-        l.pos[2] = pl.pos[2];
-        l.radius = radius * 4096.f;
-        std::memcpy(l.color, color, sizeof(color));
-        l.flicker = flicker;
-        list.push_back(l);
-        save_manual_lights();
-      }
-      ImGui::SameLine();
-      if (ImGui::Button("Remove the nearest") && pl.valid && !list.empty()) {
-        size_t best = 0;
-        float best_d2 = 1e30f;
-        for (size_t i = 0; i < list.size(); i++) {
-          float d2 = 0.f;
-          for (int k = 0; k < 3; k++) {
-            d2 += (list[i].pos[k] - pl.pos[k]) * (list[i].pos[k] - pl.pos[k]);
-          }
-          if (d2 < best_d2) {
-            best_d2 = d2;
-            best = i;
-          }
-        }
-        list.erase(list.begin() + best);
-        save_manual_lights();
-      }
-      ImGui::Text("%d lights of your own in this game", (int)list.size());
-      ImGui::TreePop();
-    }
+    ImGui::SliderFloat("Raindrops on the lens", &s.lens_drops, 0.f, 1.f, "%.2f");
+    ImGui::SetNextItemWidth(200);
+    ImGui::SliderFloat("Snow on the ground", &s.snow_cover, 0.f, 1.f, "%.2f");
+    ImGui::SetNextItemWidth(200);
+    ImGui::SliderFloat("Ambient sounds", &s.ambience, 0.f, 1.f, "%.2f");
+    ImGui::SetNextItemWidth(200);
+    ImGui::SliderFloat("Eye adaptation", &s.eye_adapt, 0.f, 1.f, "%.2f");
     ImGui::EndDisabled();
-    ImGui::SeparatorText("Water");
-    n = 0;
-    bool swell = s.water_swell > 0.f, refr = s.water_refraction > 0.f, caus = s.water_caustics > 0.f;
-    check("Reflections", &s.water_reflections);
-    if (check("Swell", &swell)) {
-      s.water_swell = swell ? 1.f : 0.f;
-    }
-    if (check("Refraction", &refr)) {
-      s.water_refraction = refr ? 0.012f : 0.f;
-    }
-    if (check("Caustics", &caus)) {
-      s.water_caustics = caus ? 0.8f : 0.f;
-    }
-    ImGui::EndDisabled();
-  }
-  if (ImGui::CollapsingHeader("City", ImGuiTreeNodeFlags_DefaultOpen)) {
-    // passers-by, traffic, guards and Metal Heads (the game scales its wanted counts, see
-    // enhanced-population-count); the game reads the same variable at boot
-    ImGui::SetNextItemWidth(200);
-    if (ImGui::Combo("Population", &m_population, "Low\0Normal\0High\0Extreme\0")) {
-      g_enhanced_menu.ask(6, std::to_string(m_population));
-    }
-    ImGui::SetNextItemWidth(200);
-    int fov = g_enhanced_menu.fov;
-    if (ImGui::SliderInt("Field of view %", &fov, 80, 140)) {
-      g_enhanced_menu.fov = fov;
-    }
-    bool map = g_enhanced_menu.minimap;
-    if (ImGui::Checkbox("Minimap", &map)) {
-      g_enhanced_menu.minimap = map;
-    }
-    ImGui::BeginDisabled(!map);
-    ImGui::SetNextItemWidth(200);
-    int map_size = g_enhanced_menu.minimap_size;
-    if (ImGui::SliderInt("Minimap size %", &map_size, 50, 100)) {
-      g_enhanced_menu.minimap_size = map_size;
-    }
-    ImGui::EndDisabled();
-    // (not in Enhanced Light: the game plays as it was, see pc_enhanced_storm_drag and the rest)
-    bool play_weather = g_enhanced_play_weather.enabled;
-    if (!enhanced_light()) {
-      if (ImGui::Checkbox("Weather and night affect play", &play_weather)) {
-        g_enhanced_play_weather.enabled = play_weather;
-      }
-      if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip(
-            "Sandstorms slow vehicles on sand; thick fog and sandstorms hide the minimap;\n"
-            "more marauders roam the desert at night (Jak 3)");
-      }
-      bool balance = g_enhanced_balance;
-      if (ImGui::Checkbox("Enhanced balance (Jak 3)", &balance)) {
-        g_enhanced_balance = balance;
-      }
-      if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip(
-            "Guns for range, Dark Jak for close combat and crowds, Light Jak for defense:\n"
-            "the Beam Reflexor bounces fewer times, the Needle Lazer, Arc Wielder and Gyro Burster\n"
-            "hit softer, the Wave Concussor and Mass Inverter harder, the Super Nova costs less;\n"
-            "Dark Jak hits much harder, shrugs off hits, and his blows and kills keep him going\n"
-            "and heal him; Light Jak's shield and freeze cost less, his kills give light eco back");
-      }
-    }
   }
   save_menu_settings();
   if (ImGui::CollapsingHeader("Time of day", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -6193,54 +5993,8 @@ void EnhancedPost::draw_menu() {
       }
       ImGui::PopID();
     }
-    ImGui::TextDisabled("Pad: Select opens the nap window, Select + R3 this menu.");
+    ImGui::TextDisabled("Pad: Select + R3 opens this menu.");
     ImGui::TextDisabled("The game's own buttons: its Options menu.");
-  }
-  if (ImGui::CollapsingHeader("My Levels", ImGuiTreeNodeFlags_DefaultOpen)) {
-    // (read again now and then: the editor or an import may have changed them)
-    static std::vector<EnhancedLevelInfo> levels;
-    static double levels_read = -100.0;
-    if (m_time - levels_read > 2.0) {
-      levels_read = m_time;
-      levels = enhanced_levels();
-    }
-    const std::string active = enhanced_level_active();
-    if (levels.empty()) {
-      ImGui::TextDisabled("None yet: in the editor (F4), File > New Level.");
-    }
-    for (const auto& l : levels) {
-      ImGui::PushID(l.id.c_str());
-      ImGui::BeginDisabled(l.id == active);
-      if (ImGui::Button(l.id == active ? "Playing" : "Play", ImVec2(90, 0))) {
-        enhanced_level_play(l.id);
-        g_enhanced_menu.open = false;
-      }
-      ImGui::EndDisabled();
-      ImGui::SameLine();
-      ImGui::Text("%s", l.name.c_str());
-      ImGui::SameLine();
-      ImGui::TextDisabled("%d objects", l.objects);
-      ImGui::PopID();
-    }
-    if (!active.empty() && ImGui::Button("Back to the main world", ImVec2(240, 0))) {
-      enhanced_level_leave();
-    }
-  }
-  if (ImGui::CollapsingHeader("Teleport", ImGuiTreeNodeFlags_DefaultOpen)) {
-    int shown = 0;
-    for (const auto& p : enhanced_places()) {
-      if (shown++ % 2) {
-        ImGui::SameLine();
-      }
-      if (ImGui::Button(p.name, ImVec2(240, 0))) {
-        g_enhanced_menu.ask(2, p.continue_point);
-      }
-    }
-    const auto& cam = g_enhanced_camera;
-    if (cam.valid) {
-      ImGui::TextDisabled("camera %.0f %.0f %.0f m", cam.trans[0] / kMeter, cam.trans[1] / kMeter,
-                          cam.trans[2] / kMeter);
-    }
   }
   ImGui::End();
 }
@@ -6453,6 +6207,50 @@ bool all_on(int preset) {
 // without the passes that cost the most on a weak graphics card (the sun's shadow map, the
 // occlusion, the traced reflections, the far view, the extra plants), the look kept (grade, lights,
 // weather, nights)
+// Jak Living Sky keeps only the weather, the sky and the light that comes from it: all the rest stays
+// off whatever an older settings file says (the menu has no switches for it)
+void EnhancedPost::apply_living_sky() {
+  auto& s = m_settings;
+  s.shadow_casters = false;
+  s.sun_shadows = false;
+  s.soft_shadows = false;
+  s.ssao = false;
+  s.gi = false;
+  s.dof = false;
+  s.cine_dof = false;
+  s.motion_blur = 0.f;
+  s.lights = false;
+  s.light_shadow = 0.f;
+  s.light_spill = 0.f;
+  s.lit_smoke = 0.f;
+  s.fire = false;
+  s.geometry_normals = false;
+  s.prints = 0.f;
+  s.desert_lamp = false;
+  s.far_view = false;
+  s.materials = 0.f;
+  s.relief = 0.f;
+  s.parallax = 0.f;
+  s.wall_notile = false;
+  s.char_detail = 0.f;
+  s.ray_traced = 0;
+  s.rt_ao = false;
+  s.water_reflections = false;
+  s.water_swell = 0.f;
+  s.water_refraction = 0.f;
+  s.water_caustics = 0.f;
+  s.blast_sparks = 0.f;
+  s.fx_detail = 0.f;
+  s.motes = 0.f;
+  s.vivid = 0.f;
+  g_enhanced_merc.enabled = false;
+  g_enhanced_wind.enabled = false;
+  g_enhanced_wind.push = false;
+  g_enhanced_vegetation = 0;
+  g_enhanced_scenery_dist = 0.f;
+  g_enhanced_smooth_chars = 0;
+}
+
 void EnhancedPost::apply_preset(int preset) {
   const bool perf = preset == 3;
   if (perf) {

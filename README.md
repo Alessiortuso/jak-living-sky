@@ -1,3 +1,12 @@
+# Jak Living Sky
+
+A mod for Jak and Daxter: The Precursor Legacy on [OpenGOAL](https://opengoal.dev), with only the
+weather, the sky and the light that comes from it. It is based on
+[Jak Enhanced Trilogy](https://github.com/stichlola/jak-enhanced-trilogy) by stichlola, whose README
+follows.
+
+---
+
 # Jak Enhanced Trilogy
 
 ![Jak Enhanced Trilogy](game/assets/enhanced/art/banner-1280x640.png)

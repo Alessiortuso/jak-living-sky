@@ -345,6 +345,7 @@ class EnhancedPost {
   std::string menu_settings_json() const;
   void apply_menu_settings(const std::string& text);
   void apply_preset(int preset);
+  void apply_living_sky();
   void save_menu_settings();
   std::array<Level, kLevels> m_levels;
   int m_w = 0;

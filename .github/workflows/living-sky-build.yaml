@@ -48,13 +48,12 @@ jobs:
         shell: cmd
         run: cmake --build build --parallel %NUMBER_OF_PROCESSORS%
 
-      - name: Upload binaries
+      - name: Make the mod's ZIP
+        run: python scripts/enhanced/make_living_sky.py --bin build/bin --version v0.1
+
+      - name: Upload the ZIP
         uses: actions/upload-artifact@v7
         with:
           name: jak-living-sky-windows
           if-no-files-found: error
-          path: |
-            build/bin/gk.exe
-            build/bin/goalc.exe
-            build/bin/extractor.exe
-            build/bin/decompiler.exe
+          path: out/release/Jak-Living-Sky-v0.1.zip
