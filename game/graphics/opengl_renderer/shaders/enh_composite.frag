@@ -2498,6 +2498,21 @@ void main() {
       wc = mix(wc, vec3(0.9, 0.93, 0.92) * (0.35 + 0.65 * clamp(sky_sun.w * 2.5, 0.0, 1.0)),
                lace * min(wake_foam, 1.0) * 0.8);
     }
+    // Jak Living Sky: the near sea ends in a hard line that follows the camera, the game's far sea
+    // past it. Looking up the screen for where it ends, this water eases into the far sea's color
+    // over the last stretch before the line
+    for (int i = 1; i <= 12; i++) {
+      vec2 fq = uv + vec2(0.0, float(i) * 0.012);
+      if (fq.y >= 1.0) {
+        break;
+      }
+      float fsd = texture(tex_T3, fq).r;
+      if (abs(texture(tex_T5, fq).r - texture(tex_T14, fq).r) < 1e-7 && abs(texture(tex_T6, fq).r - fsd) < 1e-7) {
+        float ease = 1.0 - float(i - 1) / 12.0;
+        wc = mix(wc, texture(tex_T0, fq).rgb, ease * ease * (3.0 - 2.0 * ease));
+        break;
+      }
+    }
     // the game's effects drawn over the water (foam, splashes, wakes) show through where they're
     // clearly brighter than our water; on a disc lying on the water, anything brighter does
     const vec3 luma = vec3(0.299, 0.587, 0.114);
@@ -2805,6 +2820,9 @@ void main() {
       float cs = contact_shadow(from, sun_dir.xyz);
       sh = max(sh, cs * 0.7 * smoothstep(30.0 * 4096.0, 15.0 * 4096.0, z) * facing);
     }
+    // Jak Living Sky: the sun's shadows ease out with distance: past the camera's surroundings the
+    // ground goes from wholly shadowed to not at all in a hard line that follows it
+    sh *= 1.0 - smoothstep(5.0 * 4096.0, 30.0 * 4096.0, z);
     sun_lit *= 1.0 - sh;
     // the shade is lit by the blue sky only: cooler as well as darker; the sunlit side warmer
     // and fuller (light and shadow apart)

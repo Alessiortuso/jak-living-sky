@@ -1,11 +1,11 @@
 {
   "schemaVersion": "1.0.0",
   "sourceName": "Jak Living Sky",
-  "lastUpdated": "2026-11-02T13:00:00Z",
+  "lastUpdated": "2026-11-02T14:00:00Z",
   "mods": {
     "jak-living-sky": {
       "displayName": "Jak Living Sky",
-      "description": "Only the weather, the sky and the light that comes from it for Jak and Daxter: changing weather, clouds, mist, rain, snow, day and night. Based on Jak Enhanced Trilogy by stichlola. Gameplay is untouched.",
+      "description": "New graphics and living weather for Jak and Daxter: clouds, mist, rain, snow, day and night, sun and shadows, reflections, vegetation. Based on Jak Enhanced Trilogy by stichlola, with fixes for the shadow and sea lines and the missing eco particles. Gameplay is untouched.",
       "authors": [
         "Alessiortuso",
         "stichlola"
@@ -21,6 +21,18 @@
       "coverArtUrl": null,
       "thumbnailArtUrl": null,
       "versions": [
+        {
+          "version": "0.4",
+          "publishedDate": "2026-11-02T14:00:00Z",
+          "assets": {
+            "windows": "https://github.com/Alessiortuso/jak-living-sky/releases/download/v0.4/Jak-Living-Sky-v0.4.zip",
+            "linux": null,
+            "macos": null
+          },
+          "supportedGames": [
+            "jak1"
+          ]
+        },
         {
           "version": "0.3",
           "publishedDate": "2026-11-02T13:00:00Z",

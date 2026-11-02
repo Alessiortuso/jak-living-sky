@@ -4,7 +4,7 @@
 
 The programs and data/ at the ZIP's root, as the launcher wants them; it unpacks the ZIP into its own
 mod folder and runs the extractor itself. Only files tracked by git go in, so nothing from the game
-can slip into it, and nothing that only Jak 2, Jak 3 or the left-out effects use.
+can slip into it, and nothing that only Jak 2 or Jak 3 use.
 """
 
 import argparse
@@ -19,7 +19,9 @@ ROOT = Path(__file__).resolve().parents[2]
 NAME = "Jak-Living-Sky"
 DATA = ["decompiler/config", "goal_src", "game/assets", "game/graphics/opengl_renderer/shaders", "custom_assets"]
 LEFT_OUT = ("custom_assets/jak2/", "custom_assets/jak3/", "game/assets/enhanced/art/",
-            "game/assets/enhanced/bigmap/", "game/assets/enhanced/grass_paint/")
+            "game/assets/enhanced/bigmap/jak2/", "game/assets/enhanced/bigmap/jak3/",
+            "game/assets/enhanced/grass_paint/oasis", "game/assets/enhanced/grass_paint/user_jak2",
+            "game/assets/enhanced/grass_paint/user_jak3")
 PROGRAMS = ("gk.exe", "goalc.exe", "extractor.exe", "decompiler.exe")
 
 
@@ -49,10 +51,11 @@ def main():
             shutil.copy2(ROOT / rel, target)
             count += 1
 
-    # no objects added to the world: the models aren't part of this mod
+    # only Jak 1's objects added to the world: the other games' models aren't part of this mod
     placed = dest / "data/game/assets/enhanced/placed.json"
     games = json.loads(placed.read_text(encoding="utf-8"))
-    placed.write_text(json.dumps({game: [] for game in games}), encoding="utf-8", newline="\n")
+    placed.write_text(json.dumps({game: objects if game == "jak1" else [] for game, objects in games.items()}),
+                      encoding="utf-8", newline="\n")
 
     (dest / "data/launcher").mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / ".github/scripts/releases/error-code-metadata.json",
