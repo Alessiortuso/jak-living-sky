@@ -87,6 +87,7 @@ u32 vblank_interrupt_handler = 0;
 Timer ee_clock_timer;
 
 // Jak Living Sky: music and sounds from files (OpenGOAL's mod base, for Brume Village)
+inline u64 bool_to_symbol(const bool val);
 MiniAudioLib::ma_engine maEngine;
 std::map<std::string, std::list<MiniAudioLib::ma_sound>> maSoundMap;
 MiniAudioLib::ma_sound* mainMusicSound;
