@@ -645,7 +645,12 @@
      (set! *enhanced-hour-steps* 150))
     ((2)
      (let ((cp (get-continue-by-name *game-info* *enhanced-menu-buf*)))
-       (if (and cp *target*) (start 'play cp))))
+       ;; (Jak Living Sky: from another process: this runs in Jak's, and start kills him before it's done)
+       (if (and cp *target*)
+         (process-spawn-function process
+                                 (lambda ((c continue-point)) (start 'play c) (none))
+                                 cp
+                                 :to *entity-pool*))))
     ((4)
      (when *time-of-day-proc*
        (set! (-> *time-of-day-proc* 0 time-ratio)
