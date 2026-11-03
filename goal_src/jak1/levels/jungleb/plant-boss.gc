@@ -181,6 +181,25 @@
   :bounds (static-bspherem 0 0 0 4)
   :parts ((sp-item 2994)))
 
+;; dark eco crackling about it, as round Dark Jak
+(defpart 2995
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 0.6)
+   (:x (meters -2.5) (meters 5))
+   (:y (meters -1) (meters 3.5))
+   (:z (meters -2.5) (meters 5))
+   (:scale-x (meters 0.25) (meters 0.35))
+   (:scale-y :copy scale-x)
+   (:r 110.0 40.0)
+   (:g 20.0)
+   (:b 200.0 55.0)
+   (:a 96.0 32.0)
+   (:vel-y (meters 0.02) (meters 0.02))
+   (:fade-a -0.8)
+   (:timer (seconds 0.5) (seconds 0.3))
+   (:flags (bit2 bit3))))
+
 (defpart 2994
   :init-specs
   ((:texture (hotdot effects))
@@ -200,28 +219,36 @@
   (if (-> self dark) 1 (the int (-> self health))))
 
 (defbehavior plant-boss-dark-eyes plant-boss ()
-  ;; a little whiter all over, powered up: the head, its arms, leaves, vines and roots (not its aphids; every
-  ;; frame, for the leaves grown again)
+  ;; pale, ashen and a little purple, powered up, as Dark Jak: the head, its arms, leaves, vines and roots (not
+  ;; its aphids; every frame, for the leaves grown again)
   (when (-> self dark)
-    (set-vector! (-> self draw color-mult) 0.8 0.8 0.85 1.0)
-    (set-vector! (-> self draw color-emissive) 0.3 0.3 0.33 1.0)
+    (set-vector! (-> self draw color-mult) 0.5 0.48 0.55 1.0)
+    (set-vector! (-> self draw color-emissive) 0.42 0.4 0.48 1.0)
     (let ((kid (-> self child)))
       (while kid
         (let ((pd (the-as process-drawable (ppointer->process kid))))
           (when (and (type-type? (-> pd type) process-drawable) (not (type-type? (-> pd type) aphid)) (nonzero? (-> pd draw)))
-            (set-vector! (-> pd draw color-mult) 0.8 0.8 0.85 1.0)
-            (set-vector! (-> pd draw color-emissive) 0.3 0.3 0.33 1.0)))
+            (set-vector! (-> pd draw color-mult) 0.5 0.48 0.55 1.0)
+            (set-vector! (-> pd draw color-emissive) 0.42 0.4 0.48 1.0)))
         (set! kid (-> kid 0 brother)))))
   (when (and (-> self dark) (> (-> self health) 0.0))
-    ;; (the glow a little out of each eye, toward the camera: in front of it, not inside)
+    ;; (each eye's glow between its joint and its brow's, about the middle of it, and a little toward the
+    ;; camera: in front of it, not inside)
     (let ((eye (new 'stack-no-clear 'vector))
           (out (new 'stack-no-clear 'vector)))
       (vector<-cspace! eye (-> self node-list data 30))
-      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.8))
+      (vector<-cspace! out (-> self node-list data 31))
+      (vector-lerp! eye eye out 0.5)
+      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.5))
       (launch-particles (-> *part-id-table* 2994) (vector+! eye eye out))
       (vector<-cspace! eye (-> self node-list data 34))
-      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.8))
-      (launch-particles (-> *part-id-table* 2994) (vector+! eye eye out))))
+      (vector<-cspace! out (-> self node-list data 35))
+      (vector-lerp! eye eye out 0.5)
+      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.5))
+      (launch-particles (-> *part-id-table* 2994) (vector+! eye eye out))
+      ;; and the dark eco about its head
+      (vector<-cspace! eye (-> self node-list data 13))
+      (launch-particles (-> *part-id-table* 2995) eye)))
   (none))
 
 ;; ja-post, for the states that had it, with the eyes too
