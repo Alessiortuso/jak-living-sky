@@ -807,6 +807,7 @@
   (brume-oracle-2 #x4622)
   (brume-findcell-1 #x4623)
   (brume-restore-power #x4624)
+  (brume-radio #x4649)
 
   ;;ABANDON;;
 

@@ -108,7 +108,7 @@
 (defun warp-slot-open? ((arg0 warp-gate) (arg1 int))
   (and (!= arg1 (-> arg0 level-slot))
        (if (= arg1 5)
-         (or (= (-> arg0 level-slot) 2) (= (-> arg0 level-slot) 5))
+         (or (= (-> arg0 level-slot) 5) (and (= (-> arg0 level-slot) 2) (< 0.0 *brume-radio*)))
          (<= arg1 (-> arg0 max-slot)))))
 
 (defun get-next-slot-up ((arg0 warp-gate) (arg1 int))

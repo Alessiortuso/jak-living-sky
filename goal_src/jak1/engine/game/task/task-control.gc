@@ -357,7 +357,7 @@
                  :flags (task-flags has-entity)
                  :condition
                  (lambda :behavior process-taskable ((arg0 task-control))
-                   (>= (the int (the float (send-event *target* 'query 'pickup (pickup-type fuel-cell)))) 45)))
+                   (>= (the int (the float (send-event *target* 'query 'pickup (pickup-type fuel-cell)))) 60))) ;; Jak Living Sky: 45 before Brume
             (new 'static
                  'task-cstage
                  :game-task (game-task sunken-room)
