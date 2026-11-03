@@ -809,6 +809,7 @@
   (brume-restore-power #x4624)
   (brume-radio #x4649)
   (brume-radio-daxter #x464a)
+  (brume-levitator-60 #x464b)
 
   ;;ABANDON;;
 

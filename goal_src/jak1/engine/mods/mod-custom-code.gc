@@ -160,3 +160,25 @@
       (none))
     :to *entity-pool*)
   (none))
+
+;; Jak Living Sky: near the levitator without the cells, once Keira has said it takes 60: her line
+;; with 60, not the game's with 45 (custom_assets/jak1/audio/voice/keira-levitator-60.mp3). Not again
+;; for 30 s
+(define *brume-lev-hint-last* -100000)
+
+(defun brume-levitator-hint ()
+  (let ((now (the int (/ (the float (current-time)) 300.0))))
+    (when (or (< now *brume-lev-hint-last*) (>= (- now *brume-lev-hint-last*) 30))
+      (set! *brume-lev-hint-last* now)
+      (process-spawn-function
+        process
+        (lambda :behavior process ()
+          (voicebox-spawn self (target-pos 0))
+          (play-sound-file "voice/keira-levitator-60.mp3" 100)
+          (let ((start (current-time)))
+            (while (not (time-elapsed? start (seconds 4.5)))
+              (brume-radio-subtitle "KEIRA" #x464b)
+              (suspend)))
+          (none))
+        :to *entity-pool*)))
+  (none))
