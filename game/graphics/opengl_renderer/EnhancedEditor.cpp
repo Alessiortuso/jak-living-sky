@@ -6508,6 +6508,7 @@ const std::vector<EnhancedPlace>& enhanced_places() {
       out = {{"Geyser Rock", "training-start"},
              {"Sandover Village", "village1-hut"},
              {"Forbidden Jungle", "jungle-start"},
+             {"Forbidden Temple", "jungle-tower"},
              {"Misty Island", "misty-start"},
              {"Fire Canyon", "firecanyon-start"},
              {"Rock Village", "village2-warp"},
