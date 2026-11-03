@@ -114,7 +114,7 @@
         ((5)
          (cond
            ((and *cheat-mode* (cpad-hold? 0 l3)) (goto cfg-77))
-           ((>= (-> *game-info* fuel) 72.0) (goto cfg-77))))
+           ((>= (-> *game-info* fuel) 90.0) (goto cfg-77)))) ;; Jak Living Sky: 72 before Brume
         ((3)
          (cond
            ((and (task-complete? *game-info* (-> self entity extra perm task)) (not (handle->process (-> self cell))))
