@@ -26,7 +26,8 @@
    (try              int32)
    (camera           handle)
    (money            handle)
-   (try-inc          symbol))
+   (try-inc          symbol)
+   (dark             symbol))
   (:states (plant-boss-attack int)
    (plant-boss-dead symbol)
    (plant-boss-dead-bounce float)
@@ -170,7 +171,55 @@
        (send-event arg0 'attack-or-shove (-> arg3 param 0) (new 'static 'attack-info))))
     (else (plant-boss-generic-event-handler arg0 arg1 arg2 arg3))))
 
+;; Jak Living Sky: the plant powered by dark eco (with the hard rules): purple glowing eyes (their texture is
+;; custom_assets/jak1/texture_remade/_all/plant-eye.png), 5 hits instead of 3, its aphids quicker
+(defpartgroup group-plant-boss-dark-eye
+  :id 720
+  :duration (seconds 0.017)
+  :flags (use-local-clock)
+  :bounds (static-bspherem 0 0 0 4)
+  :parts ((sp-item 2994)))
+
+(defpart 2994
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:scale-x (meters 1.6) (meters 0.3))
+   (:scale-y :copy scale-x)
+   (:r 170.0)
+   (:g 40.0)
+   (:b 255.0)
+   (:a 64.0 16.0)
+   (:fade-a -3.2)
+   (:timer (seconds 0.05))
+   (:flags (bit2 bit3))))
+
+;; the fight's stage, 3 (first) to 1 (last), from the hits left: with 5, two hits a stage (one the last)
+(defbehavior plant-boss-stage plant-boss ()
+  (let ((h (the int (-> self health))))
+    (cond
+      ((not (-> self dark)) h)
+      ((>= h 4) 3)
+      ((>= h 2) 2)
+      (else h))))
+
+(defbehavior plant-boss-dark-eyes plant-boss ()
+  (when (and (-> self dark) (> (-> self health) 0.0))
+    (let ((eye (new 'stack-no-clear 'vector)))
+      (vector<-cspace! eye (-> self node-list data 30))
+      (launch-particles (-> *part-id-table* 2994) eye)
+      (vector<-cspace! eye (-> self node-list data 34))
+      (launch-particles (-> *part-id-table* 2994) eye)))
+  (none))
+
+;; ja-post, for the states that had it, with the eyes too
+(defbehavior plant-boss-dark-ja-post plant-boss ()
+  (plant-boss-dark-eyes)
+  (ja-post)
+  (none))
+
 (defbehavior plant-boss-post plant-boss ()
+  (plant-boss-dark-eyes)
   (when *target*
     (let ((gp-0 (-> *target* control root-prim prim-core)))
       (set-target! (-> self neck) (the-as vector gp-0))
@@ -692,7 +741,7 @@
             (go plant-boss-intro))
           (suspend)
           (ja :num! (seek!)))))
-  :post ja-post)
+  :post plant-boss-dark-ja-post)
 
 (defstate plant-boss-intro (plant-boss)
   :code
@@ -759,7 +808,7 @@
       (set! (-> self cycle-count) 0)
       (set! (-> self snap-count) 0)
       (go plant-boss-reset 0))
-  :post ja-post)
+  :post plant-boss-dark-ja-post)
 
 (defstate plant-boss-idle (plant-boss)
   :event plant-boss-default-event-handler
@@ -844,7 +893,7 @@
       (set! (-> self body flex-blend) 0.0)
       (set! (-> self neck flex-blend) 1.0)
       (set! (-> self want-aphid-count)
-            (min (- 4 (the int (-> self health)))
+            (min (- 4 (plant-boss-stage))
                  (cond
                    ((>= (-> self try) 15) 1)
                    ((>= (-> self try) 10) 2)
@@ -856,13 +905,13 @@
       (cond
         ((zero? (-> self want-aphid-count))
          enter-state
-         (let ((v1-7 (the int (-> self health))))
+         (let ((v1-7 (plant-boss-stage)))
            (go plant-boss-attack
                (cond
                  ((= v1-7 2) 2)
                  ((= v1-7 1) 3)
                  (else 1)))))
-        ((time-elapsed? (-> self aphid-spawn-time) (seconds 1.4))
+        ((time-elapsed? (-> self aphid-spawn-time) (if (-> self dark) (seconds 0.9) (seconds 1.4)))
          (when (process-spawn aphid self (-> self root trans) (target-pos 0) :to self)
            (+! (-> self aphid-count) 1)
            (seekl! (-> self want-aphid-count) 0 1)
@@ -1388,7 +1437,8 @@
                        :to
                        this))
   (set! (-> this energy) 0.25)
-  (set! (-> this health) 3.0)
+  (set! (-> this dark) *soul-on*)
+  (set! (-> this health) (if (-> this dark) 5.0 3.0))
   (set! (-> this cam-tracker) (the-as handle #f))
   (set! (-> this camera) (the-as handle #f))
   (set! (-> this money) (the-as handle #f))
