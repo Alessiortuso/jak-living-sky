@@ -445,7 +445,7 @@
                   (let ((sv-80 format))
                     (sv-80 (clear *temp-string*)
                            "/~D"
-                           (if (< 100 (the int (-> s3-3 file s1-0 fuel-cell-count))) (-> this total-nb-of-power-cells) 100)))
+                           (-> this total-nb-of-power-cells) ;; Jak Living Sky: all of them, Brume's too (it was 100 until past it)))
                   (s0-6 *temp-string* arg0 #f s4-1 22))
                 ;; og:preserve-this when custom-aspect use same offsets from counts for totals
                 (set! (-> arg0 origin x) (the float (- (if (-> *pc-settings* use-vis?) 150 1) (-> this left-x-offset))))
