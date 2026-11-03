@@ -155,7 +155,7 @@
             (when (not looking)
               (set! looking #t)
               (let ((from (-> *camera* slave 0 0 trans)))
-                (vector-lerp! pos gate from (fmin 1.0 (/ (meters 8) (vector-vector-distance gate from))))
+                (vector-lerp! pos gate from (fmin 1.0 (/ (meters 8) (vector-vector-distance gate from)))))
               (send-event *target* 'change-mode 'grab)
               (send-event *camera* 'change-state cam-fixed 0))
             (dotimes (i (-> *camera* num-slaves))
