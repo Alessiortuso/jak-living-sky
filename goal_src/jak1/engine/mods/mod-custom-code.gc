@@ -105,3 +105,29 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 #| these are no longer recommended/supported however we include them anyways to not break anyones mods. |#
+
+;; Jak Living Sky: Keira's radio about Brume Village, as the game's own radio calls: the floating radio
+;; by Jak her voice comes from (custom_assets/jak1/audio/voice/keira-brume.mp3), her words as a subtitle
+(defun brume-radio-play ()
+  (process-spawn-function
+    process
+    (lambda :behavior process ()
+      (voicebox-spawn self (target-pos 0))
+      (play-sound-file "voice/keira-brume.mp3" 100)
+      (let ((font (new 'stack 'font-context *font-default-matrix* 0 0 0.0 (font-color default) (font-flags shadow kerning)))
+            (start (current-time)))
+        (set! (-> font flags) (font-flags shadow kerning middle large))
+        (while (not (time-elapsed? start (seconds 12)))
+          (when (and (-> *pc-settings* hinttitles?) (= *master-mode* 'game) (not *progress-process*))
+            (hide-bottom-hud)
+            (set! (-> font origin x) (* (- 1.0 (-> *SUBTITLE-bank* width)) 256))
+            (set! (-> font origin y) (* (-> *SUBTITLE-bank* hint-height) 224))
+            (set-width! font (the int (* (-> *SUBTITLE-bank* width) 512)))
+            (set-height! font (the int (* (-> *SUBTITLE-bank* lines) 11)))
+            (set-scale! font (* (-> *SUBTITLE-bank* scale) (enhanced-subtitle-size)))
+            (print-game-subtitle (string-format "~3L~S:~0L ~S" "KEIRA" (lookup-text! *common-text* (the-as text-id #x4649) #f))
+                                 font #f 128 22))
+          (suspend)))
+      (none))
+    :to *entity-pool*)
+  (none))

@@ -1635,8 +1635,9 @@
   (none))
 
 ;; Jak Living Sky: in Rock Village with the 45 cells the levitator used to want, Keira radios: it needs
-;; 60, but the warp gate picks up a signal from Brume Village. Her voice from
-;; custom_assets/jak1/audio/voice/keira-brume.mp3 (the words on screen either way)
+;; 60, but the warp gate picks up a signal from Brume Village (brume-radio-play, in mod-custom-code)
+(define-extern brume-radio-play (function none))
+
 (defun brume-radio-update ()
   (when (and *target*
              (= *brume-radio* 0.0)
@@ -1645,17 +1646,7 @@
              (not (movie?))
              (= *master-mode* 'game))
     (set! *brume-radio* 1.0)
-    (set! *brume-radio-time* 720)
-    (play-sound-file "voice/keira-brume.mp3" 100))
-  (when (> *brume-radio-time* 0)
-    (if (= *master-mode* 'game) (+! *brume-radio-time* -1))
-    (hide-hud)
-    (let ((font (new 'stack 'font-context *font-default-matrix* 32 160 0.0 (font-color default) (font-flags shadow kerning))))
-      (set-width! font 448)
-      (set-height! font 80)
-      (set-scale! font 0.8)
-      (set! (-> font flags) (font-flags shadow kerning middle large))
-      (print-game-text (lookup-text! *common-text* (the-as text-id #x4649) #f) font #f 128 22)))
+    (brume-radio-play))
   (none))
 
 (defun soul-pile-update ()
