@@ -1645,7 +1645,7 @@
              (not (movie?))
              (= *master-mode* 'game))
     (set! *brume-radio* 1.0)
-    (set! *brume-radio-time* 900)
+    (set! *brume-radio-time* 720)
     (play-sound-file "voice/keira-brume.mp3" 100))
   (when (> *brume-radio-time* 0)
     (if (= *master-mode* 'game) (+! *brume-radio-time* -1))
