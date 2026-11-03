@@ -78,6 +78,10 @@ bool enhanced_remade_has_relief();
 // JAK_ENHANCED_REMADE_SWITCH set: F7 swaps the remade pictures and the game's own in the loaded levels,
 // with the name of what's showing on screen (to compare them; every frame)
 void enhanced_remade_switch(const std::vector<LevelData*>& levels);
+// Jak Living Sky: a texture shown as custom_assets/<game>/texture_swap/<name>.png from now on, or as the
+// game's own again (asked from the game, any thread; done by enhanced_texture_swap, in the frame)
+void enhanced_texture_swap_request(const std::string& name, bool on);
+void enhanced_texture_swap(const std::vector<LevelData*>& levels);
 
 // a file opened with the program the system has for it (a PNG: the user's paint program)
 void enhanced_open_file(const fs::path& path);

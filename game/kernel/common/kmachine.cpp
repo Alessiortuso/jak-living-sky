@@ -1635,6 +1635,12 @@ void pc_enhanced_denied() {
   snd::ambience::play_denied();
 }
 
+// Jak Living Sky: a texture swapped for its picture in custom_assets/<game>/texture_swap, or back
+void enhanced_texture_swap_request(const std::string& name, bool on);
+void pc_enhanced_texture_swap(u32 name, u32 on) {
+  enhanced_texture_swap_request(Ptr<String>(name).c()->data(), symbol_to_bool(on));
+}
+
 // Jak Living Sky: the harder rules on (the Enhanced menu)
 u64 pc_enhanced_hard_rules() {
   return g_enhanced_menu.hard_rules.load() ? 1 : 0;
@@ -1968,6 +1974,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-enhanced-strike-hit", (void*)pc_enhanced_strike_hit);
   make_func_symbol_func("pc-enhanced-fov", (void*)pc_enhanced_fov);
   make_func_symbol_func("pc-enhanced-denied", (void*)pc_enhanced_denied);
+  make_func_symbol_func("pc-enhanced-texture-swap", (void*)pc_enhanced_texture_swap);
   make_func_symbol_func("play-sound-file", (void*)playMP3);
   make_func_symbol_func("stop-sound-file", (void*)stopMP3);
   make_func_symbol_func("stop-all-sounds", (void*)stopAllSounds);

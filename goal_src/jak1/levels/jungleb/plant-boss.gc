@@ -171,8 +171,9 @@
        (send-event arg0 'attack-or-shove (-> arg3 param 0) (new 'static 'attack-info))))
     (else (plant-boss-generic-event-handler arg0 arg1 arg2 arg3))))
 
-;; Jak Living Sky: the plant powered by dark eco (with the hard rules): purple glowing eyes (their texture is
-;; custom_assets/jak1/texture_remade/_all/plant-eye.png), 5 hits instead of 3, its aphids quicker
+;; Jak Living Sky: with the hard rules, the third hit doesn't kill the plant: dark eco powers it up, its eyes
+;; purple and glowing (their texture then custom_assets/jak1/texture_swap/plant-eye.png), two hits more at the
+;; fight's hardest, its aphids quicker
 (defpartgroup group-plant-boss-dark-eye
   :id 720
   :duration (seconds 0.017)
@@ -194,14 +195,9 @@
    (:timer (seconds 0.05))
    (:flags (bit2 bit3))))
 
-;; the fight's stage, 3 (first) to 1 (last), from the hits left: with 5, two hits a stage (one the last)
+;; the fight's stage, 3 (first) to 1 (last), from the hits left; powered up, the last
 (defbehavior plant-boss-stage plant-boss ()
-  (let ((h (the int (-> self health))))
-    (cond
-      ((not (-> self dark)) h)
-      ((>= h 4) 3)
-      ((>= h 2) 2)
-      (else h))))
+  (if (-> self dark) 1 (the int (-> self health))))
 
 (defbehavior plant-boss-dark-eyes plant-boss ()
   (when (and (-> self dark) (> (-> self health) 0.0))
@@ -1149,7 +1145,14 @@
            (ja-blend-eval)
            (suspend)
            (ja :num! (seek! (ja-aframe (the-as float 20.0) 0))))))
-      (if (= (-> self health) 0.0) (go plant-boss-dead #f))
+      (when (= (-> self health) 0.0)
+        (cond
+          ((and *soul-on* (not (-> self dark)))
+           (set! (-> self dark) #t)
+           (set! (-> self health) 2.0)
+           (pc-enhanced-texture-swap "plant-eye" #t)
+           (sound-play "death-darkeco"))
+          (else (go plant-boss-dead #f))))
       (ja-no-eval :num! (seek!))
       (while (not (ja-done? 0))
         (suspend)
@@ -1161,6 +1164,7 @@
   :event plant-boss-generic-event-handler
   :code
     (behavior ((arg0 symbol))
+      (pc-enhanced-texture-swap "plant-eye" #f)
       (logclear! (-> self mask) (process-mask actor-pause))
       (set! (-> self neck flex-blend) 0.0)
       (set! (-> self body flex-blend) 0.0)
@@ -1437,8 +1441,9 @@
                        :to
                        this))
   (set! (-> this energy) 0.25)
-  (set! (-> this dark) *soul-on*)
-  (set! (-> this health) (if (-> this dark) 5.0 3.0))
+  (set! (-> this dark) #f)
+  (pc-enhanced-texture-swap "plant-eye" #f)
+  (set! (-> this health) 3.0)
   (set! (-> this cam-tracker) (the-as handle #f))
   (set! (-> this camera) (the-as handle #f))
   (set! (-> this money) (the-as handle #f))

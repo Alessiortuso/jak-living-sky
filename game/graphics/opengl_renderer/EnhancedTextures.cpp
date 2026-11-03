@@ -713,6 +713,75 @@ void enhanced_remade_switch(const std::vector<LevelData*>& levels) {
               remade ? IM_COL32(120, 255, 140, 255) : IM_COL32(255, 190, 90, 255), text);
 }
 
+namespace {
+std::mutex g_swap_mutex;
+std::map<std::string, bool> g_swap_want;   // by the texture's name: its picture in place, or not
+bool g_swap_asked = false;
+std::map<GLuint, std::string> g_swap_shown;  // the textures showing their picture now
+}  // namespace
+
+void enhanced_texture_swap_request(const std::string& name, bool on) {
+  std::lock_guard<std::mutex> lock(g_swap_mutex);
+  auto it = g_swap_want.find(name);
+  if (it == g_swap_want.end() || it->second != on) {
+    g_swap_want[name] = on;
+    g_swap_asked = true;
+  }
+}
+
+void enhanced_texture_swap(const std::vector<LevelData*>& levels) {
+  static int frames = 0;
+  std::map<std::string, bool> want;
+  {
+    std::lock_guard<std::mutex> lock(g_swap_mutex);
+    if (g_swap_want.empty()) {
+      return;
+    }
+    // (now and then too: the levels that came in since)
+    if (!g_swap_asked && ++frames % 60 != 0) {
+      return;
+    }
+    g_swap_asked = false;
+    want = g_swap_want;
+  }
+  const auto dir = file_util::get_jak_project_dir() / "custom_assets" /
+                   game_version_names[g_game_version] / "texture_swap";
+  std::vector<u32> px;
+  for (const auto* lev : levels) {
+    if (!lev || !lev->level) {
+      continue;
+    }
+    const auto& texs = lev->level->textures;
+    for (size_t i = 0; i < texs.size() && i < lev->textures.size(); i++) {
+      const auto& tex = texs[i];
+      const auto it = want.find(tex.debug_name);
+      if (it == want.end()) {
+        continue;
+      }
+      const GLuint gl = lev->textures[i];
+      const auto shown = g_swap_shown.find(gl);
+      const bool is_shown = shown != g_swap_shown.end() && shown->second == tex.debug_name;
+      if (is_shown == it->second) {
+        continue;
+      }
+      int w = tex.w, h = tex.h;
+      if (it->second) {
+        if (!load_remade(dir / (tex.debug_name + ".png"), plain_alpha_of(tex), px, w, h)) {
+          continue;
+        }
+        g_swap_shown[gl] = tex.debug_name;
+      } else {
+        g_swap_shown.erase(gl);
+      }
+      glBindTexture(GL_TEXTURE_2D, gl);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV,
+                   it->second ? px.data() : tex.data.data());
+      glGenerateMipmap(GL_TEXTURE_2D);
+    }
+  }
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 void enhanced_open_file(const fs::path& path) {
 #ifdef _WIN32
   ShellExecuteW(nullptr, L"open", path.wstring().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
