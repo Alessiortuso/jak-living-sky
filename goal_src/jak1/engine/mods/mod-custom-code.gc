@@ -109,9 +109,14 @@
 ;; Jak Living Sky: Keira's radio about Brume Village, as the game's own radio calls: the floating radio
 ;; by Jak her voice comes from, her words as a subtitle; while she speaks of the signal the camera turns to
 ;; Rock Village's warp gate. Then Daxter, jealous. (custom_assets/jak1/audio/voice/*-brume.mp3)
-;; Rock Village's warp gate, the one in the active levels (#f if there's none)
-(defun brume-find-warp-gate ()
-  (search-process-tree *active-pool* (lambda ((p process)) (type-type? (-> p type) warp-gate))))
+;; where Rock Village's warp gate is: by the place its warp leaves Jak (the gate itself is only a process
+;; once Jak is in the hut), 2 m up
+(defun brume-warp-gate-pos ((out vector))
+  (let ((cp (get-continue-by-name *game-info* "village2-warp")))
+    (when cp
+      (set! (-> out quad) (-> cp trans quad))
+      (+! (-> out y) (meters 2))
+      out)))
 
 (defun brume-radio-subtitle ((speaker string) (id int))
   (when (and (-> *pc-settings* hinttitles?) (= *master-mode* 'game) (not *progress-process*))
@@ -127,6 +132,11 @@
                            font #f 128 22)))
   (none))
 
+;; kept off the radio's stack (a spawned process's stack is saved in 256 bytes when it suspends)
+(define *brume-cam-gate* (new 'global 'vector))
+(define *brume-cam-pos* (new 'global 'vector))
+(define *brume-cam-dir* (new 'global 'vector))
+
 (defun brume-radio-play ()
   (process-spawn-function
     process
@@ -134,23 +144,33 @@
       (voicebox-spawn self (target-pos 0))
       (play-sound-file "voice/keira-brume.mp3" 100)
       (let ((start (current-time))
-            (gate (the-as process-drawable (brume-find-warp-gate)))
-            (looking #f))
+            (gate (brume-warp-gate-pos *brume-cam-gate*))
+            (looking #f)
+            (pos *brume-cam-pos*))
         ;; Keira: 11 s; from the 5th, where she speaks of the signal, the camera holds still and looks at
         ;; the warp gate
         (while (not (time-elapsed? start (seconds 11.2)))
           (when (and gate (time-elapsed? start (seconds 5)) (> (-> *camera* num-slaves) 0))
+            ;; closer: from where the camera is, toward the gate, until 8 m from it; Jak held still meanwhile
             (when (not looking)
               (set! looking #t)
+              (let ((from (-> *camera* slave 0 0 trans)))
+                (vector-lerp! pos gate from (fmin 1.0 (/ (meters 8) (vector-vector-distance gate from))))
+              (send-event *target* 'change-mode 'grab)
               (send-event *camera* 'change-state cam-fixed 0))
-            (let ((cam (-> *camera* slave 0 0))
-                  (dir (new 'stack-no-clear 'vector)))
-              (vector-! dir (-> gate root trans) (-> cam trans))
-              (vector-normalize! dir 1.0)
-              (forward-down->inv-matrix (-> cam tracking inv-mat) dir (-> *camera* local-down))))
+            (dotimes (i (-> *camera* num-slaves))
+              (let ((cam (-> *camera* slave i 0))
+                    (dir *brume-cam-dir*))
+                (set! (-> cam saved-pt quad) (-> pos quad))
+                (set! (-> cam trans quad) (-> pos quad))
+                (vector-! dir gate pos)
+                (vector-normalize! dir 1.0)
+                (forward-down->inv-matrix (-> cam tracking inv-mat) dir (-> *camera* local-down)))))
           (brume-radio-subtitle "KEIRA" #x4649)
           (suspend))
-        (if looking (send-event *camera* 'change-state *camera-base-mode* 0))
+        (when looking
+          (send-event *camera* 'change-state *camera-base-mode* 0)
+          (send-event *target* 'end-mode))
         ;; Daxter: 7 s
         (play-sound-file "voice/daxter-brume.mp3" 200)
         (set! start (current-time))
