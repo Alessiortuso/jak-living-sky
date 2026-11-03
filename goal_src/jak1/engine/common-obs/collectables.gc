@@ -1587,13 +1587,14 @@
   (none))
 
 ;; The white eco's shop, what's on sale. To add an item: raise the count and add a line to each of these.
-(defconstant SOUL-SHOP-ITEMS 2)
+(defconstant SOUL-SHOP-ITEMS 3)
 
 ;; its name, in capitals (small letters are other characters in the game's font)
 (defun soul-item-name ((i int))
   (case i
     ((0) "AGGIUNGI PUNTO VITA")
     ((1) "ECO BIANCO X2 DAI NEMICI")
+    ((2) "AUMENTA DURATA ECO")
     (else "")))
 
 ;; how much of it Jak has
@@ -1601,6 +1602,7 @@
   (case i
     ((0) (the int (+ 2.0 *soul-life*)))
     ((1) (the int *soul-double*))
+    ((2) (the int *soul-eco-time*))
     (else 0)))
 
 ;; the most he can have
@@ -1608,6 +1610,7 @@
   (case i
     ((0) 5)
     ((1) 1)
+    ((2) 3)
     (else 0)))
 
 ;; what the next one costs
@@ -1618,6 +1621,10 @@
            ((1) 200)
            (else 400)))
     ((1) 600)
+    ((2) (case (the int *soul-eco-time*)
+           ((0) 150)
+           ((1) 300)
+           (else 500)))
     (else 0)))
 
 ;; giving it to him
@@ -1626,7 +1633,8 @@
     ((0)
      (set! *soul-life* (+ *soul-life* 1.0))
      (if *target* (set! (-> *target* fact health) (+ 2.0 *soul-life*))))
-    ((1) (set! *soul-double* 1.0)))
+    ((1) (set! *soul-double* 1.0))
+    ((2) (set! *soul-eco-time* (+ *soul-eco-time* 1.0))))
   (none))
 
 ;; resting at a warp gate: Jak's health full, and every enemy killed back where it was (what reset-actors does
@@ -1679,6 +1687,10 @@
   ;; the menu's switch (the rest of the rules follow it, the life's display after a restart)
   (set! *soul-on* (!= 0 (pc-enhanced-hard-rules)))
   (set! *soul-enemy-speed* (if *soul-on* 1.25 1.0))
+  ;; blue, red and yellow eco last half as long again for each step bought (5 s a ball, 20 s at most, at none)
+  (let ((more (if *soul-on* (+ 1.0 (* 0.5 *soul-eco-time*)) 1.0)))
+    (set! (-> *FACT-bank* eco-single-timeout) (the-as seconds (the int (* more (the float (seconds 5))))))
+    (set! (-> *FACT-bank* eco-full-timeout) (the-as seconds (the int (* more (the float (seconds 20)))))))
   ;; a hit takes one mark off: 2 of them, and the ones bought
   (when (and *soul-on* *target*)
     (set! (-> *target* fact health-max) (+ 2.0 *soul-life*))
