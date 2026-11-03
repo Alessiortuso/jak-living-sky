@@ -12,6 +12,7 @@
 #include "game/graphics/opengl_renderer/DirectRenderer.h"
 #include "game/graphics/opengl_renderer/EnhancedEditor.h"
 #include "game/graphics/opengl_renderer/EnhancedPost.h"
+#include "game/graphics/opengl_renderer/EnhancedTextures.h"
 #include "game/graphics/opengl_renderer/EyeRenderer.h"
 #include "game/graphics/opengl_renderer/ProgressRenderer.h"
 #include "game/graphics/opengl_renderer/ShadowRenderer.h"
@@ -1122,6 +1123,9 @@ void OpenGLRenderer::render(DmaFollower dma, const RenderOptions& settings) {
     g_current_renderer = "loader-window";
     m_render_state.loader->draw_debug_window();
   }
+
+  // Jak Living Sky: the textures the game asked swapped (every frame, the post pass on or off)
+  enhanced_texture_swap(m_render_state.loader->get_in_use_levels());
 
   if (g_enhanced_menu.start_menu) {
     // (drawn by the display every frame: draw_start_menu)

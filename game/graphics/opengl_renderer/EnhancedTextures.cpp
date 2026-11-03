@@ -767,6 +767,7 @@ void enhanced_texture_swap(const std::vector<LevelData*>& levels) {
       int w = tex.w, h = tex.h;
       if (it->second) {
         if (!load_remade(dir / (tex.debug_name + ".png"), plain_alpha_of(tex), px, w, h)) {
+          lg::warn("[enhanced] texture swap {}: no picture in {}", tex.debug_name, dir.string());
           continue;
         }
         g_swap_shown[gl] = tex.debug_name;
@@ -777,6 +778,8 @@ void enhanced_texture_swap(const std::vector<LevelData*>& levels) {
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV,
                    it->second ? px.data() : tex.data.data());
       glGenerateMipmap(GL_TEXTURE_2D);
+      lg::info("[enhanced] texture swap {} ({}): {}", tex.debug_name, tex.debug_tpage_name,
+               it->second ? "the picture" : "the game's");
     }
   }
   glBindTexture(GL_TEXTURE_2D, 0);

@@ -200,12 +200,28 @@
   (if (-> self dark) 1 (the int (-> self health))))
 
 (defbehavior plant-boss-dark-eyes plant-boss ()
+  ;; a little whiter all over, powered up: the head, its arms, leaves, vines and roots (not its aphids; every
+  ;; frame, for the leaves grown again)
+  (when (-> self dark)
+    (set-vector! (-> self draw color-mult) 0.8 0.8 0.85 1.0)
+    (set-vector! (-> self draw color-emissive) 0.3 0.3 0.33 1.0)
+    (let ((kid (-> self child)))
+      (while kid
+        (let ((pd (the-as process-drawable (ppointer->process kid))))
+          (when (and (type-type? (-> pd type) process-drawable) (not (type-type? (-> pd type) aphid)) (nonzero? (-> pd draw)))
+            (set-vector! (-> pd draw color-mult) 0.8 0.8 0.85 1.0)
+            (set-vector! (-> pd draw color-emissive) 0.3 0.3 0.33 1.0)))
+        (set! kid (-> kid 0 brother)))))
   (when (and (-> self dark) (> (-> self health) 0.0))
-    (let ((eye (new 'stack-no-clear 'vector)))
+    ;; (the glow a little out of each eye, toward the camera: in front of it, not inside)
+    (let ((eye (new 'stack-no-clear 'vector))
+          (out (new 'stack-no-clear 'vector)))
       (vector<-cspace! eye (-> self node-list data 30))
-      (launch-particles (-> *part-id-table* 2994) eye)
+      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.8))
+      (launch-particles (-> *part-id-table* 2994) (vector+! eye eye out))
       (vector<-cspace! eye (-> self node-list data 34))
-      (launch-particles (-> *part-id-table* 2994) eye)))
+      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.8))
+      (launch-particles (-> *part-id-table* 2994) (vector+! eye eye out))))
   (none))
 
 ;; ja-post, for the states that had it, with the eyes too
