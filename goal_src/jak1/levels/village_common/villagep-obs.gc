@@ -142,6 +142,7 @@
 (define-extern soul-item-most (function int int))
 (define-extern soul-item-cost (function int int))
 (define-extern soul-shop-buy (function int none))
+(define-extern soul-rest (function none))
 
 (defconstant SOUL-SHOP-ROWS 5)
 
@@ -253,13 +254,26 @@
                 (logclear! (-> *cpad-list* cpads 0 button0-abs 0) (pad-buttons circle))
                 (logclear! (-> *cpad-list* cpads 0 button0-rel 0) (pad-buttons circle))
                 (go-virtual use gp-0 (the-as level s1-2))))
-            ;; Jak Living Sky: resting at the warp gate, as at a bonfire: back by it at full health, and every
-            ;; enemy back too (all as when Jak dies, but nothing lost)
-            (when (and *soul-on* (cpad-pressed? 0 x) (>= (-> self level-slot) 0))
+            ;; Jak Living Sky: resting at the warp gate, as at a bonfire: the screen fades to black, Jak's health
+            ;; comes back full and so does every enemy killed, then it fades back in, still at the gate
+            (when (and *soul-on* (cpad-pressed? 0 x))
               (cpad-clear! 0 x)
               (sound-play "start-options")
-              (set! (-> *game-info* current-continue) (get-continue-by-name *game-info* (-> *warp-info* (-> self level-slot))))
-              (initialize! *game-info* 'life (the-as game-save #f) (the-as string #f)))
+              (set-setting! 'bg-a-speed #f 1.25 0)
+              (set-setting! 'bg-a 'abs 1.0 0)
+              (set-time! (-> self state-time))
+              (until (time-elapsed? (-> self state-time) (seconds 2))
+                (can-grab-display? self)
+                (hide-hud)
+                (suspend))
+              (soul-rest)
+              (remove-setting! 'bg-a)
+              (set-time! (-> self state-time))
+              (until (time-elapsed? (-> self state-time) (seconds 0.8))
+                (can-grab-display? self)
+                (hide-hud)
+                (suspend))
+              (remove-setting! 'bg-a-speed))
             ;; Jak Living Sky: the white eco's shop, at every warp gate
             (when (and *soul-on* (cpad-pressed? 0 square))
               (cpad-clear! 0 square)

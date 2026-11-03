@@ -1629,6 +1629,23 @@
     ((1) (set! *soul-double* 1.0)))
   (none))
 
+;; resting at a warp gate: Jak's health full, and every enemy killed back where it was (what reset-actors does
+;; when he dies, but those still there left alone)
+(defun soul-rest ()
+  (if *target* (set! (-> *target* fact health) (-> *target* fact health-max)))
+  (dotimes (i (-> *level* length))
+    (let ((lev (-> *level* level i)))
+      (when (= (-> lev status) 'active)
+        (let ((ents (-> lev bsp level entity)))
+          (dotimes (j (-> ents length))
+            (let ((e (-> ents data j entity)))
+              (if (not (-> e extra process)) (update-perm! (-> e extra perm) 'life (the-as entity-perm-status 623)))))))))
+  ;; and those of the levels not loaded now
+  (let ((perms (-> *game-info* perm-list)))
+    (dotimes (i (-> perms length))
+      (update-perm! (-> perms data i) 'life (the-as entity-perm-status 623))))
+  (none))
+
 ;; buying one (not enough eco, or at the most: a sound of its own)
 (defun soul-shop-buy ((i int))
   (cond
