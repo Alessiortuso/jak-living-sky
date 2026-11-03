@@ -123,6 +123,8 @@
                  (and (= (-> (the-as level-hint a0-0) next-state name) 'level-hint-normal)
                       (not (appeared-for-long-enough? (the-as level-hint a0-0))))))))
 
+(define-extern brume-radio-subtitle (function string int none))
+
 (defun level-hint-spawn ((arg0 text-id) (arg1 string) (arg2 entity) (arg3 process-tree) (arg4 game-task))
   (if (< (the-as uint 1) (the-as uint arg4)) (close-specific-task! arg4 (task-status need-hint)))
   (let ((s3-1 (level-hint-task-process arg2 (the-as uint128 arg0) arg1)))
@@ -282,6 +284,19 @@
           (suspend))
         (while (not *sound-player-enable*)
           (suspend))
+        ;; Jak Living Sky: Keira's two lines with the 90 cells the lava tube now wants, in a voice of their own
+        ;; (custom_assets/jak1/audio/voice), her words as the game's subtitle
+        (let ((own (cond
+                     ((string= arg0 "asstva73") 0)
+                     ((string= arg0 "asstva74") 1)
+                     (else -1))))
+          (when (>= own 0)
+            (play-sound-file (if (zero? own) "voice/keira-lava-90.mp3" "voice/keira-lava-need-90.mp3") 100)
+            (let ((start (current-time)))
+              (while (not (time-elapsed? start (if (zero? own) (seconds 9.2) (seconds 8.3))))
+                (brume-radio-subtitle "KEIRA" (+ #x464c own))
+                (suspend)))
+            (go level-hint-exit)))
         (let ((s5-1 sound-play-by-name)
               (s4-1 string->sound-name))
           (format (clear *temp-string*) "spool-~S" arg0)
