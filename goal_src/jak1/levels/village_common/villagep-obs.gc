@@ -253,6 +253,13 @@
                 (logclear! (-> *cpad-list* cpads 0 button0-abs 0) (pad-buttons circle))
                 (logclear! (-> *cpad-list* cpads 0 button0-rel 0) (pad-buttons circle))
                 (go-virtual use gp-0 (the-as level s1-2))))
+            ;; Jak Living Sky: resting at the warp gate, as at a bonfire: back by it at full health, and every
+            ;; enemy back too (all as when Jak dies, but nothing lost)
+            (when (and *soul-on* (cpad-pressed? 0 x) (>= (-> self level-slot) 0))
+              (cpad-clear! 0 x)
+              (sound-play "start-options")
+              (set! (-> *game-info* current-continue) (get-continue-by-name *game-info* (-> *warp-info* (-> self level-slot))))
+              (initialize! *game-info* 'life (the-as game-save #f) (the-as string #f)))
             ;; Jak Living Sky: the white eco's shop, at every warp gate
             (when (and *soul-on* (cpad-pressed? 0 square))
               (cpad-clear! 0 square)
@@ -295,7 +302,9 @@
               (print-game-text (lookup-text! *common-text* (text-id press-to-exit) #f) s1-3 #f 128 22)
               (when *soul-on*
                 (+! (-> s1-3 origin y) 15.0)
-                (print-game-text "PREMI ~Y~22L<~Z~Y~24L#~Z~Y~1L>~Z~Y~23L[~Z~+26H PER IL NEGOZIO" s1-3 #f 128 22)))
+                (print-game-text "PREMI ~Y~22L<~Z~Y~24L#~Z~Y~1L>~Z~Y~23L[~Z~+26H PER IL NEGOZIO" s1-3 #f 128 22)
+                (+! (-> s1-3 origin y) 15.0)
+                (print-game-text "PREMI ~Y~22L<~Z~Y~27L*~Z~Y~1L>~Z~Y~23L[~Z~+26H PER RIPOSARE" s1-3 #f 128 22)))
             (suspend))))))
 
 (defstate hidden (warp-gate)

@@ -1587,24 +1587,27 @@
   (none))
 
 ;; The white eco's shop, what's on sale. To add an item: raise the count and add a line to each of these.
-(defconstant SOUL-SHOP-ITEMS 1)
+(defconstant SOUL-SHOP-ITEMS 2)
 
 ;; its name, in capitals (small letters are other characters in the game's font)
 (defun soul-item-name ((i int))
   (case i
     ((0) "AGGIUNGI PUNTO VITA")
+    ((1) "ECO BIANCO X2 DAI NEMICI")
     (else "")))
 
 ;; how much of it Jak has
 (defun soul-item-have ((i int))
   (case i
     ((0) (the int (+ 2.0 *soul-life*)))
+    ((1) (the int *soul-double*))
     (else 0)))
 
 ;; the most he can have
 (defun soul-item-most ((i int))
   (case i
     ((0) 5)
+    ((1) 1)
     (else 0)))
 
 ;; what the next one costs
@@ -1614,6 +1617,7 @@
            ((0) 100)
            ((1) 200)
            (else 400)))
+    ((1) 600)
     (else 0)))
 
 ;; giving it to him
@@ -1621,7 +1625,8 @@
   (case i
     ((0)
      (set! *soul-life* (+ *soul-life* 1.0))
-     (if *target* (set! (-> *target* fact health) (+ 2.0 *soul-life*)))))
+     (if *target* (set! (-> *target* fact health) (+ 2.0 *soul-life*))))
+    ((1) (set! *soul-double* 1.0)))
   (none))
 
 ;; buying one (not enough eco, or at the most: a sound of its own)
@@ -1702,7 +1707,7 @@
   ;; Jak Living Sky: white eco, more from a bigger enemy (only enemies say who dropped it: not crates)
   (when (and *soul-on* arg2)
     (let* ((size (if (nonzero? (-> this process draw)) (-> this process draw bounds w) (meters 2)))
-           (amount (fmax 3.0 (fmin 25.0 (* 2.0 (/ size (meters 1))))))
+           (amount (* (fmax 3.0 (fmin 25.0 (* 2.0 (/ size (meters 1))))) (+ 1.0 *soul-double*))) ;; x2 from the shop
            (flying (max 1 (min 6 (the int (/ amount 3.0)))))
            (value (/ amount (the float flying)))
            (from (new 'stack-no-clear 'vector)))

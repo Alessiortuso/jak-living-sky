@@ -202,6 +202,7 @@
      (set! *soul-eco* 0.0)
      (set! *soul-life* 0.0)
      (set! *brume-radio* 0.0)
+     (set! *soul-double* 0.0)
      (set! (-> this fuel) 0.0)
      (set! (-> this money-total) 0.0)
      (set! (-> this buzzer-total) 0.0)
