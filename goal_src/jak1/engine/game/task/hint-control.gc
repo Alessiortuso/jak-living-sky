@@ -294,6 +294,10 @@
 
 ;; WARN: disable def twice: 139. This may happen when a cond (no else) is nested inside of another conditional, but it should be rare.
 (defun can-hint-be-played? ((arg0 text-id) (arg1 entity) (arg2 string))
+  ;; Jak Living Sky: Keira's radio about the levitator's 45 cells, not once she's told of the 60 (or is about to)
+  (when (and (or (= arg0 (text-id village2-levitator-find-cells)) (and arg2 (string= arg2 "asstvb72")))
+             (or (< 0.0 *brume-radio*) (>= (-> *game-info* fuel) 45.0)))
+    (return #f))
   (let ((v1-0 (not (str-is-playing?))))
     (if (and v1-0 (nonzero? arg0)) (set! v1-0 (not (seen-text? *game-info* arg0))))
     (when v1-0
