@@ -126,7 +126,8 @@
    (vertex              (inline-array nav-vertex))
    (poly-count          int32)
    (poly                (inline-array nav-poly))
-   (route               (inline-array vector4ub)))
+   (route               (inline-array vector4ub))
+   (custom-hacky?       symbol))
   (:methods
    (tri-centroid-world (_type_ nav-poly vector) vector) ;; finds the centroid of the given triangle, in the "world" coordinate system.
    (tri-centroid-local (_type_ nav-poly vector) vector) ;; finds the centroid of the given triangle, in the local nav-mesh coordinate system.

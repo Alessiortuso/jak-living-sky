@@ -1,6 +1,13 @@
 ;;-*-Lisp-*-
 (in-package goal)
 
+;; Jak Living Sky: the drips' end, here: Rock Village's own is unloaded with it while Brume runs
+(defun check-drop-level-brume ((arg0 sparticle-system) (arg1 sparticle-cpuinfo) (arg2 vector))
+  (when (< (-> arg2 y) (-> arg1 user-float))
+    (sp-kill-particle arg0 arg1)
+    (if (< (rand-float-gen) 0.25) (sound-play "water-drop")))
+  (none))
+
 
 
 (def-actor test-actor2 :bounds (0 0 0 50))
@@ -2272,7 +2279,7 @@ nav-enemy-default-event-handler
    (:timer (seconds 4))
    (:flags (bit2 bit14))
    (:userdata 91750.4)
-   (:func 'check-drop-level-sagehut2)
+   (:func 'check-drop-level-brume)
    (:conerot-x (degrees 0) (degrees 120))
    (:conerot-y (degrees -180) (degrees 180))))
 

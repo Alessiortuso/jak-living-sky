@@ -31,6 +31,8 @@
                   (set! a1-0 (car a0-1))))
               #f))))
 
+(define-extern runs-on-jak-spawn (function none))
+
 (defstate target-continue (target)
   :event target-generic-event-handler
   :exit
@@ -273,10 +275,12 @@
              ;; Jak Living Sky: Brume Village's gate
              ((string= (-> arg0 name) "brume-warp")
               (set! (-> s5-6 quad) (-> (entity-by-name "brume-training-part-1") extra trans quad))
-              (set-continue! *game-info* "brume-start")))
+              (set-continue! *game-info* "brume-start")
+              (runs-on-jak-spawn)))
            (go target-warp-in s5-6 (-> arg0 trans))))
         (else (suspend-for (seconds 0.05))))
       (set-continue! *game-info* arg0)
+      (runs-on-jak-spawn)
       (when *auto-continue*
         (let ((s5-8 (next-level (-> arg0 level))))
           (when (and s5-8 (not (null? (-> s5-8 continues))))

@@ -1,5 +1,7 @@
 ;;-*-Lisp-*-
 (in-package goal)
+
+(define-extern runs-on-checkpt (function none))
 (bundles "ENGINE.CGO" "GAME.CGO")
 (require "engine/draw/drawable-ambient-h.gc")
 (require "engine/game/game-save.gc")
@@ -1375,7 +1377,8 @@
          (load-state-want-force-vis (the-as symbol (-> s4-0 lev0)) (the-as symbol (-> s4-0 lev1))))
         ((= (-> s4-0 cmd) (load-boundary-cmd checkpt))
          (format 0 "Setting continue to ~A~%" (-> s4-0 lev0))
-         (set-continue! *game-info* (-> s4-0 lev0))))))
+         (set-continue! *game-info* (-> s4-0 lev0))
+         (runs-on-checkpt)))))
   (label cfg-28)
   (none))
 

@@ -367,6 +367,7 @@
     #f))
 
 (defun recursive-inside-poly ((arg0 nav-mesh) (arg1 nav-node) (arg2 vector) (arg3 float))
+  (when (!= (-> arg0 custom-hacky?) #t) ;; Jak Living Sky: it crashes on hand-made zones (mod base)
   (when (point-inside-rect? arg1 arg2 arg3)
     (cond
       ((zero? (-> arg1 type))
@@ -389,9 +390,8 @@
            (set! s2-1 (&-> s2-1 1))
            (if (= s1-0 3) (set! s2-1 (&-> s2-1 4)))))
        (return -1)))
-    (the-as none 0))
+    (the-as none 0)))
   -1)
-
 (defmethod find-poly-fast ((this nav-mesh) (arg0 vector) (arg1 meters))
   (local-vars (a0-6 symbol) (a2-3 uint128) (a2-4 uint128))
   -1
@@ -903,6 +903,8 @@
         (set! gp-0 #t))
       (when gp-0
         (if pp (format #t "current process is ~A~%" (-> pp name)) (format #t "(no current process).~%"))))
+      (when (zero? (-> this custom-hacky?))
+        (set! (-> this custom-hacky?) #f))
     0
     (none)))
 

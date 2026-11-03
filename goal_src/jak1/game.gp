@@ -1664,6 +1664,14 @@
 ;; Jak Living Sky: Brume Village, by Cuttlefishthesage (github.com/Cuttlefishthesage/BrumeVillage)
 (build-custom-level "brume")
 (custom-level-cgo "BRU.DGO" "brume/brume.gd")
+(build-custom-level "abandon")
+(custom-level-cgo "ABA.DGO" "abandon/abandon.gd")
+(build-custom-level "mount")
+(custom-level-cgo "MOU.DGO" "mount/mount.gd")
+(build-custom-level "preundg")
+(custom-level-cgo "PRE.DGO" "preundg/preundg.gd")
+(build-actor "gravityswitch" :gen-mesh #t)
+(build-actor "ambushdoor" :gen-mesh #t)
 (build-actor "test-actor2" :gen-mesh #t)
 (build-actor "brumesteamcap" :gen-mesh #t)
 
@@ -2129,9 +2137,26 @@
 (goal-src "pc/debug/default-menu-pc.gc" "anim-tester-x" "part-tester" "entity-debug")
 (goal-src "pc/debug/pc-debug-common.gc" "pckernel-impl" "entity-h" "game-info-h" "level-h" "settings-h" "gsound-h" "target-util")
 (goal-src "pc/debug/pc-debug-methods.gc" "pc-debug-common")
+(goal-src-sequence
+ ;; prefix
+ "engine/"
+ :deps ("$OUT/obj/battlecontroller.o" "$OUT/obj/snow-bunny.o" "$OUT/obj/baby-spider.o" "$OUT/obj/sage-village3.o" "$OUT/obj/sage-finalboss.o" "$OUT/obj/assistant-citadel.o" "$OUT/obj/assistant-lavatube.o" "$OUT/obj/robocave-part.o" "$OUT/obj/driller-lurker.o" "$OUT/obj/training-part.o" "$OUT/obj/rolling-race-ring.o" "$OUT/obj/beach-part.o" "$OUT/obj/sculptor.o" "$OUT/obj/sunken-fish.o" "$OUT/obj/billy.o" "$OUT/obj/sidekick-human.o" "$OUT/obj/flying-lurker.o" "$OUT/obj/target-racer-h.o" "$OUT/obj/firecanyon-obs.o" "$OUT/obj/target-flut.o" "$OUT/obj/hud-classes-pc.o" "$OUT/obj/collide-reaction-racer.o" "$OUT/obj/plant-boss.o" "$OUT/obj/beach-obs.o" "$OUT/obj/sunken-elevator.o" "$OUT/obj/jungle-part.o" "$OUT/obj/sequence-a-village1.o" "$OUT/obj/ticky.o")
+ "mods/mod-settings.gc"
+ "mods/mod-common-functions.gc"
+ "mods/mod-custom-code.gc"
+ "mods/mod-debug.gc"
+)
+
 (goal-src "levels/test-zone/test-zone-obs.gc" "process-drawable")
 (goal-src "engine/common-obs/linear-plat.gc" "process-drawable")
 (goal-src "levels/brume/brume-obs.gc" "process-drawable" "linear-plat")
+(goal-src "levels/abandoned/abandoned-obs.gc" "process-drawable")
+(goal-src "levels/abandoned/pathing-minecart.gc" "process-drawable")
+(goal-src "levels/mount/mount-obs.gc" "process-drawable")
+(goal-src "levels/preundg/preundg-obs.gc" "process-drawable")
+(goal-src "levels/common/blocking-plane-b.gc" "process-drawable")
+(goal-src "engine/mods/input-display.gc")
+(goal-src "engine/mods/orb-placer.gc")
 
 (group-list "all-code"
   `(,@(reverse *all-gc*))

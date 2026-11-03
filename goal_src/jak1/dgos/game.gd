@@ -203,6 +203,12 @@
   "speedruns.o" ;; added
   "pckernel-common.o" ;; added
   "pckernel.o" ;; added
+  "input-display.o" ;; mod-base-change added
+  "mod-settings.o" ;; added mod-base-change
+  "mod-common-functions.o" ;; added
+  "orb-placer.o" ;; added
+  "mod-custom-code.o" ;; added
+  "mod-debug.o" ;; added
   "mood-tables.o"
   "mood.o"
   "weather-part.o"

@@ -808,6 +808,48 @@
   (brume-findcell-1 #x4623)
   (brume-restore-power #x4624)
 
+  ;;ABANDON;;
+
+  (abandon #x4625)
+  (abandon-buzzer #x4626)
+  (abandon-findcell-1 #x4627)
+  (abandon-findcell-2 #x4628)
+  (abandon-findcell-3 #x4629)
+  (abandon-drillers #x4630)
+  (abandon-rock #x4631)
+
+  ;;MOUNT;;
+
+  (mount #x4632)
+  (mount-buzzer #x4633)
+  (mount-findcell-1 #x4634)
+  (mount-findcell-waterfall #x4635)
+  (mount-zoomer #x4636)
+  (mount-towertop #x4637)
+  (mount-ringrace #x4638)
+
+  ;;PREUNDG;;
+
+  (preundg #x4639)
+  (preundg-buzzer #x4640)
+  (preundg-spireclimb #x4641)
+  (preundg-battlearena #x4642)
+  (preundg-fluthalls #x4643)
+  (preundg-switchroom #x4644)
+  (preundg-slideclimb #x4645)
+
+  ;; WELCOME SCREEN ;;
+
+  (welcome-brume #x4646)
+  ;; mod text mod-base-change
+  (pad-triangle #x2000)
+  (pad-circle #x2001)
+  (pad-x #x2002)
+  (pad-square #x2003)
+
+  (save-and-load-game #x3000)
+  ;; GAME-TEXT-ID ENUM ENDS
+
 )
 
 ;; DECOMP BEGINS
