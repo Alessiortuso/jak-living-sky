@@ -808,6 +808,7 @@
   (brume-findcell-1 #x4623)
   (brume-restore-power #x4624)
   (brume-radio #x4649)
+  (brume-radio-daxter #x464a)
 
   ;;ABANDON;;
 
