@@ -932,3 +932,67 @@
   :code
     (behavior ()
       (go-virtual projectile-die)))
+
+;; Jak Living Sky: Dark Jak's shots of dark eco (his punch throws one ahead, his spin a ring of them): as
+;; yellow eco's, each seeking the nearest enemy its way, far off too; purple, a bright core in a dark trail
+(defpartgroup group-dark-jak-shot
+  :id 725
+  :bounds (static-bspherem 0 0 0 3)
+  :parts ((sp-item 3011) (sp-item 3012)))
+
+(defpart 3011
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:scale-x (meters 0.9) (meters 0.2))
+   (:scale-y :copy scale-x)
+   (:r 200.0)
+   (:g 120.0)
+   (:b 255.0)
+   (:a 128.0)
+   (:fade-a -6.4)
+   (:timer (seconds 0.05))
+   (:flags (bit2 bit3))))
+
+(defpart 3012
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 2.0)
+   (:x (meters -0.2) (meters 0.4))
+   (:y (meters -0.2) (meters 0.4))
+   (:z (meters -0.2) (meters 0.4))
+   (:scale-x (meters 0.4) (meters 0.4))
+   (:scale-y :copy scale-x)
+   (:r 100.0 40.0)
+   (:g 10.0 20.0)
+   (:b 190.0 60.0)
+   (:a 100.0 28.0)
+   (:fade-a -1.4)
+   (:timer (seconds 0.4) (seconds 0.2))
+   (:flags (bit2 bit3))))
+
+(deftype projectile-dark-jak (projectile-yellow) ())
+
+(defmethod projectile-method-27 ((this projectile-dark-jak))
+  (let ((t9-0 (method-of-type projectile-yellow projectile-method-27))) (t9-0 this))
+  ;; (its look: dark eco, not yellow)
+  (set! (-> this part) (create-launch-control group-dark-jak-shot this))
+  (none))
+
+;; a shot from Jak (from: where, way: its direction, flat), as yellow eco's from his hands
+(defun dark-jak-shot ((from vector) (way vector))
+  (when *target*
+    (let ((vel (vector-normalize-copy! (new 'stack-no-clear 'vector) way (-> *TARGET-bank* yellow-projectile-speed)))
+          (p (get-process *default-dead-pool* projectile-dark-jak #x4000)))
+      (when p
+        ((method-of-type projectile-dark-jak activate) (the-as projectile-dark-jak p) *target* 'projectile-dark-jak (the-as pointer #x70004000))
+        ((the-as (function object object object object object object object none) run-function-in-process)
+         p
+         projectile-init-by-other
+         (-> *target* entity)
+         from
+         vel
+         296 ;; (40 as yellow eco's, and 256: no yellow flash at the hand)
+         #f))))
+  (none))
+

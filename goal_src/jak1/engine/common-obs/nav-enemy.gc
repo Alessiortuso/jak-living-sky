@@ -1426,7 +1426,9 @@ nav-enemy-default-event-handler
       (set! (-> v y) 0.0)
       (vector-normalize! v (* (meters 30) (-> this dark-push)))
       (set! (-> v y) (meters -2))
-      (fill-cache-integrate-and-collide! (-> this collide-info) v (-> this collide-info root-prim collide-with)))
+      (let ((x0 (-> this root trans x)) (z0 (-> this root trans z)))
+        (fill-cache-integrate-and-collide! (-> this collide-info) v (-> this collide-info root-prim collide-with))
+        (format 0 "DARKPUSH ~A ~M ~M -> ~M ~M~%" (-> this type) x0 z0 (-> this root trans x) (-> this root trans z))))
     (set! (-> this dark-push) (- (-> this dark-push) 0.07)))
   (none))
 

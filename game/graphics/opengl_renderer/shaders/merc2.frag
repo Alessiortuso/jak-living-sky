@@ -80,8 +80,8 @@ void main() {
   if (enh_dark > 1.5 && gfx_hack_no_tex == 0) {
     float l = clamp(dot(color.rgb, vec3(0.3, 0.59, 0.11)) * 1.35, 0.0, 1.0);
     if (enh_mat == MAT_EYE) {
-      float e = dot(T0.rgb, vec3(0.3, 0.59, 0.11));
-      color.rgb = vec3(0.72, 0.22, 1.0) * (0.9 + 0.6 * e);
+      // (all purple and bright, no pupils: the glow's in front of them)
+      color.rgb = vec3(0.86, 0.42, 1.0);
     } else if (enh_mat == MAT_SKIN) {
       vec3 shade = mix(vec3(0.24, 0.27, 0.46), vec3(0.62, 0.66, 0.84), smoothstep(0.0, 0.55, l));
       color.rgb = mix(shade, vec3(0.93, 0.95, 1.0), smoothstep(0.5, 1.0, l));
