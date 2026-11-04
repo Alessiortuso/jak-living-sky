@@ -1795,19 +1795,38 @@
       (process-spawn darkjak-part :init darkjak-part-init (+ 52 (* 2 i)) (+ 53 (* 2 i)) :to *target*)))
   (none))
 
-;; his eyes' glow (small: his eyes are)
+;; his eyes' glow
 (defpart 3007
   :init-specs
   ((:texture (hotdot effects))
    (:num 1.0)
-   (:scale-x (meters 0.2) (meters 0.05))
+   (:scale-x (meters 0.42) (meters 0.08))
    (:scale-y :copy scale-x)
-   (:r 170.0)
-   (:g 40.0)
+   (:r 190.0)
+   (:g 60.0)
    (:b 255.0)
-   (:a 100.0 20.0)
+   (:a 128.0)
    (:fade-a -3.2)
    (:timer (seconds 0.05))
+   (:flags (bit2 bit3))))
+
+;; dark eco flaring from his hands and feet as he attacks
+(defpart 3008
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 2.0)
+   (:x (meters -0.15) (meters 0.3))
+   (:y (meters -0.15) (meters 0.3))
+   (:z (meters -0.15) (meters 0.3))
+   (:scale-x (meters 0.35) (meters 0.35))
+   (:scale-y :copy scale-x)
+   (:r 120.0 50.0)
+   (:g 15.0 25.0)
+   (:b 210.0 45.0)
+   (:a 110.0 18.0)
+   (:vel-y (meters 0.01) (meters 0.02))
+   (:fade-a -1.6)
+   (:timer (seconds 0.35) (seconds 0.2))
    (:flags (bit2 bit3))))
 
 (define *dark-jak-saved* (new 'static 'array float 8))
@@ -1868,6 +1887,17 @@
           (set-vector! (-> *target* draw color-mult) 1.0 1.0 1.0 1.0)
           (set-vector! (-> *target* draw color-emissive) 0.0 0.0 0.0 8.0)
           (launch-particles (-> *part-id-table* 3002) (-> *target* control trans))
+          ;; attacking: dark eco flaring from his hands and feet (the joints sk_lhand, sk_rhand, the ankles)
+          (when (logtest? (-> *target* state-flags) (state-flags dangerous))
+            (let ((at (new 'stack-no-clear 'vector)))
+              (vector<-cspace! at (-> *target* node-list data 17))
+              (launch-particles (-> *part-id-table* 3008) at)
+              (vector<-cspace! at (-> *target* node-list data 23))
+              (launch-particles (-> *part-id-table* 3008) at)
+              (vector<-cspace! at (-> *target* node-list data 29))
+              (launch-particles (-> *part-id-table* 3008) at)
+              (vector<-cspace! at (-> *target* node-list data 33))
+              (launch-particles (-> *part-id-table* 3008) at)))
           ;; his eyes' glow
           (let ((eye (new 'stack-no-clear 'vector))
                 (out (new 'stack-no-clear 'vector)))
