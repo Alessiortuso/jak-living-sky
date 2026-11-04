@@ -1695,6 +1695,29 @@
     (else (pc-enhanced-denied)))
   (none))
 
+;; Jak Living Sky: the game being played, not its title or intro (the Naughty Dog logo plays in the title level,
+;; Jak there too)
+(defun soul-in-play? ()
+  (and *target* (= *master-mode* 'game) (not (movie?)) (not (level-get *level* 'title))))
+
+;; Jak Living Sky: Jak free to turn into Dark Jak: in play, no cutscene, menu or talk, standing or walking on the
+;; ground (as he must be to take an eco powerup), not on the zoomer, the Flut Flut, a tube or a pole, not in
+;; water, not hurt, held, dying, looking through binoculars
+(defun dark-jak-can-turn? ()
+  (and (soul-in-play?)
+       (not *progress-process*)
+       (time-elapsed? (-> *game-info* letterbox-time) (seconds 0.1))
+       (time-elapsed? (-> *game-info* blackout-time) (seconds 0.1))
+       (logtest? (-> *target* control status) (cshape-moving-flags onsurf))
+       (not (logtest? (-> *target* state-flags)
+                      (state-flags dangerous being-attacked grabbed first-person-mode dying)))
+       (not (logtest? (-> *target* water flag) (water-flag touch-water swimming under-water)))
+       (not (logtest? (-> *target* control root-prim prim-core action)
+                      (collide-action edgegrab-cam swingpole-active racer snowball tube flut)))
+       (let ((s (-> *target* next-state name)))
+         (or (= s 'target-stance) (= s 'target-walk) (= s 'target-stance-look-around)
+             (= s 'target-turn-around) (= s 'target-duck-stance) (= s 'target-duck-walk)))))
+
 ;; Jak Living Sky: Dark Jak. With the dark eco ring full, L1 and R1 together turn Jak into him for 10 s (15, 20
 ;; bought in the shop: dark-jak-duration), the
 ;; ring draining meanwhile: pale and ashen, black eyes (merc2.frag: 8 in his color-emissive's w), dark eco
@@ -1988,15 +2011,11 @@
     ((not *dark-jak*)
      ;; turning: the ring full, L1 and R1 together, Jak free and in play
      ;; (on the ground: the turning plays out, target2.gc, and at its height dark-jak-begin)
-     (when (and *target*
-                (>= *soul-dark* 100.0)
-                (= *master-mode* 'game)
-                (not (movie?))
+     (when (and (>= *soul-dark* 100.0)
                 (cpad-hold? 0 l1)
                 (cpad-hold? 0 r1)
                 (or (cpad-pressed? 0 l1) (cpad-pressed? 0 r1))
-                (logtest? (-> *target* control status) (cshape-moving-flags onsurf))
-                (not (logtest? (-> *target* state-flags) (state-flags grabbed dying))))
+                (dark-jak-can-turn?))
        (send-event *target* 'dark-transform)))
     (else
      (let ((spent (/ (the float (- (current-time) *dark-jak-start*)) (the float (dark-jak-duration)))))
