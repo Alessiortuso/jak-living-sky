@@ -774,6 +774,10 @@
               (not (logtest? (-> self control status) (cshape-moving-flags t-act on-water)))
               (logtest? (-> self control status) (cshape-moving-flags onground)))
        (set! (-> self control last-known-safe-ground quad) (-> self control trans quad)))
+     (if (and (>= (-> self control coverage) 1.0)
+              (not (logtest? (-> self control status) (cshape-moving-flags on-water)))
+              (logtest? (-> self control status) (cshape-moving-flags onground)))
+       (set! (-> *soul-last-ground* quad) (-> self control trans quad)))
      ((-> self control current-surface touch-hook)))
     (else
      (let ((v1-25 (-> self control trans)))

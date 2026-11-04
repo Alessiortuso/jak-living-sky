@@ -715,23 +715,27 @@ void enhanced_remade_switch(const std::vector<LevelData*>& levels) {
 
 namespace {
 std::mutex g_swap_mutex;
-std::map<std::string, bool> g_swap_want;   // by the texture's name: its picture in place, or not
+std::map<std::string, std::string> g_swap_want;  // by the texture's name: the picture in its place ("": none)
 bool g_swap_asked = false;
-std::map<GLuint, std::string> g_swap_shown;  // the textures showing their picture now
+std::map<GLuint, std::string> g_swap_shown;  // the textures showing a picture now: which
 }  // namespace
 
-void enhanced_texture_swap_request(const std::string& name, bool on) {
+void enhanced_texture_swap_file(const std::string& name, const std::string& file) {
   std::lock_guard<std::mutex> lock(g_swap_mutex);
   auto it = g_swap_want.find(name);
-  if (it == g_swap_want.end() || it->second != on) {
-    g_swap_want[name] = on;
+  if (it == g_swap_want.end() || it->second != file) {
+    g_swap_want[name] = file;
     g_swap_asked = true;
   }
 }
 
+void enhanced_texture_swap_request(const std::string& name, bool on) {
+  enhanced_texture_swap_file(name, on ? name : std::string());
+}
+
 void enhanced_texture_swap(const std::vector<LevelData*>& levels) {
   static int frames = 0;
-  std::map<std::string, bool> want;
+  std::map<std::string, std::string> want;
   {
     std::lock_guard<std::mutex> lock(g_swap_mutex);
     if (g_swap_want.empty()) {
@@ -760,26 +764,30 @@ void enhanced_texture_swap(const std::vector<LevelData*>& levels) {
       }
       const GLuint gl = lev->textures[i];
       const auto shown = g_swap_shown.find(gl);
-      const bool is_shown = shown != g_swap_shown.end() && shown->second == tex.debug_name;
-      if (is_shown == it->second) {
+      const std::string now = shown != g_swap_shown.end() ? shown->second : std::string();
+      if (now == it->second) {
         continue;
       }
       int w = tex.w, h = tex.h;
-      if (it->second) {
-        if (!load_remade(dir / (tex.debug_name + ".png"), plain_alpha_of(tex), px, w, h)) {
-          lg::warn("[enhanced] texture swap {}: no picture in {}", tex.debug_name, dir.string());
+      const bool picture = !it->second.empty();
+      if (picture) {
+        if (!load_remade(dir / (it->second + ".png"), plain_alpha_of(tex), px, w, h)) {
+          lg::warn("[enhanced] texture swap {}: no {}.png in {}", tex.debug_name, it->second, dir.string());
+          g_swap_shown[gl] = it->second;  // (not tried again every frame)
           continue;
         }
-        g_swap_shown[gl] = tex.debug_name;
+        g_swap_shown[gl] = it->second;
       } else {
         g_swap_shown.erase(gl);
       }
       glBindTexture(GL_TEXTURE_2D, gl);
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV,
-                   it->second ? px.data() : tex.data.data());
+                   picture ? px.data() : tex.data.data());
       glGenerateMipmap(GL_TEXTURE_2D);
-      lg::info("[enhanced] texture swap {} ({}): {}", tex.debug_name, tex.debug_tpage_name,
-               it->second ? "the picture" : "the game's");
+      if (picture ? it->second == tex.debug_name : true) {
+        lg::info("[enhanced] texture swap {} ({}): {}", tex.debug_name, tex.debug_tpage_name,
+                 picture ? it->second : std::string("the game's"));
+      }
     }
   }
   glBindTexture(GL_TEXTURE_2D, 0);

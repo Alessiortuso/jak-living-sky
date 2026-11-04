@@ -619,6 +619,7 @@
 (define-extern pc-enhanced-fov (function int))
 (define-extern pc-enhanced-denied (function none))
 (define-extern pc-enhanced-texture-swap (function string symbol none))
+(define-extern pc-enhanced-texture-file (function string string none))
 (define-extern play-main-music (function string int none))
 (define-extern pause-main-music (function none))
 (define-extern stop-main-music (function none))

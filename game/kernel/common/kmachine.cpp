@@ -1640,6 +1640,11 @@ void enhanced_texture_swap_request(const std::string& name, bool on);
 void pc_enhanced_texture_swap(u32 name, u32 on) {
   enhanced_texture_swap_request(Ptr<String>(name).c()->data(), symbol_to_bool(on));
 }
+// ... one of several pictures for it: texture_swap/<file>.png
+void enhanced_texture_swap_file(const std::string& name, const std::string& file);
+void pc_enhanced_texture_file(u32 name, u32 file) {
+  enhanced_texture_swap_file(Ptr<String>(name).c()->data(), Ptr<String>(file).c()->data());
+}
 
 // Jak Living Sky: the harder rules on (the Enhanced menu)
 u64 pc_enhanced_hard_rules() {
@@ -1975,6 +1980,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-enhanced-fov", (void*)pc_enhanced_fov);
   make_func_symbol_func("pc-enhanced-denied", (void*)pc_enhanced_denied);
   make_func_symbol_func("pc-enhanced-texture-swap", (void*)pc_enhanced_texture_swap);
+  make_func_symbol_func("pc-enhanced-texture-file", (void*)pc_enhanced_texture_file);
   make_func_symbol_func("play-sound-file", (void*)playMP3);
   make_func_symbol_func("stop-sound-file", (void*)stopMP3);
   make_func_symbol_func("stop-all-sounds", (void*)stopAllSounds);

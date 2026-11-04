@@ -213,8 +213,18 @@
 (define *brume-radio* 0.0)
 ;; Jak Living Sky: bought in the shop: twice the white eco from enemies (0 no, 1 yes)
 (define *soul-double* 0.0)
+;; Jak Living Sky: the last ground Jak stood on, firm and dry (on what moves too: the game's own safe ground
+;; leaves that out, and so lagged behind, far, where much of the ground moves or is ice)
+(define *soul-last-ground* (new 'global 'vector))
+;; Jak Living Sky: the white eco's column now: each one's number (a new one at each death: an older one closes)
+(define *soul-vent-gen* 0)
+;; Jak Living Sky: the white eco left behind can be taken back (Jak's been away from it since)
+(define *soul-pile-armed* #f)
 ;; Jak Living Sky: bought in the shop: how much longer the eco lasts (0 to 3 steps)
 (define *soul-eco-time* 0.0)
+;; Jak Living Sky: the dark eco Jak has taken in from corrupted enemies, kept for good (0 to 100: full, he
+;; can turn into Dark Jak)
+(define *soul-dark* 0.0)
 (define *brume-radio-time* 0)
 (define *soul-shop-cursor* 0)
 (define *soul-enemy-speed* 1.25)

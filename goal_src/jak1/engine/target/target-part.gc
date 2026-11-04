@@ -143,6 +143,31 @@
   0
   (none))
 
+;; Jak Living Sky: dark eco flying to Jak, from a corrupted enemy: as the white, purple
+(defpartgroup group-soul-dark-wisp
+  :id 721
+  :duration (seconds 0.017)
+  :flags (use-local-clock)
+  :bounds (static-bspherem 0 0 0 4)
+  :parts ((sp-item 3001)))
+
+(defpart 3001
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 2.0)
+   (:x (meters -0.1) (meters 0.2))
+   (:y (meters -0.1) (meters 0.2))
+   (:z (meters -0.1) (meters 0.2))
+   (:scale-x (meters 0.55) (meters 0.3))
+   (:scale-y :copy scale-x)
+   (:r 150.0)
+   (:g 30.0)
+   (:b 230.0)
+   (:a 128.0)
+   (:fade-a -5.0)
+   (:timer (seconds 0.4))
+   (:flags (bit2 bit3))))
+
 ;; Jak Living Sky: white eco flying to Jak: a bright spot with a short trail
 (defpartgroup group-soul-wisp
   :id 710

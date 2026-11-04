@@ -36,6 +36,9 @@ out vec3 vtx_key_color;
 out vec3 enh_ambient;  // the ambient light, for the shadow side's rim
 out vec3 enh_pos;  // world offset from the camera (for the face normal)
 uniform mat3 enh_world_to_view;
+// Jak Living Sky: corrupted by dark eco (the game marks it with 4 in its color-emissive's w: the ambient
+// light's w then over 3)
+out float enh_dark;
 
 struct MercMatrixData {
   mat4 X;
@@ -84,7 +87,10 @@ void main() {
   vec3 light_intensity = light_dir0_fade.xyz * rotated_nrm.x + light_dir1_fade_en.xyz * rotated_nrm.y + light_dir2 * rotated_nrm.z;
   light_intensity = max(light_intensity, vec3(0, 0, 0));
 
-  vec4 light_color = light_ambient
+  float dark = light_ambient.w > 3.0 ? 1.0 : 0.0;
+  vec4 ambient = light_ambient - vec4(0.0, 0.0, 0.0, 4.0 * dark);
+  enh_dark = dark;
+  vec4 light_color = ambient
                    + light_intensity.x * light_col0
                    + light_intensity.y * light_col1
                    + light_intensity.z * light_col2;
@@ -112,7 +118,7 @@ void main() {
   // the light matrix holds the lights' directions in its columns' components
   vtx_key = vec3(light_dir0_fade.x, light_dir1_fade_en.x, light_dir2.x);
   vtx_key_color = light_col0.rgb;
-  enh_ambient = light_ambient.rgb;
+  enh_ambient = ambient.rgb;
   // toward the camera, in the view space the normals and lights are in (vtx_pos is the view
   // position negated)
   vtx_view = normalize(vtx_pos.xyz);

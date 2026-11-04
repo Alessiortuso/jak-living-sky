@@ -81,6 +81,8 @@ void enhanced_remade_switch(const std::vector<LevelData*>& levels);
 // Jak Living Sky: a texture shown as custom_assets/<game>/texture_swap/<name>.png from now on, or as the
 // game's own again (asked from the game, any thread; done by enhanced_texture_swap, in the frame)
 void enhanced_texture_swap_request(const std::string& name, bool on);
+// ... or as texture_swap/<file>.png, one of several pictures for it ("": the game's own)
+void enhanced_texture_swap_file(const std::string& name, const std::string& file);
 void enhanced_texture_swap(const std::vector<LevelData*>& levels);
 
 // a file opened with the program the system has for it (a PNG: the user's paint program)

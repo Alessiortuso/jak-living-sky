@@ -26,6 +26,8 @@ class Loader {
   void set_want_levels(const std::vector<std::string>& levels);
   void set_active_levels(const std::vector<std::string>& levels);
   std::vector<LevelData*> get_in_use_levels();
+  // Jak Living Sky: the common level (the HUD's textures and the rest always loaded)
+  LevelData* get_common_level() { return &m_common_level; }
   void draw_debug_window();
   void debug_print_loaded_levels();
   void request_reload_all() { m_want_reload = true; }

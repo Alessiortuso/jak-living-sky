@@ -32,6 +32,7 @@ uniform float enh_char;     // Enhanced: strength of the relief and materials (0
 uniform int enh_mat;        // Enhanced: the part's material (EnhancedMaterials.h; 0 = as without it)
 uniform float enh_eye_lid;  // Enhanced: an eye's eyelid reaches down to this v of its texture (0 = open)
 uniform int enh_relief;     // Enhanced: tex_relief is 0 none, 1 a normal map, 2 a height map
+in float enh_dark;          // Jak Living Sky: corrupted by dark eco (merc2.vert)
 
 const int MAT_SKIN = 1;
 const int MAT_HAIR = 2;
@@ -68,6 +69,18 @@ void main() {
       color.a = vtx_color.a * 2;
     } else {
       color.a = 1;
+    }
+  }
+
+  // Jak Living Sky: corrupted by dark eco: its eyes purple and glowing, the rest pale and ashen (its shading
+  // kept), as Dark Jak
+  if (enh_dark > 0.5 && gfx_hack_no_tex == 0) {
+    if (enh_mat == MAT_EYE) {
+      float l = dot(T0.rgb, vec3(0.3, 0.59, 0.11));
+      color.rgb = vec3(0.72, 0.22, 1.0) * (0.85 + 0.7 * l);
+    } else {
+      float l = dot(color.rgb, vec3(0.3, 0.59, 0.11));
+      color.rgb = mix(color.rgb, vec3(l) * vec3(0.98, 0.95, 1.05) * 1.3 + 0.05, 0.8);
     }
   }
 

@@ -1124,8 +1124,13 @@ void OpenGLRenderer::render(DmaFollower dma, const RenderOptions& settings) {
     m_render_state.loader->draw_debug_window();
   }
 
-  // Jak Living Sky: the textures the game asked swapped (every frame, the post pass on or off)
-  enhanced_texture_swap(m_render_state.loader->get_in_use_levels());
+  // Jak Living Sky: the textures the game asked swapped (every frame, the post pass on or off; the common
+  // level's too: the HUD's)
+  {
+    auto levels = m_render_state.loader->get_in_use_levels();
+    levels.push_back(m_render_state.loader->get_common_level());
+    enhanced_texture_swap(levels);
+  }
 
   if (g_enhanced_menu.start_menu) {
     // (drawn by the display every frame: draw_start_menu)

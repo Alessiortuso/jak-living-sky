@@ -146,7 +146,13 @@
   (when (and *soul-on* *target* (= (-> this mode) 'play))
     (set! (-> *soul-pile* w) 0.0)
     (when (< 0.0 *soul-eco*)
+      ;; where he last stood (the game's safe ground, unless it's far behind: then the last ground at all)
       (set! (-> *soul-pile* quad) (-> *target* control last-known-safe-ground quad))
+      (if (< (meters 12) (vector-vector-distance *soul-last-ground* (-> *target* control last-known-safe-ground)))
+        (set! (-> *soul-pile* quad) (-> *soul-last-ground* quad)))
+      ;; the column where the white eco was before closes: a new one opens at the new spot
+      (+! *soul-vent-gen* 1)
+      (set! *soul-pile-armed* #f)
       (set! (-> *soul-pile* w) *soul-eco*)
       (set! *soul-eco* 0.0))))
 
@@ -204,6 +210,7 @@
      (set! *brume-radio* 0.0)
      (set! *soul-double* 0.0)
      (set! *soul-eco-time* 0.0)
+     (set! *soul-dark* 0.0)
      (set! (-> this fuel) 0.0)
      (set! (-> this money-total) 0.0)
      (set! (-> this buzzer-total) 0.0)

@@ -1484,6 +1484,23 @@
    (:flags (bit2 bit9))
    (:func 'part-hud-eco-timer-03-func)))
 
+;; Jak Living Sky: the dark eco Jak has taken in (*soul-dark*, for good) fills the eco meter's outer ring: the
+;; meter's picture is one of custom_assets/jak1/texture_swap/hud-ecometer-0..21.png (soul-dark-meter-update)
+
+(define *soul-dark-picture* -1)
+(define *soul-dark-picture-name* (new 'global 'string 32 (the-as string #f)))
+
+;; the picture for the dark eco now: 0 to 20 by twentieths, full pulsing between 20 and 21 (brighter)
+(defun soul-dark-meter-update ()
+  (let ((pic (if (>= *soul-dark* 100.0)
+               (if (zero? (logand (/ (the int (-> *display* integral-frame-counter)) 20) 1)) 20 21)
+               (min 19 (the int (* 0.2 *soul-dark*))))))
+    (when (!= pic *soul-dark-picture*)
+      (set! *soul-dark-picture* pic)
+      (format (clear *soul-dark-picture-name*) "hud-ecometer-~D" pic)
+      (pc-enhanced-texture-file "hud-ecometer" *soul-dark-picture-name*)))
+  (none))
+
 (deftype hud-power (hud)
   ((scale-timer   float)
    (scale-backing float)
@@ -1579,7 +1596,8 @@
   (none))
 
 (defun part-hud-eco-timer-func ((arg0 sparticle-system) (arg1 sparticle-cpuinfo) (arg2 matrix))
-  (let ((f0-0 (-> *hud-parts* power 0 scale-timer))) (set! (-> arg2 vector 0 w) f0-0) (set! (-> arg2 vector 1 w) f0-0))
+  ;; Jak Living Sky: its picture holds the dark eco's ring round it too: drawn bigger, the frame as big as ever
+  (let ((f0-0 (/ (-> *hud-parts* power 0 scale-timer) 0.72))) (set! (-> arg2 vector 0 w) f0-0) (set! (-> arg2 vector 1 w) f0-0))
   0
   (none))
 
