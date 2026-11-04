@@ -41,13 +41,17 @@ def to_joint(V,Nm,joint):
     M=IB[joint]; Vh=np.c_[V,np.ones(len(V))]@M.T; Nr=Nm@M[:3,:3].T; Nr/=np.linalg.norm(Nr,axis=1)[:,None]
     return Vh[:,:3].astype(np.float32),Nr.astype(np.float32)
 
-def write_glb(path, parts, tex_png):
+def write_glb(path, parts, tex_png, tex_rgb):
     # parts: list of (V,N,UV,I)
     V=np.concatenate([p[0] for p in parts]); Nm=np.concatenate([p[1] for p in parts]); UV=np.concatenate([p[2] for p in parts])
     I=[]; o=0
     for p in parts: I.append(p[3]+o); o+=len(p[0])
     I=np.concatenate(I).astype(np.uint32)
-    blobs=[V.tobytes(),Nm.tobytes(),UV.tobytes(),I.tobytes(),tex_png]
+    # (the colours in the vertices too, from the picture: its texture doesn't reach the game, white without them)
+    h_,w_=tex_rgb.shape[:2]
+    C=np.ones((len(V),4),np.float32)
+    C[:,:3]=tex_rgb[np.clip((UV[:,1]*(h_-1)).astype(int),0,h_-1),np.clip((UV[:,0]*(w_-1)).astype(int),0,w_-1)]/255.0*0.5  # (merc doubles them)
+    blobs=[V.tobytes(),Nm.tobytes(),UV.tobytes(),I.tobytes(),tex_png,C.tobytes()]
     views=[];data=b''
     for k,bl_ in enumerate(blobs):
         while len(data)%4: data+=b'\0'
@@ -58,11 +62,12 @@ def write_glb(path, parts, tex_png):
     accs=[{'bufferView':0,'componentType':5126,'count':len(V),'type':'VEC3','min':V.min(0).tolist(),'max':V.max(0).tolist()},
           {'bufferView':1,'componentType':5126,'count':len(V),'type':'VEC3'},
           {'bufferView':2,'componentType':5126,'count':len(V),'type':'VEC2'},
-          {'bufferView':3,'componentType':5125,'count':len(I),'type':'SCALAR'}]
+          {'bufferView':3,'componentType':5125,'count':len(I),'type':'SCALAR'},
+          {'bufferView':5,'componentType':5126,'count':len(V),'type':'VEC4'}]
     import os; name=os.path.basename(path)[:-4]
     g={'asset':{'version':'2.0'},'scene':0,'scenes':[{'nodes':[0]}],
        'nodes':[{'name':name,'mesh':0}],
-       'meshes':[{'name':name,'primitives':[{'attributes':{'POSITION':0,'NORMAL':1,'TEXCOORD_0':2},'indices':3,'material':0}]}],
+       'meshes':[{'name':name,'primitives':[{'attributes':{'POSITION':0,'NORMAL':1,'TEXCOORD_0':2,'COLOR_0':4},'indices':3,'material':0}]}],
        'materials':[{'name':name+'-tex','pbrMetallicRoughness':{'baseColorTexture':{'index':0},'metallicFactor':0.0,'roughnessFactor':0.6}}],
        'textures':[{'source':0,'sampler':0}],'samplers':[{'magFilter':9729,'minFilter':9987,'wrapS':10497,'wrapT':33071}],
        'images':[{'bufferView':4,'mimeType':'image/png','name':name+'-tex'}],
@@ -84,14 +89,16 @@ for y in range(H):
     c=base*(0.75+0.35*ring)
     t[y,:]=c
 noise=np.random.default_rng(1).random((H,W,1))*14
-horn_png=png(Image.fromarray(np.clip(t+noise,0,255).astype(np.uint8)))
+horn_rgb=np.clip(t+noise,0,255).astype(np.uint8)
+horn_png=png(Image.fromarray(horn_rgb))
 # --- claw texture: black, a glossy streak
 t=np.zeros((64,32,3))
 for y in range(64):
     for x in range(32):
         s=math.exp(-((x/31-0.3)/0.12)**2)
         t[y,x]=np.array([14,12,18])+np.array([90,88,100])*s*(0.4+0.6*y/63)
-claw_png=png(Image.fromarray(np.clip(t,0,255).astype(np.uint8)))
+claw_rgb=np.clip(t,0,255).astype(np.uint8)
+claw_png=png(Image.fromarray(claw_rgb))
 
 # horns: on top of the head, up and curving back, a little outward (model space, then into neckB's space)
 parts=[]
@@ -106,9 +113,9 @@ for sx in (1,-1):
     if sx<0:  # (winding kept: the tube's own)
         pass
     parts.append((V,Nm,UV,I))
-write_glb(OUT+'/darkjak-horns.glb',parts,horn_png)
+write_glb(OUT+'/darkjak-horns.glb',parts,horn_png,horn_rgb)
 # a claw along +z (its own space), curving down (-y), 0.11 long
 path=np.array([[0,-0.012*(k**2),0.11*k] for k in np.linspace(0,1,14)])
 k=np.linspace(0,1,14); radii=0.019*(1-k)**0.9+0.0015
-write_glb(OUT+'/darkjak-claw.glb',[tube(path,radii,sides=10)],claw_png)
+write_glb(OUT+'/darkjak-claw.glb',[tube(path,radii,sides=10)],claw_png,claw_rgb)
 print('ok')
