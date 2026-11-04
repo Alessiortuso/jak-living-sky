@@ -1104,6 +1104,21 @@ nav-enemy-default-event-handler
             :top-plane
             (new 'static 'plane :y 1.0 :w -4096.0))))
 
+;; Jak Living Sky: how many of an area's enemies are corrupted by dark eco, percent
+(defun soul-dark-share ((lev symbol))
+  (case lev
+    (('training 'village1 'beach) 15)
+    (('jungle 'jungleb) 20)
+    (('misty 'firecanyon) 25)
+    (('village2) 30)
+    (('sunken 'sunkenb 'swamp 'rolling) 35)
+    (('brume 'abandon 'mount 'preundg 'ogre) 40)
+    (('village3) 45)
+    (('maincave 'darkcave 'robocave 'snow) 50)
+    (('lavatube) 55)
+    (('citadel 'finalboss) 60)
+    (else 30)))
+
 (defmethod init-defaults! ((this nav-enemy) (arg0 nav-enemy-info))
   (set! (-> this rand-gen) (new 'process 'random-generator))
   (set! (-> this rand-gen seed) (the-as uint #x666edd1e))
@@ -1130,12 +1145,14 @@ nav-enemy-default-event-handler
         (new 'process 'fact-info-enemy this (pickup-type eco-pill-random) (-> *FACT-bank* default-pill-inc)))
   (set! (-> this reaction-time) (nav-enemy-rnd-int-range (seconds 0.1) (seconds 0.8)))
   (set! (-> this speed-scale) *soul-enemy-speed*)
-  ;; Jak Living Sky: half the enemies placed in the world corrupted by dark eco, always the same ones
+  ;; Jak Living Sky: enemies placed in the world corrupted by dark eco, more the further into the game (15%
+  ;; at the start, 60% at the end), always the same ones
   (set! (-> this dark)
         (the-as symbol
                 (and *soul-on*
                      (-> this entity)
-                     (let ((aid (-> this entity aid))) (= 1 (logand (+ aid (shr aid 3) (shr aid 7)) 1))))))
+                     (< (mod (shr (logand (* (-> this entity aid) 2654435761) #xffffffff) 7) 100)
+                        (soul-dark-share (-> this entity extra level name))))))
   (set! (-> this dark-eye 0) -2)
   (set! (-> this dark-eye 1) -2)
   (logior! (-> this nav-enemy-flags) (nav-enemy-flags enable-rotate enable-travel navenmf5 navenmf6 navenmf12))

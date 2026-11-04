@@ -179,8 +179,8 @@
     (if a0-2 (set! (-> arg0 quad) (-> a0-2 intersect quad)) (get-middle-of-bsphere-overlap arg1 arg0)))
   arg0)
 
-;; Jak Living Sky: how many marks a hit takes: an enemy's, more the further into the game (the level
-;; Jak is in); anything else, one
+;; Jak Living Sky: how many marks a hit takes: an enemy's, two from Rock Village on (the level Jak is in),
+;; three if it's corrupted by dark eco; anything else, one
 (define-extern nav-enemy type)
 (define-extern soul-dark-enemy? (function process symbol))
 
@@ -189,8 +189,8 @@
     (if (soul-dark-enemy? proc)
       3.0 ;; corrupted by dark eco, anywhere
     (case (-> *target* current-level name)
-      (('village2 'sunken 'sunkenb 'swamp 'rolling 'ogre 'brume 'abandon 'mount 'preundg) 2.0)
-      (('village3 'maincave 'darkcave 'robocave 'snow 'lavatube 'citadel 'finalboss) 3.0)
+      (('village2 'sunken 'sunkenb 'swamp 'rolling 'ogre 'brume 'abandon 'mount 'preundg
+        'village3 'maincave 'darkcave 'robocave 'snow 'lavatube 'citadel 'finalboss) 2.0)
       (else 1.0)))
     1.0))
 
