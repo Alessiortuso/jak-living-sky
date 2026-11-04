@@ -176,13 +176,16 @@
   (daxter-dark-line "voice/daxter-dark-jak.mp3" #x4650 (seconds 6.1))
   (none))
 
-;; the first time Jak turns back from Dark Jak (his time over, or another eco taken; not dying): "Maybe we'd
-;; better not tell Samos what happened to you." (daxter-dark-jak-end.mp3, 3.9 s)
+;; Jak turning back from Dark Jak (his time over, or another eco taken; not dying). The first time: "Maybe we'd
+;; better not tell Samos what happened to you." (daxter-dark-jak-end.mp3, 3.9 s); the second: "Oh, so dark eco
+;; gives you horns and superpowers, and me orange fur? That's not fair!" (daxter-dark-jak-end2.mp3, 6 s)
 (defun dark-jak-end-line ()
-  (when (and (zero? *daxter-dark-jak-end-seen*) *target*
+  (when (and (< *daxter-dark-jak-end-seen* 2.0) *target*
              (not (logtest? (-> *target* state-flags) (state-flags dying))))
-    (set! *daxter-dark-jak-end-seen* 1.0)
-    (daxter-dark-line "voice/daxter-dark-jak-end.mp3" #x4651 (seconds 4.1)))
+    (if (zero? *daxter-dark-jak-end-seen*)
+      (daxter-dark-line "voice/daxter-dark-jak-end.mp3" #x4651 (seconds 4.1))
+      (daxter-dark-line "voice/daxter-dark-jak-end2.mp3" #x4652 (seconds 6.2)))
+    (set! *daxter-dark-jak-end-seen* (+ *daxter-dark-jak-end-seen* 1.0)))
   (none))
 
 ;; kept off the radio's stack (a spawned process's stack is saved in 256 bytes when it suspends)
