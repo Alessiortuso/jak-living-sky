@@ -1905,14 +1905,38 @@
     ;; (one eco at a time, the last taken: blue, red or yellow eco he had is gone)
     (set! (-> *target* fact eco-level) 0.0)
     (set! (-> *target* fact eco-timeout) 0)
-    (sound-play "death-darkeco" :pitch -0.6)
-    (sound-play "shield-zap")
+    ;; (its sound: the transformation's own, target2.gc)
     (activate! *camera-smush-control* 1228.8 37 600 1.0 0.995)
     (cpad-set-buzz! (-> *cpad-list* cpads 0) 1 255 (seconds 0.5))
     (let ((at (new 'stack-no-clear 'vector)))
       (vector<-cspace! at (-> *target* node-list data 5))
       (dotimes (i 3) (launch-particles (-> *part-id-table* 3003) at)))
     (darkjak-parts-spawn))
+  (none))
+
+;; electric discharges of dark eco from him to the enemies within reach, thrown back and stunned
+;; (soul-dark-jak-blast); strike: struck too, as by his dark bomb
+(define-extern soul-dark-jak-blast (function vector float none))
+(define *dark-discharge-r* 0.0)
+
+(defun dark-jak-discharge ((reach float) (strike symbol))
+  (when *target*
+    (let ((at (new 'stack-no-clear 'vector)))
+      (vector<-cspace! at (-> *target* node-list data 5))
+      (soul-dark-jak-blast at reach))
+    (sound-play "shield-zap" :vol (if strike 100.0 45.0))
+    (when strike
+      (set! *dark-discharge-r* reach)
+      (let ((tt (process-spawn touch-tracker :init touch-tracker-init (-> *target* control trans) 4096.0 30 :to *target*)))
+        (send-event (ppointer->process tt) 'event 'attack 'flop)
+        (send-event (ppointer->process tt)
+                    'function
+                    (lambda ((arg0 target))
+                      (let ((f0-3 (seek (-> arg0 control root-prim local-sphere w)
+                                        *dark-discharge-r*
+                                        (* 409600.0 DISPLAY_FPS_RATIO 0.016666668))))
+                        (set! (-> arg0 control root-prim local-sphere w) f0-3)
+                        f0-3))))))
   (none))
 
 ;; turning: dark eco crackling about him (k: how hard), the pad trembling, the camera a little
@@ -1928,7 +1952,6 @@
           (launch-particles (-> *part-id-table* 3009) p)))
       (launch-particles (-> *part-id-table* 3002) (-> *target* control trans))
       (cpad-set-buzz! (-> *cpad-list* cpads 0) 0 (the int (* 160.0 k)) (seconds 0.05))
-      (if (zero? (logand (-> *display* integral-frame-counter) 15)) (sound-play "shield-zap" :vol (* 40.0 k)))
       (if (zero? (logand (-> *display* integral-frame-counter) 7)) (activate! *camera-smush-control* (* 300.0 k) 15 60 1.0 0.9))))
   (none))
 
