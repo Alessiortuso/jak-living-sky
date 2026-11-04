@@ -133,7 +133,12 @@
    ;; Jak Living Sky: corrupted by dark eco (half of them, with the hard rules), and its eyes' nodes (-2
    ;; not looked for yet, -1 none)
    (dark                symbol)
-   (dark-eye            int16 2))
+   (dark-eye            int16 2)
+   ;; Jak Living Sky: Dark Jak's repelling: since when it's been too near him, and its push away (strength,
+   ;; way)
+   (dark-near           time-frame)
+   (dark-push           float)
+   (dark-push-dir       vector :inline))
   (:state-methods
    nav-enemy-attack
    nav-enemy-chase

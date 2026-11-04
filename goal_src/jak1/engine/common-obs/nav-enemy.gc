@@ -1155,6 +1155,8 @@ nav-enemy-default-event-handler
                         (soul-dark-share (-> this entity extra level name))))))
   (set! (-> this dark-eye 0) -2)
   (set! (-> this dark-eye 1) -2)
+  (set! (-> this dark-near) 0)
+  (set! (-> this dark-push) 0.0)
   (logior! (-> this nav-enemy-flags) (nav-enemy-flags enable-rotate enable-travel navenmf5 navenmf6 navenmf12))
   0
   (none))
@@ -1336,11 +1338,67 @@ nav-enemy-default-event-handler
             (launch-particles part (vector+! eye eye out)))))))
   (none))
 
+;; Dark Jak's discharge: an arc of dark eco from him to the enemy
+(defpart 3009
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:x (meters -0.12) (meters 0.24))
+   (:y (meters -0.12) (meters 0.24))
+   (:z (meters -0.12) (meters 0.24))
+   (:scale-x (meters 0.3) (meters 0.2))
+   (:scale-y :copy scale-x)
+   (:r 170.0 60.0)
+   (:g 60.0 60.0)
+   (:b 255.0)
+   (:a 128.0)
+   (:fade-a -3.0)
+   (:timer (seconds 0.2) (seconds 0.1))
+   (:flags (bit2 bit3))))
+
+(define-extern *dark-jak* symbol)
+
+;; Dark Jak: an enemy too near him (3.5 m) for half a second is thrown back by a discharge of dark eco
+(defun soul-dark-jak-repel ((this nav-enemy))
+  (when (and *dark-jak* *target* (nonzero? (-> this root)))
+    (let ((d (vector-vector-distance (-> this root trans) (-> *target* control trans))))
+      (cond
+        ((>= d (meters 3.5)) (set! (-> this dark-near) 0))
+        ((zero? (-> this dark-near)) (set! (-> this dark-near) (current-time)))
+        ((and (<= (-> this dark-push) 0.0) (time-elapsed? (-> this dark-near) (seconds 0.5)))
+         ;; the discharge: an arc from his chest to it, a burst there, a zap
+         (let ((from (new 'stack-no-clear 'vector))
+               (at (new 'stack-no-clear 'vector)))
+           (vector<-cspace! from (-> *target* node-list data 5))
+           (set! (-> at quad) (-> this root trans quad))
+           (+! (-> at y) (meters 1))
+           (dotimes (i 9)
+             (let ((p (new 'stack-no-clear 'vector)))
+               (vector-lerp! p from at (* 0.125 (the float i)))
+               (+! (-> p y) (* (meters 0.35) (sin (* 4096.0 (the float (* i 7))))))
+               (launch-particles (-> *part-id-table* 3009) p)))
+           (launch-particles (-> *part-id-table* 3003) at)
+           (sound-play "shield-zap" :position (the-as symbol at)))
+         (vector-! (-> this dark-push-dir) (-> this root trans) (-> *target* control trans))
+         (set! (-> this dark-push-dir y) 0.0)
+         (vector-normalize! (-> this dark-push-dir) 1.0)
+         (set! (-> this dark-push) 1.0)
+         (set! (-> this dark-near) 0)))))
+  ;; the push: away from him, quick then slowing (about 5 m)
+  (when (< 0.0 (-> this dark-push))
+    (vector+*! (-> this root trans) (-> this root trans) (-> this dark-push-dir) (* (meters 0.55) (-> this dark-push)))
+    (set! (-> this dark-push) (- (-> this dark-push) 0.08)))
+  (none))
+
 (defun soul-dark-enemies-update ()
-  (when *soul-on*
+  (when (or *soul-on* *dark-jak*)
     (iterate-process-tree
       *active-pool*
-      (lambda ((p process)) (if (type-type? (-> p type) nav-enemy) (soul-dark-enemy-frame (the-as nav-enemy p))) #t)
+      (lambda ((p process))
+        (when (type-type? (-> p type) nav-enemy)
+          (if *soul-on* (soul-dark-enemy-frame (the-as nav-enemy p)))
+          (soul-dark-jak-repel (the-as nav-enemy p)))
+        #t)
       *null-kernel-context*))
   (none))
 
