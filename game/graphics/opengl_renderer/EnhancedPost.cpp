@@ -2324,7 +2324,7 @@ void EnhancedPost::apply_to_scene(GLuint render_fbo,
       }
       // in the rain, drops bounce off the ground around Jak (2-6 m, on his level ground): a few
       // droplets each, hopping a few centimeters
-      if (m_rain > 0.1f && pl.valid && (pl.state == 1 || pl.state == 3)) {
+      if (m_rain > 0.1f && m_cover < 0.5f && pl.valid && (pl.state == 1 || pl.state == 3)) {
         static double bounce_t = 0;
         const double every = 0.11 / m_rain;
         if (m_time - bounce_t > every) {
@@ -5505,6 +5505,8 @@ Shader& EnhancedPost::activate_composite(SharedRenderState* render_state, int w,
   glUniform4f(glGetUniformLocation(id, "weather"), m_rain * on, m_dust * on,
               (float)std::fmod(m_time, 1000.0), m_wet * on);
   glUniform1f(glGetUniformLocation(id, "puddle_level"), m_puddle * on);
+  // Jak Living Sky: under a roof (a hut, a cave mouth, the warp gate's room) no rain or snow falls
+  glUniform1f(glGetUniformLocation(id, "rain_cover"), std::clamp(m_cover * 1.25f, 0.f, 1.f));
   glUniform4f(glGetUniformLocation(id, "weather2"), m_storm * on, m_mist * on, m_clear * on,
               m_flash * on);
   {

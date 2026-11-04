@@ -163,6 +163,7 @@ uniform vec4 beacon_pos[24];
 uniform vec4 beacon_color[24];  // rgb, strength
 uniform float city_glow;        // a lit city at night (0..1): its glow on the low sky and the haze
 uniform vec4 weather;           // rain, dust (0..1), time (s), wet ground (0..1)
+uniform float rain_cover;       // Jak Living Sky: the roof over Jak (0 open sky..1 indoors): no drops falling under it
 uniform float lens_drops;       // raindrops on the lens in a downpour (0 = off)
 uniform float chroma;           // colors split at the screen's edges: a hit, Dark Jak (0..1)
 uniform float dawn_fog;         // the morning's low fog
@@ -2152,8 +2153,8 @@ void main() {
 
   // drops on the lens in a downpour: beads land now and then, slide down a little and dry; each
   // bends what's behind it like a small lens, upside down (two sizes, cells across the screen)
-  if (lens_drops > 0.0 && weather.x > 0.25) {
-    float amt = lens_drops * smoothstep(0.25, 0.7, weather.x);
+  if (lens_drops > 0.0 && weather.x > 0.25 && rain_cover < 1.0) {
+    float amt = lens_drops * smoothstep(0.25, 0.7, weather.x) * (1.0 - rain_cover);
     float aspect = texel.y / texel.x;
     for (int layer = 0; layer < 2; layer++) {
       float cell = layer == 0 ? 0.12 : 0.07;
@@ -3723,8 +3724,8 @@ void main() {
   }
 
   // rain streaks in front of everything, lit by the sky and by the lights around (the bloom)
-  if (weather.x > 0.0) {
-    float streaks = rain_drops(ray, z, pixel_rad) * (1.0 + 0.9 * weather2.x);
+  if (weather.x > 0.0 && rain_cover < 1.0) {
+    float streaks = rain_drops(ray, z, pixel_rad) * (1.0 + 0.9 * weather2.x) * (1.0 - rain_cover);
     if (streaks > 0.0) {
       vec3 glow = texture(tex_T1, tex_coord).rgb;
       vec3 lit = c * 1.25 + vec3(0.07, 0.08, 0.1) + mix(fog_color, vec3(luma(fog_color)), 0.5) * 0.25 +
@@ -3735,8 +3736,8 @@ void main() {
   }
 
   // snowflakes in front of everything, white, a little dimmer in dim light
-  if (snow_heat.x > 0.0) {
-    float flakes = snow_flakes(ray, z, pixel_rad);
+  if (snow_heat.x > 0.0 && rain_cover < 1.0) {
+    float flakes = snow_flakes(ray, z, pixel_rad) * (1.0 - rain_cover);
     if (flakes > 0.0) {
       vec3 white = vec3(0.92, 0.95, 1.0) * (0.55 + 0.45 * smoothstep(0.05, 0.5, luma(fog_color))) +
                    texture(tex_T1, tex_coord).rgb;
