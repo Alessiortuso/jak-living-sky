@@ -1805,10 +1805,8 @@
 (defun darkjak-parts-spawn ()
   (when *target*
     (process-spawn darkjak-part :init darkjak-part-init -1 7 :to *target*)
-    ;; the claws: five on the left hand's joint (17), five on the right's (23)
-    (dotimes (i 5)
-      (process-spawn darkjak-part :init darkjak-part-init 17 i :to *target*)
-      (process-spawn darkjak-part :init darkjak-part-init 23 (+ i 5) :to *target*)))
+    ;; (no claws: on hands whose fingers bend in play, no joint for them, they floated off his fingers)
+    )
   (none))
 
 ;; his eyes' glow: the core

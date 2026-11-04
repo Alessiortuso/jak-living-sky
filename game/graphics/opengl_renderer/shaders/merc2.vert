@@ -39,6 +39,7 @@ uniform mat3 enh_world_to_view;
 // Jak Living Sky: corrupted by dark eco (the game marks it with 4 in its color-emissive's w: the ambient
 // light's w then over 3): 1; Dark Jak (8: over 6): 2
 out float enh_dark;
+out vec3 enh_base;  // Jak Living Sky: the vertex's own colour, unlit (Jak 1's skin is coloured by it)
 
 struct MercMatrixData {
   mat4 X;
@@ -90,6 +91,7 @@ void main() {
   float dark = light_ambient.w > 6.0 ? 2.0 : light_ambient.w > 3.0 ? 1.0 : 0.0;
   vec4 ambient = light_ambient - vec4(0.0, 0.0, 0.0, 4.0 * dark);
   enh_dark = dark;
+  enh_base = rgba.rgb;
   vec4 light_color = ambient
                    + light_intensity.x * light_col0
                    + light_intensity.y * light_col1

@@ -33,6 +33,7 @@ uniform int enh_mat;        // Enhanced: the part's material (EnhancedMaterials.
 uniform float enh_eye_lid;  // Enhanced: an eye's eyelid reaches down to this v of its texture (0 = open)
 uniform int enh_relief;     // Enhanced: tex_relief is 0 none, 1 a normal map, 2 a height map
 in float enh_dark;          // Jak Living Sky: corrupted by dark eco (merc2.vert)
+in vec3 enh_base;           // Jak Living Sky: the vertex's own colour, unlit
 
 const int MAT_SKIN = 1;
 const int MAT_HAIR = 2;
@@ -89,15 +90,21 @@ void main() {
       vec3 shade = mix(vec3(0.16, 0.17, 0.21), vec3(0.6, 0.62, 0.68), smoothstep(0.0, 0.6, l));
       color.rgb = mix(shade, vec3(0.86, 0.87, 0.9), smoothstep(0.6, 1.0, l));
     } else {
-      // Jak 1's skin is a white texture coloured by the model's vertex colours (not a skin material): told
-      // by how warm its colour is, softly (no patches), and made Jak 2's Dark Jak's: its own shading kept,
-      // greyed and cooled to a pale lavender
-      vec3 c = color.rgb;
-      float lum = dot(c, vec3(0.3, 0.59, 0.11));
-      // (warm and light: his leather is warm too, but dark)
-      float warm = smoothstep(0.04, 0.14, c.r - c.b) * smoothstep(0.0, 0.05, c.g - c.b) * smoothstep(0.22, 0.36, lum);
-      vec3 pale = vec3(lum) * vec3(0.93, 0.93, 1.06) * 1.18 + vec3(0.03, 0.03, 0.06);
-      color.rgb = mix(c * 0.9, pale, warm);
+      // Jak 1's skin is a white texture coloured by the model's vertex colours: told by those colours,
+      // unlit (the room's light can't fool it), warm (peach, from dark to light: green two thirds of red or
+      // so, some blue, no more than green), on no cloth, leather or metal (his pants share the skin's hue);
+      // made Jak 2's Dark Jak's: its own shading kept, greyed and cooled to a pale lavender
+      vec3 v = enh_base;
+      float gr = v.g / max(v.r, 0.001);
+      float br = v.b / max(v.r, 0.001);
+      float warm = smoothstep(0.08, 0.14, v.r) * smoothstep(0.5, 0.58, gr) * (1.0 - smoothstep(0.86, 0.94, gr)) *
+                   smoothstep(0.2, 0.28, br) * (1.0 - smoothstep(1.06, 1.14, br - gr + 1.0));
+      if (enh_mat == MAT_CLOTH || enh_mat == MAT_LEATHER || enh_mat == MAT_METAL || enh_mat == MAT_LENS) {
+        warm = 0.0;
+      }
+      float lum = dot(color.rgb, vec3(0.3, 0.59, 0.11));
+      vec3 pale = vec3(lum) * vec3(0.93, 0.93, 1.06) * 1.2 + vec3(0.03, 0.03, 0.06);
+      color.rgb = mix(color.rgb * 0.9, pale, warm);
     }
   } else if (enh_dark > 0.5 && gfx_hack_no_tex == 0) {
     if (enh_mat == MAT_EYE) {
