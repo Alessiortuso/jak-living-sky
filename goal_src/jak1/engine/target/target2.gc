@@ -938,7 +938,7 @@
       (vector-flatten! (-> self control transv) (-> self control transv) (-> self control edge-grab-edge-dir)))
   :code
     (behavior ((arg0 float) (arg1 float))
-      (sound-play "jump")
+      (sound-play "jump" :pitch (dark-jak-pitch))
       (send-event *camera* 'damp-up)
       (ja :group! eichar-pole-jump-loop-ja :num! min)
       (let ((f0-1 (target-height-above-ground))
@@ -988,7 +988,7 @@
       (vector-flatten! (-> self control transv) (-> self control transv) (-> self control edge-grab-edge-dir)))
   :code
     (behavior ((arg0 float) (arg1 float))
-      (sound-play "jump")
+      (sound-play "jump" :pitch (dark-jak-pitch))
       (until (ja-done? 0)
         (suspend)
         (ja :num! (seek!)))
@@ -1346,6 +1346,8 @@
     (behavior ()
       (set! (-> self neck flex-blend) 0.0)
       (set! (-> self control mod-surface) *walk-mods*)
+      ;; (its sound: custom_assets/jak1/audio/voice/darkjak-transform.mp3, as long as the turning)
+      (play-sound-file "voice/darkjak-transform.mp3" 100)
       ;; seized
       (ja-channel-push! 1 (seconds 0.1))
       (ja-no-eval :group! eichar-shocked-ja :num! (seek! (ja-aframe (the-as float 18.0) 0)) :frame-num 0.0)

@@ -433,6 +433,10 @@
               "volume: ~f  pitch-mod: ~f~%"
               (* 0.09765625 (the float (-> gp-0 volume)))
               (* 0.000656168 (the float (-> gp-0 pitch-mod)))))
+    ;; Jak Living Sky: Dark Jak's own sounds, deeper
+    (when (and *dark-jak* *target* (= (-> this process) *target*))
+      (logior! (-> gp-0 mask) (sound-mask pitch))
+      (set! (-> gp-0 pitch-mod) (+ (-> gp-0 pitch-mod) (the int (* 1524.0 (dark-jak-pitch))))))
     (sound-play-by-spec gp-0 (new-sound-id) s5-0))
   0)
 

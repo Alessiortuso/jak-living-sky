@@ -405,15 +405,15 @@
          (target-timed-invulnerable (-> arg0 invinc-time) self)
          (cpad-set-buzz! (-> *cpad-list* cpads 0) 0 255 (seconds 0.5))
          (let ((v1-13 (-> arg0 angle))) (= v1-13 'up)))
-       (sound-play "hit-up"))
-      (else (sound-play "oof"))))
+       (sound-play "hit-up" :pitch (dark-jak-pitch)))
+      (else (sound-play "oof" :pitch (dark-jak-pitch)))))
   (case (-> arg0 mode)
     (('burn 'burnup)
      ;; og:preserve-this
      (if (not (handle->process (-> self burn-proc)))
        (set! (-> self burn-proc)
              (ppointer->handle (process-spawn-function process process-drawable-burn-effect (seconds 4) :to self)))))
-    (('tar) (sound-play "get-burned")))
+    (('tar) (sound-play "get-burned" :pitch (dark-jak-pitch))))
   0
   (none))
 
@@ -614,7 +614,7 @@
              (target-hit-effect gp-0))
             (else
              (case (-> gp-0 mode)
-               (('burn 'burnup) (sound-play "get-burned")))))
+               (('burn 'burnup) (sound-play "get-burned" :pitch (dark-jak-pitch))))))
           (set! (-> self control unknown-surface00) *smack-mods*)
           (target-hit-setup-anim gp-0)
           (target-hit-move gp-0 (target-hit-orient gp-0 s5-0) target-falling-anim-trans (the-as float 1.0)))
