@@ -1490,8 +1490,20 @@
 (define *soul-dark-picture* -1)
 (define *soul-dark-picture-name* (new 'global 'string 32 (the-as string #f)))
 
+;; the ring full: L1 + R1 shown over the meter (a picture of its own, custom_assets/jak1/texture_swap/
+;; hud-darkjak-buttons.png, in place of the "checker" texture, the game's never used), the meter kept on screen
+(defpartgroup group-part-hud-darkjak-buttons
+  :id 727
+  :flags (screen-space)
+  :bounds (static-bspherem 0 0 0 100)
+  :parts ((sp-item 3015 :flags (launch-asap))))
+
 ;; the picture for the dark eco now: 0 to 20 by twentieths, full pulsing between 20 and 21 (brighter)
 (defun soul-dark-meter-update ()
+  (when (and (>= *soul-dark* 100.0) (not *dark-jak*) (-> *hud-parts* power)
+             (zero? (logand (the int (-> *display* integral-frame-counter)) 15)))
+    (pc-enhanced-texture-file "checker" "hud-darkjak-buttons")
+    (send-event (ppointer->process (-> *hud-parts* power)) 'show))
   (let ((pic (if (>= *soul-dark* 100.0)
                (if (zero? (logand (/ (the int (-> *display* integral-frame-counter)) 20) 1)) 20 21)
                (min 19 (the int (* 0.2 *soul-dark*))))))
@@ -1590,6 +1602,28 @@
   0
   (none))
 
+;; (L1 + R1 over the meter: soul-dark-meter-update)
+(defpart 3015
+  :init-specs
+  ((:texture (checker effects))
+   (:num 1.0)
+   (:scale-x (meters 3.2))
+   (:scale-y (meters 1.6))
+   (:r 128.0)
+   (:g 128.0)
+   (:b 128.0)
+   (:a 128.0)
+   (:timer (seconds -0.005))
+   (:flags (bit2 bit9))
+   (:func 'part-hud-darkjak-buttons-func)))
+
+(defun part-hud-darkjak-buttons-func ((arg0 sparticle-system) (arg1 sparticle-cpuinfo) (arg2 matrix))
+  (let ((f0-0 (if (and (>= *soul-dark* 100.0) (not *dark-jak*)) (* 0.9 (-> *hud-parts* power 0 scale-timer)) 0.0)))
+    (set! (-> arg2 vector 0 w) f0-0)
+    (set! (-> arg2 vector 1 w) (* 0.5 f0-0)))
+  0
+  (none))
+
 (defun part-hud-eco-timer-backing-func ((arg0 sparticle-system) (arg1 sparticle-cpuinfo) (arg2 matrix))
   (let ((f0-0 (-> *hud-parts* power 0 scale-backing))) (set! (-> arg2 vector 0 w) f0-0) (set! (-> arg2 vector 1 w) f0-0))
   0
@@ -1641,6 +1675,16 @@
       (set! (-> this particles s5-2 init-pos z) 2.0)
       (set! (-> this particles s5-2 part matrix) -1))
     (+! (-> this nb-of-particles) 1))
+  ;; Jak Living Sky: L1 + R1 over it, the dark eco's ring full
+  (when (< (-> this nb-of-particles) (-> this max-nb-of-particles))
+    (let ((s5-4 (-> this nb-of-particles)))
+      (set! (-> this particles s5-4) (new 'static 'hud-particle))
+      (set! (-> this particles s5-4 part) (create-launch-control group-part-hud-darkjak-buttons this))
+      (set! (-> this particles s5-4 init-pos x) 435.0)
+      (set! (-> this particles s5-4 init-pos y) 312.0)
+      (set! (-> this particles s5-4 init-pos z) 1.0)
+      (set! (-> this particles s5-4 part matrix) -1))
+    (+! (-> this nb-of-particles) 1))
   (dotimes (s5-3 (-> this nb-of-particles))
     (if (= (-> this particles s5-3 part matrix) -1) (set! (-> this particles s5-3 part matrix) (sprite-allocate-user-hvdf))))
   (set-pos-and-scale this (= (get-aspect-ratio) 'aspect16x9) (= (get-video-mode) 'pal))
@@ -1660,6 +1704,7 @@
       (set! (-> this particles 0 init-pos x) 435.0)
       (set! (-> this particles 1 init-pos x) 432.0)
       (set! (-> this particles 2 init-pos x) 435.0)
+      (if (< 3 (-> this nb-of-particles)) (set! (-> this particles 3 init-pos x) 435.0))
       (when (not (-> *pc-settings* use-vis?))
         (dotimes (i (-> this nb-of-particles))
           (set! (-> this particles i init-pos x)

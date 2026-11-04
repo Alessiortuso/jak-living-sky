@@ -1602,7 +1602,7 @@
   (none))
 
 ;; The white eco's shop, what's on sale. To add an item: raise the count and add a line to each of these.
-(defconstant SOUL-SHOP-ITEMS 3)
+(defconstant SOUL-SHOP-ITEMS 4)
 
 ;; its name, in capitals (small letters are other characters in the game's font)
 (defun soul-item-name ((i int))
@@ -1610,6 +1610,7 @@
     ((0) "AGGIUNGI PUNTO VITA")
     ((1) "ECO BIANCO X2 DAI NEMICI")
     ((2) "AUMENTA DURATA ECO")
+    ((3) "AUMENTA DURATA DARK JAK")
     (else "")))
 
 ;; how much of it Jak has
@@ -1618,6 +1619,7 @@
     ((0) (the int (+ 2.0 *soul-life*)))
     ((1) (the int *soul-double*))
     ((2) (the int *soul-eco-time*))
+    ((3) (the int *soul-dark-time*))
     (else 0)))
 
 ;; the most he can have
@@ -1626,20 +1628,24 @@
     ((0) 5)
     ((1) 1)
     ((2) 3)
+    ((3) 2)
     (else 0)))
 
 ;; what the next one costs
 (defun soul-item-cost ((i int))
   (case i
     ((0) (case (the int *soul-life*)
-           ((0) 100)
-           ((1) 200)
-           (else 400)))
-    ((1) 600)
-    ((2) (case (the int *soul-eco-time*)
            ((0) 150)
            ((1) 300)
-           (else 500)))
+           (else 600)))
+    ((1) 900)
+    ((2) (case (the int *soul-eco-time*)
+           ((0) 250)
+           ((1) 450)
+           (else 750)))
+    ((3) (case (the int *soul-dark-time*)
+           ((0) 500)
+           (else 1000)))
     (else 0)))
 
 ;; giving it to him
@@ -1649,7 +1655,8 @@
      (set! *soul-life* (+ *soul-life* 1.0))
      (if *target* (set! (-> *target* fact health) (+ 2.0 *soul-life*))))
     ((1) (set! *soul-double* 1.0))
-    ((2) (set! *soul-eco-time* (+ *soul-eco-time* 1.0))))
+    ((2) (set! *soul-eco-time* (+ *soul-eco-time* 1.0)))
+    ((3) (set! *soul-dark-time* (+ *soul-dark-time* 1.0))))
   (none))
 
 ;; resting at a warp gate: Jak's health full, and every enemy killed back where it was (what reset-actors does
@@ -1682,7 +1689,8 @@
     (else (pc-enhanced-denied)))
   (none))
 
-;; Jak Living Sky: Dark Jak. With the dark eco ring full, L1 and R1 together turn Jak into him for 20 s, the
+;; Jak Living Sky: Dark Jak. With the dark eco ring full, L1 and R1 together turn Jak into him for 10 s (15, 20
+;; bought in the shop: dark-jak-duration), the
 ;; ring draining meanwhile: pale and ashen, black eyes (merc2.frag: 8 in his color-emissive's w), dark eco
 ;; about him; his hits reach further, he takes no hurt from enemies, runs and jumps more, and his dive ends in
 ;; a dark bomb (target.gc). Like Jak 2's and 3's, on Jak 1's own model
@@ -1985,7 +1993,7 @@
                 (not (logtest? (-> *target* state-flags) (state-flags grabbed dying))))
        (send-event *target* 'dark-transform)))
     (else
-     (let ((spent (/ (the float (- (current-time) *dark-jak-start*)) (the float (seconds 20)))))
+     (let ((spent (/ (the float (- (current-time) *dark-jak-start*)) (the float (dark-jak-duration)))))
        (set! *soul-dark* (fmax 0.0 (* 100.0 (- 1.0 spent))))
        (cond
          ((or (not *target*) (>= spent 1.0)) (dark-jak-end))
