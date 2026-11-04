@@ -1558,6 +1558,7 @@
     soul-orb-fly))
 
 (define-extern daxter-dark-eco-line (function none))
+(define-extern dark-jak-end-line (function none))
 
 (defstate soul-orb-fly (soul-orb)
   :code
@@ -2024,7 +2025,9 @@
      (let ((spent (/ (the float (- (current-time) *dark-jak-start*)) (the float (dark-jak-duration)))))
        (set! *soul-dark* (fmax 0.0 (* 100.0 (- 1.0 spent))))
        (cond
-         ((or (not *target*) (>= spent 1.0)) (dark-jak-end))
+         ((or (not *target*) (>= spent 1.0))
+          (dark-jak-end)
+          (dark-jak-end-line))
          (else
           ;; (the 8: merc2.vert's mark for Dark Jak; Daxter, copying it, keeps his own look: sidekick.gc)
           (set-vector! (-> *target* draw color-mult) 1.0 1.0 1.0 1.0)

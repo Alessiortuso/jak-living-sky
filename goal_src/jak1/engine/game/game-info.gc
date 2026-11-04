@@ -143,6 +143,7 @@
 
 ;; Jak Living Sky: Jak's white eco stays behind (any left there from before is lost)
 (define-extern dark-jak-end (function none))
+(define-extern dark-jak-end-line (function none))
 
 (defun soul-drop-eco ((this game-info))
   ;; (and Dark Jak is gone, his dark eco spent)
@@ -222,6 +223,7 @@
      (set! *daxter-dark-seen* 0.0)
      (set! *daxter-dark-eco-seen* 0.0)
      (set! *daxter-dark-jak-seen* 0.0)
+     (set! *daxter-dark-jak-end-seen* 0.0)
      (set! (-> this fuel) 0.0)
      (set! (-> this money-total) 0.0)
      (set! (-> this buzzer-total) 0.0)
@@ -518,7 +520,9 @@
                  )))
      ;; Jak Living Sky: one eco at a time, the last taken: blue, red or yellow eco ends Dark Jak (the dark eco
      ;; left in his ring stays)
-     (if *dark-jak* (dark-jak-end))
+     (when *dark-jak*
+       (dark-jak-end)
+       (dark-jak-end-line))
      ;; new type of eco. Reset and use the new type.
      (when (!= (-> this eco-type) kind)
        ;; as far as I can tell, the eco-level isn't really used other than just 1 or 0.

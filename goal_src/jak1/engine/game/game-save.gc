@@ -75,6 +75,7 @@
   (daxter-dark-seen 912)
   (daxter-dark-eco-seen 913)
   (daxter-dark-jak-seen 914)
+  (daxter-dark-jak-end-seen 915)
   (money-per-level 204)
   (buzzer-total 205)
   (fuel-cell 206)
@@ -305,11 +306,12 @@
 
 ;; Jak Living Sky: its tags, returning where the next one goes
 (defun soul-save-tags ((p pointer))
-  (dotimes (i 15)
+  (dotimes (i 16)
     (let ((tag (the-as game-save-tag (&+ p (* i 16)))))
       (set! (-> tag elt-type) (the-as game-save-elt (+ i 900)))
       (set! (-> tag elt-count) 0)
       (set! (-> tag user-float0) (cond
+                                       ((= i 15) *daxter-dark-jak-end-seen*)
                                        ((= i 14) *daxter-dark-jak-seen*)
                                        ((= i 13) *daxter-dark-eco-seen*)
                                        ((= i 12) *daxter-dark-seen*)
@@ -322,7 +324,7 @@
                                        ((= i 5) *soul-life*)
                                        ((= i 4) *soul-eco*)
                                        (else (-> *soul-pile* data i))))))
-  (&+ p 240))
+  (&+ p 256))
 
 (defmethod save-game! ((this game-info) (arg0 game-save) (arg1 string))
   "Update the game-save to have the info from the current game state"
@@ -659,6 +661,7 @@
   (set! *daxter-dark-seen* 0.0)
   (set! *daxter-dark-eco-seen* 0.0)
   (set! *daxter-dark-jak-seen* 0.0)
+  (set! *daxter-dark-jak-end-seen* 0.0)
   ;; loop over all tags
   (let ((data (the-as game-save-tag (-> save tag))))
     (while (< (the-as int data) (the-as int (&-> save tag 0 user-int8 (-> save length))))
@@ -706,6 +709,7 @@
         (((game-save-elt daxter-dark-seen)) (set! *daxter-dark-seen* (-> data user-float0)))
         (((game-save-elt daxter-dark-eco-seen)) (set! *daxter-dark-eco-seen* (-> data user-float0)))
         (((game-save-elt daxter-dark-jak-seen)) (set! *daxter-dark-jak-seen* (-> data user-float0)))
+        (((game-save-elt daxter-dark-jak-end-seen)) (set! *daxter-dark-jak-end-seen* (-> data user-float0)))
         (((game-save-elt money-per-level))
          (let ((v1-34 (min 32 (-> data elt-count))))
            (dotimes (a0-76 v1-34)

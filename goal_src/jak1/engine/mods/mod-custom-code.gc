@@ -176,6 +176,15 @@
   (daxter-dark-line "voice/daxter-dark-jak.mp3" #x4650 (seconds 6.1))
   (none))
 
+;; the first time Jak turns back from Dark Jak (his time over, or another eco taken; not dying): "Maybe we'd
+;; better not tell Samos what happened to you." (daxter-dark-jak-end.mp3, 3.9 s)
+(defun dark-jak-end-line ()
+  (when (and (zero? *daxter-dark-jak-end-seen*) *target*
+             (not (logtest? (-> *target* state-flags) (state-flags dying))))
+    (set! *daxter-dark-jak-end-seen* 1.0)
+    (daxter-dark-line "voice/daxter-dark-jak-end.mp3" #x4651 (seconds 4.1)))
+  (none))
+
 ;; kept off the radio's stack (a spawned process's stack is saved in 256 bytes when it suspends)
 (define *brume-cam-gate* (new 'global 'vector))
 (define *brume-cam-pos* (new 'global 'vector))
