@@ -1358,12 +1358,12 @@ nav-enemy-default-event-handler
 
 (define-extern *dark-jak* symbol)
 
-;; Dark Jak: an enemy too near him (3.5 m) for half a second is thrown back by a discharge of dark eco
+;; Dark Jak: an enemy too near him (2 m) for half a second is thrown back by a discharge of dark eco
 (defun soul-dark-jak-repel ((this nav-enemy))
   (when (and *dark-jak* *target* (nonzero? (-> this root)))
     (let ((d (vector-vector-distance (-> this root trans) (-> *target* control trans))))
       (cond
-        ((>= d (meters 3.5)) (set! (-> this dark-near) 0))
+        ((>= d (meters 2)) (set! (-> this dark-near) 0))
         ((zero? (-> this dark-near)) (set! (-> this dark-near) (current-time)))
         ((and (<= (-> this dark-push) 0.0) (time-elapsed? (-> this dark-near) (seconds 0.5)))
          ;; the discharge: an arc from his chest to it, a burst there, a zap
