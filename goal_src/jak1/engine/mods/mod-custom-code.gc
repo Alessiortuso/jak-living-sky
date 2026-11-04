@@ -132,6 +132,22 @@
                            font #f 128 22)))
   (none))
 
+;; Jak Living Sky: Daxter, the first time a corrupted enemy is near (nav-enemy.gc): "Jak, look at that one! Its
+;; eyes are purple..." (custom_assets/jak1/audio/voice/daxter-dark-enemy.mp3, 5.7 s). Once in a game
+(defun daxter-dark-enemy-line ()
+  (set! *daxter-dark-seen* 1.0)
+  (process-spawn-function
+    process
+    (lambda :behavior process ()
+      (play-sound-file "voice/daxter-dark-enemy.mp3" 200)
+      (let ((start (current-time)))
+        (while (not (time-elapsed? start (seconds 5.9)))
+          (brume-radio-subtitle "DAXTER" #x464e)
+          (suspend)))
+      (none))
+    :to *entity-pool*)
+  (none))
+
 ;; kept off the radio's stack (a spawned process's stack is saved in 256 bytes when it suspends)
 (define *brume-cam-gate* (new 'global 'vector))
 (define *brume-cam-pos* (new 'global 'vector))

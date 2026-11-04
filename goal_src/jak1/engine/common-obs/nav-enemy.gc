@@ -1319,6 +1319,8 @@ nav-enemy-default-event-handler
       )
     (if (>= node (-> this node-list length)) -1 node)))
 
+(define-extern daxter-dark-enemy-line (function none))
+
 (defun soul-dark-enemy-frame ((this nav-enemy))
   (when (and (-> this dark) (nonzero? (-> this draw)) (nonzero? (-> this node-list)))
     ;; only those whose eyes are known (glows put on a face by guess landed in mouths)
@@ -1334,6 +1336,13 @@ nav-enemy-default-event-handler
     ;; (the 4 in w: the merc shader's mark, merc2.vert: its eyes and skin there)
     (set-vector! (-> this draw color-mult) 1.0 1.0 1.0 1.0)
     (set-vector! (-> this draw color-emissive) 0.0 0.0 0.0 4.0)
+    ;; the first one near Jak, in a game: Daxter's line
+    (when (and (zero? *daxter-dark-seen*)
+               *target*
+               (= *master-mode* 'game)
+               (not (movie?))
+               (< (vector-vector-distance (-> this root trans) (target-pos 0)) (meters 20)))
+      (daxter-dark-enemy-line))
     (let ((part (if (< (meters 3) (-> this draw bounds w)) (-> *part-id-table* 2999) (-> *part-id-table* 2998)))
           (spot (new 'stack-no-clear 'vector))
           (eye (new 'stack-no-clear 'vector))
