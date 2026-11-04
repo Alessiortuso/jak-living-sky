@@ -1795,17 +1795,32 @@
       (process-spawn darkjak-part :init darkjak-part-init (+ 52 (* 2 i)) (+ 53 (* 2 i)) :to *target*)))
   (none))
 
-;; his eyes' glow
+;; his eyes' glow: the core
+(defpart 3010
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:scale-x (meters 0.14) (meters 0.03))
+   (:scale-y :copy scale-x)
+   (:r 235.0)
+   (:g 170.0)
+   (:b 255.0)
+   (:a 128.0)
+   (:fade-a -3.2)
+   (:timer (seconds 0.05))
+   (:flags (bit2 bit3))))
+
+;; his eyes' glow: the halo
 (defpart 3007
   :init-specs
   ((:texture (hotdot effects))
    (:num 1.0)
-   (:scale-x (meters 0.42) (meters 0.08))
+   (:scale-x (meters 0.55) (meters 0.12))
    (:scale-y :copy scale-x)
-   (:r 190.0)
-   (:g 60.0)
+   (:r 150.0)
+   (:g 30.0)
    (:b 255.0)
-   (:a 128.0)
+   (:a 110.0 18.0)
    (:fade-a -3.2)
    (:timer (seconds 0.05))
    (:flags (bit2 bit3))))
@@ -1848,64 +1863,13 @@
     (set! (-> *TARGET-bank* double-jump-height-max) (* j (-> *dark-jak-saved* 4))))
   (none))
 
-(define *dark-charge* 0.0)
-
 (defun dark-jak-end ()
   (when *dark-jak*
     (set! *dark-jak* #f)
-    (set! *dark-charge* 0.0)
     (dark-jak-powers #f)
     (when *target*
       (set-vector! (-> *target* draw color-emissive) 0.0 0.0 0.0 0.0)
       (sound-play "death-darkeco" :pitch 1.0)))
-  (none))
-
-;; his charged blast: circle held (past the punch it starts) gathers dark eco about him; let go, it bursts:
-;; the further charged (up to 1.5 s), the wider (5 to 12 m), striking and throwing back what it reaches
-(define-extern soul-dark-jak-blast (function vector float none))
-(define *dark-blast-r* 0.0)
-
-(defun dark-jak-charge ()
-  (cond
-    ((cpad-hold? 0 circle)
-     (+! *dark-charge* (seconds-per-frame))
-     (when (< 0.35 *dark-charge*)
-       ;; charging: sparks drawn in round him, more and brighter as it grows
-       (let* ((k (fmin 1.0 (/ (- *dark-charge* 0.35) 1.15)))
-              (at (new 'stack-no-clear 'vector)))
-         (vector<-cspace! at (-> *target* node-list data 5))
-         (dotimes (i (+ 1 (the int (* 4.0 k))))
-           (let ((p (new 'stack-no-clear 'vector))
-                 (a (rand-vu-float-range 0.0 65536.0))
-                 (r (* (meters 1.4) (- 1.2 k))))
-             (set-vector! p (+ (-> at x) (* r (cos a))) (+ (-> at y) (rand-vu-float-range (meters -0.8) (meters 0.8))) (+ (-> at z) (* r (sin a))) 1.0)
-             (launch-particles (-> *part-id-table* 3009) p)))
-         (launch-particles (-> *part-id-table* 3007) at)
-         (cpad-set-buzz! (-> *cpad-list* cpads 0) 0 (the int (* 120.0 k)) (seconds 0.05)))))
-    (else
-     (when (< 0.35 *dark-charge*)
-       ;; the blast
-       (let ((k (fmin 1.0 (/ (- *dark-charge* 0.35) 1.15)))
-             (at (new 'stack-no-clear 'vector)))
-         (vector<-cspace! at (-> *target* node-list data 5))
-         (set! *dark-blast-r* (+ (meters 5) (* k (meters 7))))
-         (dotimes (i 3) (launch-particles (-> *part-id-table* 3003) at))
-         (activate! *camera-smush-control* (+ 819.2 (* 1228.8 k)) 37 600 1.0 0.995)
-         (cpad-set-buzz! (-> *cpad-list* cpads 0) 1 255 (seconds 0.5))
-         (sound-play "shield-zap")
-         (sound-play "death-darkeco" :pitch -0.8)
-         (let ((tt (process-spawn touch-tracker :init touch-tracker-init (-> *target* control trans) 4096.0 40 :to *target*)))
-           (send-event (ppointer->process tt) 'event 'attack 'flop)
-           (send-event (ppointer->process tt)
-                       'function
-                       (lambda ((arg0 target))
-                         (let ((f0-3 (seek (-> arg0 control root-prim local-sphere w)
-                                           *dark-blast-r*
-                                           (* 409600.0 DISPLAY_FPS_RATIO 0.016666668))))
-                           (set! (-> arg0 control root-prim local-sphere w) f0-3)
-                           f0-3))))
-         (soul-dark-jak-blast at *dark-blast-r*)))
-     (set! *dark-charge* 0.0)))
   (none))
 
 (defun dark-jak-update ()
@@ -1938,7 +1902,6 @@
           (set-vector! (-> *target* draw color-mult) 1.0 1.0 1.0 1.0)
           (set-vector! (-> *target* draw color-emissive) 0.0 0.0 0.0 8.0)
           (launch-particles (-> *part-id-table* 3002) (-> *target* control trans))
-          (dark-jak-charge)
           ;; attacking: dark eco flaring from his hands and feet (the joints sk_lhand, sk_rhand, the ankles)
           (when (logtest? (-> *target* state-flags) (state-flags dangerous))
             (let ((at (new 'stack-no-clear 'vector)))
@@ -1950,13 +1913,16 @@
               (launch-particles (-> *part-id-table* 3008) at)
               (vector<-cspace! at (-> *target* node-list data 33))
               (launch-particles (-> *part-id-table* 3008) at)))
-          ;; his eyes' glow
+          ;; his eyes' glow: a halo and a bright core, in front of each
           (let ((eye (new 'stack-no-clear 'vector))
                 (out (new 'stack-no-clear 'vector)))
             (dotimes (i 2)
               (vector<-cspace! eye (-> *target* node-list data (+ 82 i)))
-              (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.08))
-              (launch-particles (-> *part-id-table* 3007) (vector+! eye eye out)))))))))
+              ;; (well out in front: nearer, the face hid it)
+              (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.4))
+              (vector+! eye eye out)
+              (launch-particles (-> *part-id-table* 3007) eye)
+              (launch-particles (-> *part-id-table* 3010) eye))))))))
   (none))
 
 ;; Jak Living Sky: in Rock Village with the 45 cells the levitator used to want, Keira radios: it needs

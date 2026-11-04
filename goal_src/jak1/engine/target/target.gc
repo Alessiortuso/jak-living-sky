@@ -12,6 +12,8 @@
 (define-extern target-effect-exit (function none :behavior target))
 
 (define-extern target-post (function none :behavior target))
+;; Jak Living Sky: Dark Jak's discharge (nav-enemy.gc)
+(define-extern soul-dark-jak-blast (function vector float none))
 
 (define-extern target-walk-event-handler (function process int symbol event-message-block object :behavior target))
 
@@ -1660,6 +1662,9 @@
             (sound-play "death-darkeco" :pitch -0.9)
             (launch-particles (-> *part-id-table* 3003) (-> self control trans))
             (launch-particles (-> *part-id-table* 3003) (-> self control trans))
+            ;; and a discharge: an arc to each enemy within 12 m, thrown back and stunned
+            (soul-dark-jak-blast (-> self control trans) (meters 12))
+            (sound-play "shield-zap")
             (let ((s5-2 (process-spawn touch-tracker :init touch-tracker-init (-> self control trans) 4096.0 40 :to self)))
               (send-event (ppointer->process s5-2) 'event 'attack 'flop)
               (send-event (ppointer->process s5-2)
