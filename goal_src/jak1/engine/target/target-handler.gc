@@ -427,6 +427,8 @@
          (logior! (-> self attack-info-rec mask) (attack-mask attacker)))
        (go target-hit 'shove (-> self attack-info-rec))))
     (('launch) (mem-copy! (&-> self control unknown-pointer00) (the-as pointer arg3) 72) #t)
+    ;; Jak Living Sky: turning into Dark Jak (target2.gc)
+    (('dark-transform) (go target-dark-transform))
     (('powerup)
      (if (or (= (-> self next-state name) 'target-stance)
              (= (-> self next-state name) 'target-walk)

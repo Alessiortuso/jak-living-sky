@@ -60,6 +60,7 @@
    target-duck-stance
    target-duck-walk
    (target-eco-powerup object float)
+   target-dark-transform
    target-edge-grab
    (target-edge-grab-jump float float)
    target-edge-grab-off

@@ -1896,10 +1896,44 @@
       (set! *dark-jak-last-state* now)))
   (none))
 
+;; he's Dark Jak: the burst, his powers, horns and claws
+(defun dark-jak-begin ()
+  (when (and *target* (not *dark-jak*))
+    (set! *dark-jak* #t)
+    (set! *dark-jak-start* (current-time))
+    (dark-jak-powers #t)
+    (sound-play "death-darkeco" :pitch -0.6)
+    (sound-play "shield-zap")
+    (activate! *camera-smush-control* 1228.8 37 600 1.0 0.995)
+    (cpad-set-buzz! (-> *cpad-list* cpads 0) 1 255 (seconds 0.5))
+    (let ((at (new 'stack-no-clear 'vector)))
+      (vector<-cspace! at (-> *target* node-list data 5))
+      (dotimes (i 3) (launch-particles (-> *part-id-table* 3003) at)))
+    (darkjak-parts-spawn))
+  (none))
+
+;; turning: dark eco crackling about him (k: how hard), the pad trembling, the camera a little
+(defun dark-jak-transform-shake ((k float))
+  (when *target*
+    (let ((at (new 'stack-no-clear 'vector)))
+      (vector<-cspace! at (-> *target* node-list data 5))
+      (dotimes (i (+ 1 (the int (* 3.0 k))))
+        (let ((p (new 'stack-no-clear 'vector))
+              (a (rand-vu-float-range 0.0 65536.0))
+              (r (rand-vu-float-range (meters 0.4) (meters 1.2))))
+          (set-vector! p (+ (-> at x) (* r (cos a))) (+ (-> at y) (rand-vu-float-range (meters -1) (meters 1))) (+ (-> at z) (* r (sin a))) 1.0)
+          (launch-particles (-> *part-id-table* 3009) p)))
+      (launch-particles (-> *part-id-table* 3002) (-> *target* control trans))
+      (cpad-set-buzz! (-> *cpad-list* cpads 0) 0 (the int (* 160.0 k)) (seconds 0.05))
+      (if (zero? (logand (-> *display* integral-frame-counter) 15)) (sound-play "shield-zap" :vol (* 40.0 k)))
+      (if (zero? (logand (-> *display* integral-frame-counter) 7)) (activate! *camera-smush-control* (* 300.0 k) 15 60 1.0 0.9))))
+  (none))
+
 (defun dark-jak-update ()
   (cond
     ((not *dark-jak*)
      ;; turning: the ring full, L1 and R1 together, Jak free and in play
+     ;; (on the ground: the turning plays out, target2.gc, and at its height dark-jak-begin)
      (when (and *target*
                 (>= *soul-dark* 100.0)
                 (= *master-mode* 'game)
@@ -1907,15 +1941,9 @@
                 (cpad-hold? 0 l1)
                 (cpad-hold? 0 r1)
                 (or (cpad-pressed? 0 l1) (cpad-pressed? 0 r1))
+                (logtest? (-> *target* control status) (cshape-moving-flags onsurf))
                 (not (logtest? (-> *target* state-flags) (state-flags grabbed dying))))
-       (set! *dark-jak* #t)
-       (set! *dark-jak-start* (current-time))
-       (dark-jak-powers #t)
-       (sound-play "death-darkeco" :pitch -0.6)
-       (activate! *camera-smush-control* 819.2 37 600 1.0 0.995)
-       (cpad-set-buzz! (-> *cpad-list* cpads 0) 1 255 (seconds 0.5))
-       (launch-particles (-> *part-id-table* 3003) (-> *target* control trans))
-       (darkjak-parts-spawn)))
+       (send-event *target* 'dark-transform)))
     (else
      (let ((spent (/ (the float (- (current-time) *dark-jak-start*)) (the float (seconds 20)))))
        (set! *soul-dark* (fmax 0.0 (* 100.0 (- 1.0 spent))))

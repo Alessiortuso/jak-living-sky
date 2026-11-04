@@ -1327,6 +1327,49 @@
       (go target-falling 'target-eco-powerup))
   :post target-post)
 
+;; Jak Living Sky: turning into Dark Jak: dark eco seizes him (shocked, sparks crackling, the pad and camera
+;; shaking), then he powers up, slowly; at its height the burst, and he's Dark Jak (collectables.gc)
+(define-extern dark-jak-begin (function none))
+(define-extern dark-jak-transform-shake (function float none))
+
+(defstate target-dark-transform (target)
+  :event target-standard-event-handler
+  :enter
+    (behavior ()
+      (set-time! (-> self state-time))
+      (logior! (-> self state-flags) (state-flags invulnerable)))
+  :exit
+    (behavior ()
+      (logclear! (-> self state-flags) (state-flags invulnerable))
+      (target-exit))
+  :code
+    (behavior ()
+      (set! (-> self neck flex-blend) 0.0)
+      (set! (-> self control mod-surface) *walk-mods*)
+      ;; seized
+      (ja-channel-push! 1 (seconds 0.1))
+      (ja-no-eval :group! eichar-shocked-ja :num! (seek! (ja-aframe (the-as float 18.0) 0)) :frame-num 0.0)
+      (until (ja-done? 0)
+        (dark-jak-transform-shake 0.5)
+        (suspend)
+        (ja :num! (seek! (ja-aframe (the-as float 18.0) 0))))
+      (set-time! (-> self state-time))
+      (until (time-elapsed? (-> self state-time) (seconds 0.7))
+        (dark-jak-transform-shake 1.0)
+        (suspend))
+      ;; powering up, slowly; the burst at its height
+      (ja-channel-push! 1 (seconds 0.15))
+      (ja-no-eval :group! eichar-powerup-ja :num! (seek! max 0.6) :frame-num 0.0)
+      (set-time! (-> self state-time))
+      (until (ja-done? 0)
+        (if (and (not *dark-jak*) (time-elapsed? (-> self state-time) (seconds 0.45))) (dark-jak-begin))
+        (if (not *dark-jak*) (dark-jak-transform-shake 1.0))
+        (suspend)
+        (ja :num! (seek! max 0.6)))
+      (if (not *dark-jak*) (dark-jak-begin))
+      (go target-stance))
+  :post target-post)
+
 (defstate target-wade-stance (target)
   :event target-standard-event-handler
   :enter
