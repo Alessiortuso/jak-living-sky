@@ -1682,8 +1682,11 @@
     (brume-radio-play))
   (none))
 
+(define-extern soul-dark-enemies-update (function none))
+
 (defun soul-pile-update ()
   (brume-radio-update)
+  (soul-dark-enemies-update)
   ;; the menu's switch (the rest of the rules follow it, the life's display after a restart)
   (set! *soul-on* (!= 0 (pc-enhanced-hard-rules)))
   (set! *soul-enemy-speed* (if *soul-on* 1.25 1.0))

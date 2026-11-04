@@ -1130,6 +1130,14 @@ nav-enemy-default-event-handler
         (new 'process 'fact-info-enemy this (pickup-type eco-pill-random) (-> *FACT-bank* default-pill-inc)))
   (set! (-> this reaction-time) (nav-enemy-rnd-int-range (seconds 0.1) (seconds 0.8)))
   (set! (-> this speed-scale) *soul-enemy-speed*)
+  ;; Jak Living Sky: half the enemies placed in the world corrupted by dark eco, always the same ones
+  (set! (-> this dark)
+        (the-as symbol
+                (and *soul-on*
+                     (-> this entity)
+                     (let ((aid (-> this entity aid))) (= 1 (logand (+ aid (shr aid 3) (shr aid 7)) 1))))))
+  (set! (-> this dark-eye 0) -2)
+  (set! (-> this dark-eye 1) -2)
   (logior! (-> this nav-enemy-flags) (nav-enemy-flags enable-rotate enable-travel navenmf5 navenmf6 navenmf12))
   0
   (none))
@@ -1227,3 +1235,102 @@ nav-enemy-default-event-handler
       *kernel-context*))
   (pc-enhanced-set-pushers (the-as pointer *enhanced-pushers*) *enhanced-pusher-count*)
   (none))
+
+;; Jak Living Sky: the enemies corrupted by dark eco: a hit of theirs takes three marks (soul-hit-of), their
+;; eyes glow purple, their skin pale and ashen (its shading kept)
+(defpart 2998
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:scale-x (meters 0.35) (meters 0.1))
+   (:scale-y :copy scale-x)
+   (:r 170.0)
+   (:g 40.0)
+   (:b 255.0)
+   (:a 80.0 16.0)
+   (:fade-a -3.2)
+   (:timer (seconds 0.05))
+   (:flags (bit2 bit3))))
+
+(defpart 2999
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:scale-x (meters 0.8) (meters 0.2))
+   (:scale-y :copy scale-x)
+   (:r 170.0)
+   (:g 40.0)
+   (:b 255.0)
+   (:a 80.0 16.0)
+   (:fade-a -3.2)
+   (:timer (seconds 0.05))
+   (:flags (bit2 bit3))))
+
+(defun soul-dark-enemy? ((proc process))
+  (the-as symbol (and proc (type-type? (-> proc type) nav-enemy) (-> (the-as nav-enemy proc) dark))))
+
+;; "eye" in a joint's name, any case (not a brow, a lid or a stalk)
+(defun soul-eye-name? ((name string))
+  (let ((n (length name))
+        (eye #f)
+        (other #f))
+    (dotimes (i n)
+      (let ((c (logior (-> name data i) 32)))
+        (when (and (= c 101) (< (+ i 2) n) (= (logior (-> name data (+ i 1)) 32) 121) (= (logior (-> name data (+ i 2)) 32) 101))
+          (set! eye #t))
+        ;; eyeb(row), eyel(id), eyel(ash), eyest(alk)
+        (when (and eye (< (+ i 3) n) (= c 101) (= (logior (-> name data (+ i 1)) 32) 121) (= (logior (-> name data (+ i 2)) 32) 101))
+          (let ((d (logior (-> name data (+ i 3)) 32)))
+            (if (or (= d 98)
+                    (= d 108)
+                    (and (= d 115) (< (+ i 4) n) (= (logior (-> name data (+ i 4)) 32) 116)))
+              (set! other #t))))))
+    (and eye (not other))))
+
+(defun soul-dark-find-eyes ((this nav-enemy))
+  (set! (-> this dark-eye 0) -1)
+  (set! (-> this dark-eye 1) -1)
+  (let ((jg (-> this draw jgeo))
+        (found 0))
+    (when (and (nonzero? jg) jg)
+      (dotimes (k (-> jg length))
+        (let ((j (-> jg data k)))
+          (when (and (< found 2) j (nonzero? (-> j name)) (soul-eye-name? (-> j name)) (< (+ k 1) (-> this node-list length)))
+            (set! (-> this dark-eye found) (+ k 1))
+            (+! found 1)))))
+    ;; no eyes: the head's glow
+    (when (zero? found)
+      (dotimes (k (-> jg length))
+        (let ((j (-> jg data k)))
+          (when (and (= found 0) j (nonzero? (-> j name)) (string= (-> j name) "head") (< (+ k 1) (-> this node-list length)))
+            (set! (-> this dark-eye 0) (+ k 1))
+            (+! found 1))))))
+  (none))
+
+(defun soul-dark-enemy-frame ((this nav-enemy))
+  (when (and (-> this dark)
+             (nonzero? (-> this draw))
+             (nonzero? (-> this node-list))
+             (< (vector-vector-distance (-> this root trans) (math-camera-pos)) (meters 80)))
+    (set-vector! (-> this draw color-mult) 0.7 0.67 0.76 1.0)
+    (set-vector! (-> this draw color-emissive) 0.2 0.18 0.24 1.0)
+    (if (= (-> this dark-eye 0) -2) (soul-dark-find-eyes this))
+    (let ((part (if (< (meters 3) (-> this draw bounds w)) (-> *part-id-table* 2999) (-> *part-id-table* 2998)))
+          (eye (new 'stack-no-clear 'vector))
+          (out (new 'stack-no-clear 'vector)))
+      (dotimes (i 2)
+        (when (>= (-> this dark-eye i) 0)
+          (vector<-cspace! eye (-> this node-list data (-> this dark-eye i)))
+          ;; (a little toward the camera: in front of the eye, not inside)
+          (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.2))
+          (launch-particles part (vector+! eye eye out))))))
+  (none))
+
+(defun soul-dark-enemies-update ()
+  (when *soul-on*
+    (iterate-process-tree
+      *active-pool*
+      (lambda ((p process)) (if (type-type? (-> p type) nav-enemy) (soul-dark-enemy-frame (the-as nav-enemy p))) #t)
+      *null-kernel-context*))
+  (none))
+
