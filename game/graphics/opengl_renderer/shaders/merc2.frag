@@ -74,17 +74,22 @@ void main() {
 
   // Jak Living Sky: corrupted by dark eco: its eyes purple and glowing, the rest pale and ashen (its shading
   // kept), as Dark Jak
-  // Dark Jak: black eyes, pale ashen skin, his hair white-grey, the rest darker with a purple sheen
+  // Dark Jak: his skin pale, shaded from slate blue in the shadows through lavender to near white in the light
+  // (a ramp on its lit brightness, the texture's detail kept); his hair grey, darker in its depths; his eyes
+  // purple and glowing; his clothes their own, a little darker
   if (enh_dark > 1.5 && gfx_hack_no_tex == 0) {
-    float l = dot(color.rgb, vec3(0.3, 0.59, 0.11));
+    float l = clamp(dot(color.rgb, vec3(0.3, 0.59, 0.11)) * 1.35, 0.0, 1.0);
     if (enh_mat == MAT_EYE) {
-      color.rgb = vec3(0.02, 0.0, 0.04) + vec3(0.25, 0.05, 0.4) * pow(l, 3.0);
+      float e = dot(T0.rgb, vec3(0.3, 0.59, 0.11));
+      color.rgb = vec3(0.72, 0.22, 1.0) * (0.9 + 0.6 * e);
     } else if (enh_mat == MAT_SKIN) {
-      color.rgb = mix(color.rgb, vec3(l) * vec3(0.95, 0.93, 1.02) * 1.25 + 0.04, 0.85);
+      vec3 shade = mix(vec3(0.24, 0.27, 0.46), vec3(0.62, 0.66, 0.84), smoothstep(0.0, 0.55, l));
+      color.rgb = mix(shade, vec3(0.93, 0.95, 1.0), smoothstep(0.5, 1.0, l));
     } else if (enh_mat == MAT_HAIR || enh_mat == MAT_FUR) {
-      color.rgb = mix(color.rgb, vec3(0.55 + 0.6 * l) * vec3(0.94, 0.93, 1.0), 0.9);
+      vec3 shade = mix(vec3(0.16, 0.17, 0.21), vec3(0.6, 0.62, 0.68), smoothstep(0.0, 0.6, l));
+      color.rgb = mix(shade, vec3(0.86, 0.87, 0.9), smoothstep(0.6, 1.0, l));
     } else {
-      color.rgb = mix(color.rgb, color.rgb * vec3(0.7, 0.6, 0.85), 0.6);
+      color.rgb *= 0.88;
     }
   } else if (enh_dark > 0.5 && gfx_hack_no_tex == 0) {
     if (enh_mat == MAT_EYE) {

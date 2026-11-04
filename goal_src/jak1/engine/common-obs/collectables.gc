@@ -1724,6 +1724,92 @@
    (:conerot-x (degrees 0) (degrees 180))
    (:conerot-y (degrees 0) (degrees 360))))
 
+;; his horns and claws: models of their own (custom_assets/jak1/models), each frame put where his head's and
+;; his fingertips' joints are
+(def-actor darkjak-horns :bounds (0 0 0 2))
+(def-actor darkjak-claw :bounds (0 0 0 1))
+
+(deftype darkjak-part (process-drawable)
+  ((ja int32)
+   (jb int32))
+  (:states
+    darkjak-part-idle))
+
+(defun darkjak-part-place ((this darkjak-part))
+  (let ((nodes (-> *target* node-list)))
+    (cond
+      ((< (-> this ja) 0)
+       ;; the horns: on his head's joint, as it turns
+       (let ((m (-> nodes data (-> this jb) bone transform)))
+         (vector<-cspace! (-> this root trans) (-> nodes data (-> this jb)))
+         (matrix->quaternion (-> this root quat) m)))
+      (else
+       ;; a claw: from the fingertip (as far past the last joint as the finger's last bone is long), along it
+       (let ((a (new 'stack-no-clear 'vector))
+             (b (new 'stack-no-clear 'vector))
+             (m (new 'stack-no-clear 'matrix)))
+         (vector<-cspace! a (-> nodes data (-> this ja)))
+         (vector<-cspace! b (-> nodes data (-> this jb)))
+         (vector-! (-> m vector 2) b a)
+         (vector+*! (-> this root trans) b (-> m vector 2) 0.9)
+         (vector-normalize! (-> m vector 2) 1.0)
+         ;; (its up: the last joint's own, square to the finger)
+         (set! (-> m vector 1 quad) (-> nodes data (-> this jb) bone transform vector 1 quad))
+         (vector-normalize! (vector-cross! (-> m vector 0) (-> m vector 1) (-> m vector 2)) 1.0)
+         (vector-cross! (-> m vector 1) (-> m vector 2) (-> m vector 0))
+         (set! (-> m vector 0 w) 0.0)
+         (set! (-> m vector 1 w) 0.0)
+         (set! (-> m vector 2 w) 0.0)
+         (set-vector! (-> m vector 3) 0.0 0.0 0.0 1.0)
+         (matrix->quaternion (-> this root quat) m)))))
+  (none))
+
+(defstate darkjak-part-idle (darkjak-part)
+  :code
+    (behavior ()
+      (loop
+        (if (or (not *dark-jak*) (not *target*)) (deactivate self))
+        (darkjak-part-place self)
+        (suspend)))
+  :post ja-post)
+
+;; ja -1: the horns on joint jb; else a claw past fingertip joint jb (ja the joint before)
+(defbehavior darkjak-part-init darkjak-part ((ja int) (jb int))
+  (set! (-> self root) (new 'process 'trsqv))
+  (logclear! (-> self mask) (process-mask actor-pause))
+  (vector-identity! (-> self root scale))
+  (quaternion-identity! (-> self root quat))
+  (set! (-> self ja) ja)
+  (set! (-> self jb) jb)
+  (initialize-skeleton self (if (< ja 0) *darkjak-horns-sg* *darkjak-claw-sg*) '())
+  (darkjak-part-place self)
+  (go darkjak-part-idle)
+  (none))
+
+(defun darkjak-parts-spawn ()
+  (when *target*
+    (process-spawn darkjak-part :init darkjak-part-init -1 7 :to *target*)
+    ;; thumb, index, middle, ring and little finger: left (40..49), right (52..61)
+    (dotimes (i 5)
+      (process-spawn darkjak-part :init darkjak-part-init (+ 40 (* 2 i)) (+ 41 (* 2 i)) :to *target*)
+      (process-spawn darkjak-part :init darkjak-part-init (+ 52 (* 2 i)) (+ 53 (* 2 i)) :to *target*)))
+  (none))
+
+;; his eyes' glow (small: his eyes are)
+(defpart 3007
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:scale-x (meters 0.2) (meters 0.05))
+   (:scale-y :copy scale-x)
+   (:r 170.0)
+   (:g 40.0)
+   (:b 255.0)
+   (:a 100.0 20.0)
+   (:fade-a -3.2)
+   (:timer (seconds 0.05))
+   (:flags (bit2 bit3))))
+
 (define *dark-jak-saved* (new 'static 'array float 8))
 
 ;; his reach, speed and jumps more (or back as they were)
@@ -1770,7 +1856,8 @@
        (sound-play "death-darkeco" :pitch -0.6)
        (activate! *camera-smush-control* 819.2 37 600 1.0 0.995)
        (cpad-set-buzz! (-> *cpad-list* cpads 0) 1 255 (seconds 0.5))
-       (launch-particles (-> *part-id-table* 3003) (-> *target* control trans))))
+       (launch-particles (-> *part-id-table* 3003) (-> *target* control trans))
+       (darkjak-parts-spawn)))
     (else
      (let ((spent (/ (the float (- (current-time) *dark-jak-start*)) (the float (seconds 20)))))
        (set! *soul-dark* (fmax 0.0 (* 100.0 (- 1.0 spent))))
@@ -1780,7 +1867,14 @@
           ;; (the 8: merc2.vert's mark for Dark Jak; Daxter, copying it, keeps his own look: sidekick.gc)
           (set-vector! (-> *target* draw color-mult) 1.0 1.0 1.0 1.0)
           (set-vector! (-> *target* draw color-emissive) 0.0 0.0 0.0 8.0)
-          (launch-particles (-> *part-id-table* 3002) (-> *target* control trans)))))))
+          (launch-particles (-> *part-id-table* 3002) (-> *target* control trans))
+          ;; his eyes' glow
+          (let ((eye (new 'stack-no-clear 'vector))
+                (out (new 'stack-no-clear 'vector)))
+            (dotimes (i 2)
+              (vector<-cspace! eye (-> *target* node-list data (+ 82 i)))
+              (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 0.08))
+              (launch-particles (-> *part-id-table* 3007) (vector+! eye eye out)))))))))
   (none))
 
 ;; Jak Living Sky: in Rock Village with the 45 cells the levitator used to want, Keira radios: it needs

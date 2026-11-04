@@ -1695,6 +1695,10 @@
 ;; Enhanced: Jak's nap (lying down, asleep, getting up, a stretch); the glb is made by
 ;; scripts/enhanced/nap_anims.py, target2.gc plays it from *enhanced-nap-ag*
 (build-actor "jak-nap" :texture-bucket #f :master-art-group "eichar-ag")
+;; Jak Living Sky: Dark Jak's horns and claws (models made by scratch scripts from Jak's own skeleton; their meshes
+;; go into the common level from custom_assets/jak1/models/common, where the extractor adds them)
+(build-actor "darkjak-horns")
+(build-actor "darkjak-claw")
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; Game Engine Code
