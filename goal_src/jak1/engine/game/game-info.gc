@@ -511,6 +511,9 @@
                  (-> this eco-level)
                  0.0 ;; we don't have this kind of eco.
                  )))
+     ;; Jak Living Sky: one eco at a time, the last taken: blue, red or yellow eco ends Dark Jak (the dark eco
+     ;; left in his ring stays)
+     (if *dark-jak* (dark-jak-end))
      ;; new type of eco. Reset and use the new type.
      (when (!= (-> this eco-type) kind)
        ;; as far as I can tell, the eco-level isn't really used other than just 1 or 0.
