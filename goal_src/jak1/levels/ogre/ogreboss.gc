@@ -1009,7 +1009,8 @@
 
 ;; Jak Living Sky: with the hard rules, Klaww's third fall doesn't finish him: dark eco powers him up for a
 ;; fourth round, harder; his eyes purple and glowing (their texture then custom_assets/jak1/texture_swap/
-;; ogre-eye.png), pale and ashen as Dark Jak, dark eco crackling about his head
+;; ogre-eye.png), pale and ashen as Dark Jak (his fur too: those textures there), dark eco crackling about his
+;; head
 (defpart 2996
   :init-specs
   ((:texture (hotdot effects))
@@ -1042,18 +1043,36 @@
    (:timer (seconds 0.5) (seconds 0.3))
    (:flags (bit2 bit3))))
 
+(defun ogreboss-dark-textures ((on symbol))
+  (pc-enhanced-texture-swap "ogre-eye" on)
+  (pc-enhanced-texture-swap "ogre-bluefur" on)
+  (pc-enhanced-texture-swap "ogre-furlong" on)
+  (pc-enhanced-texture-swap "ogre-furtrans" on)
+  (pc-enhanced-texture-swap "ogre-furtrans2" on)
+  (pc-enhanced-texture-swap "ogre-hair" on)
+  (none))
+
 (defbehavior ogreboss-dark ogreboss ()
   (when (-> self dark)
     (set-vector! (-> self draw color-mult) 0.5 0.48 0.55 1.0)
     (set-vector! (-> self draw color-emissive) 0.42 0.4 0.48 1.0)
-    ;; (the glows by his brows, a little toward the camera: in front of the eyes)
+    ;; (he has no joints for his eyes, only for his brows: each eye under its brow, a quarter of the way
+    ;; from the brows down to his lips, a little toward the camera: in front of it)
     (let ((eye (new 'stack-no-clear 'vector))
-          (out (new 'stack-no-clear 'vector)))
+          (out (new 'stack-no-clear 'vector))
+          (down (new 'stack-no-clear 'vector)))
       (vector<-cspace! eye (-> self node-list data 23))
-      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 2))
+      (vector<-cspace! out (-> self node-list data 24))
+      (vector-lerp! down eye out 0.5)
+      (vector<-cspace! out (-> self node-list data 16))
+      (vector-! down out down)
+      (vector-float*! down down 0.25)
+      (vector+! eye eye down)
+      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 1.5))
       (launch-particles (-> *part-id-table* 2996) (vector+! eye eye out))
       (vector<-cspace! eye (-> self node-list data 24))
-      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 2))
+      (vector+! eye eye down)
+      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 1.5))
       (launch-particles (-> *part-id-table* 2996) (vector+! eye eye out))
       (vector<-cspace! eye (-> self node-list data 7))
       (launch-particles (-> *part-id-table* 2997) eye)))
@@ -1366,7 +1385,7 @@
            (set! (-> self dark) #t)
            (set! (-> self level) 2.0)
            (set! (-> self difficulty) (* 1.2 (-> self difficulty)))
-           (pc-enhanced-texture-swap "ogre-eye" #t)
+           (ogreboss-dark-textures #t)
            (sound-play "death-darkeco"))
           (else (go ogreboss-die))))
       (send-event (handle->process (-> self boulder)) 'go-hit)
@@ -1399,7 +1418,7 @@
 (defstate ogreboss-die (ogreboss)
   :code
     (behavior ()
-      (pc-enhanced-texture-swap "ogre-eye" #f)
+      (ogreboss-dark-textures #f)
       (ogreboss-reset-camera)
       (send-event (handle->process (-> self boulder)) 'go-die)
       (ja-channel-push! 1 (seconds 0.2))
@@ -1537,7 +1556,7 @@
   (set! *ogreboss* (the-as ogreboss (process->ppointer this)))
   (set! (-> this level) 0.0)
   (set! (-> this dark) #f)
-  (pc-enhanced-texture-swap "ogre-eye" #f)
+  (ogreboss-dark-textures #f)
   (set! (-> this vulnerable) #f)
   (set! (-> this bridge-assembled) #f)
   (set! (-> this submerged) #f)
