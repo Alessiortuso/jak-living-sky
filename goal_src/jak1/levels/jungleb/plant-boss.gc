@@ -214,6 +214,21 @@
    (:timer (seconds 0.05))
    (:flags (bit2 bit3))))
 
+;; its textures powered up (custom_assets/jak1/texture_swap): the eyes purple, the rest ashen
+(defun plant-boss-dark-textures ((on symbol))
+  (pc-enhanced-texture-swap "plant-eye" on)
+  (pc-enhanced-texture-swap "plant-headtop" on)
+  (pc-enhanced-texture-swap "plant-leaf-01" on)
+  (pc-enhanced-texture-swap "plant-leaf-02" on)
+  (pc-enhanced-texture-swap "plant-mouth" on)
+  (pc-enhanced-texture-swap "plant-eyestems-01" on)
+  (pc-enhanced-texture-swap "plant-thorns-01" on)
+  (pc-enhanced-texture-swap "plant-dangler" on)
+  (pc-enhanced-texture-swap "plantarms-stripes" on)
+  (pc-enhanced-texture-swap "plantarms-stripes2white" on)
+  (pc-enhanced-texture-swap "plant-undermouth-streaks" on)
+  (none))
+
 ;; the fight's stage, 3 (first) to 1 (last), from the hits left; powered up, the last
 (defbehavior plant-boss-stage plant-boss ()
   (if (-> self dark) 1 (the int (-> self health))))
@@ -222,14 +237,14 @@
   ;; pale, ashen and a little purple, powered up, as Dark Jak: the head, its arms, leaves, vines and roots (not
   ;; its aphids; every frame, for the leaves grown again)
   (when (-> self dark)
-    (set-vector! (-> self draw color-mult) 0.5 0.48 0.55 1.0)
-    (set-vector! (-> self draw color-emissive) 0.42 0.4 0.48 1.0)
+    (set-vector! (-> self draw color-mult) 0.7 0.68 0.75 1.0)
+    (set-vector! (-> self draw color-emissive) 0.2 0.19 0.24 1.0)
     (let ((kid (-> self child)))
       (while kid
         (let ((pd (the-as process-drawable (ppointer->process kid))))
           (when (and (type-type? (-> pd type) process-drawable) (not (type-type? (-> pd type) aphid)) (nonzero? (-> pd draw)))
-            (set-vector! (-> pd draw color-mult) 0.5 0.48 0.55 1.0)
-            (set-vector! (-> pd draw color-emissive) 0.42 0.4 0.48 1.0)))
+            (set-vector! (-> pd draw color-mult) 0.7 0.68 0.75 1.0)
+            (set-vector! (-> pd draw color-emissive) 0.2 0.19 0.24 1.0)))
         (set! kid (-> kid 0 brother)))))
   (when (and (-> self dark) (> (-> self health) 0.0))
     ;; (each eye's glow between its joint and its brow's, about the middle of it, and a little toward the
@@ -1193,7 +1208,7 @@
           ((and *soul-on* (not (-> self dark)))
            (set! (-> self dark) #t)
            (set! (-> self health) 2.0)
-           (pc-enhanced-texture-swap "plant-eye" #t)
+           (plant-boss-dark-textures #t)
            (sound-play "death-darkeco"))
           (else (go plant-boss-dead #f))))
       (ja-no-eval :num! (seek!))
@@ -1207,7 +1222,7 @@
   :event plant-boss-generic-event-handler
   :code
     (behavior ((arg0 symbol))
-      (pc-enhanced-texture-swap "plant-eye" #f)
+      (plant-boss-dark-textures #f)
       (logclear! (-> self mask) (process-mask actor-pause))
       (set! (-> self neck flex-blend) 0.0)
       (set! (-> self body flex-blend) 0.0)
@@ -1485,7 +1500,7 @@
                        this))
   (set! (-> this energy) 0.25)
   (set! (-> this dark) #f)
-  (pc-enhanced-texture-swap "plant-eye" #f)
+  (plant-boss-dark-textures #f)
   (set! (-> this health) 3.0)
   (set! (-> this cam-tracker) (the-as handle #f))
   (set! (-> this camera) (the-as handle #f))
