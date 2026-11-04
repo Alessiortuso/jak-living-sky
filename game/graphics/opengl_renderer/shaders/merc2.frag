@@ -89,7 +89,20 @@ void main() {
       vec3 shade = mix(vec3(0.16, 0.17, 0.21), vec3(0.6, 0.62, 0.68), smoothstep(0.0, 0.6, l));
       color.rgb = mix(shade, vec3(0.86, 0.87, 0.9), smoothstep(0.6, 1.0, l));
     } else {
-      color.rgb *= 0.88;
+      // Jak 1's skin is a white texture coloured by the model's vertex colours (not a skin material): told
+      // by its colour, warm and light (his leather is darker, his pants paler), as Jak 2's Dark Jak: pale
+      // grey-lavender in the light, slate blue in the shadows
+      vec3 c = vtx_color.rgb;
+      float mx = max(c.r, max(c.g, c.b));
+      float mn = min(c.r, min(c.g, c.b));
+      float sat = mx > 0.0 ? (mx - mn) / mx : 0.0;
+      bool skin = c.r > c.g && c.g > c.b && sat > 0.18 && sat < 0.65 && c.r > 0.12 && T0.r > 0.7 && T0.g > 0.6;
+      if (skin) {
+        vec3 shade = mix(vec3(0.27, 0.29, 0.46), vec3(0.64, 0.66, 0.8), smoothstep(0.0, 0.55, l));
+        color.rgb = mix(shade, vec3(0.9, 0.9, 0.97), smoothstep(0.55, 1.0, l));
+      } else {
+        color.rgb *= 0.88;
+      }
     }
   } else if (enh_dark > 0.5 && gfx_hack_no_tex == 0) {
     if (enh_mat == MAT_EYE) {

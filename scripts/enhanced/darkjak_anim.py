@@ -102,9 +102,10 @@ def deltas(t, f):
         # (an arm hanging down turned about +X swings back: forward is the other way)
         "Larm": rot("z", 65 * u) @ rot("x", -35 * h), "Rarm": rot("z", -65 * u) @ rot("x", -35 * h),
         "Lforarm": rot("x", -50 * h), "Rforarm": rot("x", -50 * h),
-        "Lthigh": rot("x", -22 * h) @ rot("z", 8 * u), "Rthigh": rot("x", -22 * h) @ rot("z", -8 * u),
-        "Lknee": rot("x", 40 * h), "Rknee": rot("x", 40 * h),
-        "Lankle": rot("x", -18 * h), "Rankle": rot("x", -18 * h),
+        # legs a little apart (more as he bursts), knees bent a little: not a trunk, not squashed down
+        "Lthigh": rot("x", -14 * h) @ rot("z", 6 * h + 10 * u), "Rthigh": rot("x", -14 * h) @ rot("z", -6 * h - 10 * u),
+        "Lknee": rot("x", 24 * h), "Rknee": rot("x", 24 * h),
+        "Lankle": rot("x", -10 * h) @ rot("z", -6 * h - 10 * u), "Rankle": rot("x", -10 * h) @ rot("z", 6 * h + 10 * u),
     }
 
 
@@ -151,7 +152,7 @@ def main():
         for i in order:
             tl, ql, sl = base[i]
             if nodes[i]["name"] == "main":
-                tl = tl + np.array([0, -0.12 * h, 0])
+                tl = tl + np.array([0, -0.04 * h, 0])
             m = trs(tl, ql, sl)
             p = world.get(parent.get(i), np.eye(4))
             w = p @ m
