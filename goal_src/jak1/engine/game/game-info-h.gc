@@ -227,6 +227,8 @@
 (define *soul-dark* 0.0)
 ;; Jak Living Sky: Daxter has seen a corrupted enemy (his line said: 0 not yet, 1 yes)
 (define *daxter-dark-seen* 0.0)
+;; Jak Living Sky: Jak has taken in dark eco (Daxter's line against it said: 0 not yet, 1 yes)
+(define *daxter-dark-eco-seen* 0.0)
 ;; Jak Living Sky: bought in the shop: twice the dark eco from corrupted enemies (0 no, 1 yes)
 (define *soul-dark-double* 0.0)
 ;; Jak Living Sky: bought in the shop: how long Dark Jak lasts (0: 10 s, 1: 15 s, 2: 20 s)

@@ -1557,6 +1557,8 @@
   (:states
     soul-orb-fly))
 
+(define-extern daxter-dark-eco-line (function none))
+
 (defstate soul-orb-fly (soul-orb)
   :code
     (behavior ()
@@ -1570,6 +1572,7 @@
                ;; (twice as much, bought in the shop)
                (set! *soul-dark* (fmin 100.0 (+ *soul-dark* (* (+ 1.0 *soul-dark-double*) (-> self value)))))
                (sound-play "get-red-eco" :pitch -0.6)
+               (if (zero? *daxter-dark-eco-seen*) (daxter-dark-eco-line))
                (if (-> *hud-parts* power) (send-event (ppointer->process (-> *hud-parts* power)) 'show)))
               (else
                (+! *soul-eco* (-> self value))
