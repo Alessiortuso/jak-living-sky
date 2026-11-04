@@ -1699,6 +1699,8 @@
 ;; go into the common level from custom_assets/jak1/models/common, where the extractor adds them)
 (build-actor "darkjak-horns")
 (build-actor "darkjak-claw")
+;; Jak Living Sky: Dark Jak's transformation, an animation of Jak's (scripts/enhanced/darkjak_anim.py)
+(build-actor "darkjak-turn" :texture-bucket #f :master-art-group "eichar-ag")
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; Game Engine Code

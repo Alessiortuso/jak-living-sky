@@ -334,6 +334,7 @@
   "jak-nap-ag.go" ;; Enhanced: the nap's animations (build-actor in game.gp)
   "darkjak-horns-ag.go" ;; Jak Living Sky: Dark Jak's horns and claws (build-actor in game.gp)
   "darkjak-claw-ag.go"
+  "darkjak-turn-ag.go"
   "deathcam-ag.go"
   "game-cnt.go"
   "rigid-body-h.o"

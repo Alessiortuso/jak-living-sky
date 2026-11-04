@@ -1327,12 +1327,14 @@
       (go target-falling 'target-eco-powerup))
   :post target-post)
 
-;; Jak Living Sky: turning into Dark Jak, in time with its sound (custom_assets/jak1/audio/voice/
-;; darkjak-transform.mp3: its blow at 0.6 s): dark eco seizes him, held still, discharges striking the enemies
-;; about; at the blow the burst, and he's Dark Jak (collectables.gc)
+;; Jak Living Sky: turning into Dark Jak, at once, in time with its sound (custom_assets/jak1/audio/voice/
+;; darkjak-transform.mp3, its blow from 0.3 s): an animation of his own (eichar-darkjak-turn,
+;; scripts/enhanced/darkjak_anim.py): hunched and trembling, discharges striking the enemies about, then
+;; bursting open: there he's Dark Jak (collectables.gc). Held still meanwhile
 (define-extern dark-jak-begin (function none))
 (define-extern dark-jak-transform-shake (function float none))
 (define-extern dark-jak-discharge (function float symbol none))
+(define-extern *darkjak-turn-ag* art-group)
 
 (defstate target-dark-transform (target)
   :event target-standard-event-handler
@@ -1354,24 +1356,25 @@
       (set! (-> self neck flex-blend) 0.0)
       (set! (-> self control mod-surface) *grab-mods*)
       (play-sound-file "voice/darkjak-transform.mp3" 100)
-      (ja-channel-push! 1 (seconds 0.05))
-      (ja-no-eval :group! eichar-shocked-ja :num! (seek! (ja-aframe (the-as float 18.0) 0)) :frame-num 0.0)
-      (let ((zap (current-time)))
-        ;; seized, until the blow
-        (until (time-elapsed? (-> self state-time) (seconds 0.6))
-          (dark-jak-transform-shake 1.0)
-          (when (time-elapsed? zap (seconds 0.15))
-            (set-time! zap)
-            (dark-jak-discharge (meters 8) #f))
+      (let ((anim (if *darkjak-turn-ag* (lookup-art *darkjak-turn-ag* "eichar-darkjak-turn" art-joint-anim)))
+            (zap (current-time)))
+        (when anim
+          (ja-channel-push! 1 (seconds 0.05))
+          (ja-no-eval :group! (the-as art-joint-anim anim) :num! (seek!) :frame-num 0.0))
+        (until (if anim (ja-done? 0) (time-elapsed? (-> self state-time) (seconds 0.6)))
+          (cond
+            ((not *dark-jak*)
+             ;; hunched: dark eco crackling, discharges; at 0.3 s the burst
+             (dark-jak-transform-shake 1.0)
+             (when (time-elapsed? zap (seconds 0.1))
+               (set-time! zap)
+               (dark-jak-discharge (meters 8) #f))
+             (when (time-elapsed? (-> self state-time) (seconds 0.3))
+               (dark-jak-begin)
+               (dark-jak-discharge (meters 8) #t))))
           (suspend)
-          (ja :num! (seek! (ja-aframe (the-as float 18.0) 0)))))
-      ;; the blow: he's Dark Jak, a last discharge striking
-      (dark-jak-begin)
-      (dark-jak-discharge (meters 8) #t)
-      (set-time! (-> self state-time))
-      (until (time-elapsed? (-> self state-time) (seconds 0.3))
-        (suspend)
-        (ja :num! (seek!)))
+          (if anim (ja :num! (seek!)))))
+      (if (not *dark-jak*) (dark-jak-begin))
       (go target-stance))
   :post target-post)
 
