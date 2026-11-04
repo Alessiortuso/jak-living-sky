@@ -219,11 +219,14 @@
   0
   (none))
 
+;; Jak Living Sky: Dark Jak's hits reach further
+(define-extern *dark-jak* symbol)
+
 (defbehavior target-danger-set! target ((arg0 symbol) (arg1 symbol))
   (let ((s4-0 (-> self control unknown-sphere00))
         (s5-0 (-> self control unknown-sphere01))
         (gp-0 (-> self control unknown-sphere02))
-        (f30-0 (if arg1 2.0 1.0)))
+        (f30-0 (* (if arg1 2.0 1.0) (if *dark-jak* 1.8 1.0))))
     (dotimes (v1-4 3)
       (set! (-> self control unknown-sphere-array00 v1-4 prim-core offense) (collide-offense normal-attack)))
     (sphere<-vector+r! (the-as sphere (-> self control root-prim local-sphere))

@@ -194,7 +194,17 @@
       (else 1.0)))
     1.0))
 
+(define-extern *dark-jak* symbol)
+
 (defbehavior target-attacked target ((arg0 symbol) (arg1 attack-info) (arg2 process) (arg3 touching-shapes-entry) (arg4 (state symbol attack-info target)))
+  ;; Jak Living Sky: Dark Jak takes no hurt from enemies' hits (what kills anyone still does: falls, dark eco,
+  ;; lava, drowning...)
+  (when (and *dark-jak*
+             (or (not (logtest? (-> arg1 mask) (attack-mask mode)))
+                 (= (-> arg1 mode) 'damage)
+                 (= (-> arg1 mode) 'generic)
+                 (= (-> arg1 mode) 'explode)))
+    (return #f))
   (set! *soul-hit* (soul-hit-of arg2))
   (when (not (logtest? (-> self state-flags) (state-flags being-attacked)))
     (cond

@@ -110,6 +110,8 @@
             (when (pc-cheats? (-> *pc-settings* cheats) sidekick-blue)
               (set! (-> self draw color-mult x) (set! (-> self draw color-mult y) 0.1))))
           (let ((v1-26 (-> self parent-override 0 draw color-emissive quad))) (set! (-> self draw color-emissive quad) v1-26))
+          ;; Jak Living Sky: not Dark Jak's mark (merc2.vert): Daxter stays himself
+          (if (< 6.0 (-> self draw color-emissive w)) (set! (-> self draw color-emissive w) 0.0))
           (set! (-> self draw secondary-interp) (-> self parent-override 0 draw secondary-interp))
           (if *debug-segment*
             (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0)

@@ -225,6 +225,9 @@
 ;; Jak Living Sky: the dark eco Jak has taken in from corrupted enemies, kept for good (0 to 100: full, he
 ;; can turn into Dark Jak)
 (define *soul-dark* 0.0)
+;; Jak Living Sky: Jak turned into Dark Jak (and since when)
+(define *dark-jak* #f)
+(define *dark-jak-start* (the-as time-frame 0))
 (define *brume-radio-time* 0)
 (define *soul-shop-cursor* 0)
 (define *soul-enemy-speed* 1.25)

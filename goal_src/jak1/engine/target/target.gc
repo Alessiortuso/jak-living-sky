@@ -1653,6 +1653,23 @@
                                               )))
                               (set! (-> arg0 control root-prim local-sphere w) f0-3)
                               f0-3)))))
+          ;; Jak Living Sky: Dark Jak's dive ends in a dark bomb: the blast spreads to 12 m, purple
+          (when *dark-jak*
+            (cpad-set-buzz! (-> *cpad-list* cpads 0) 1 255 (seconds 0.6))
+            (activate! *camera-smush-control* 1228.8 37 600 1.0 0.995)
+            (sound-play "death-darkeco" :pitch -0.9)
+            (launch-particles (-> *part-id-table* 3003) (-> self control trans))
+            (launch-particles (-> *part-id-table* 3003) (-> self control trans))
+            (let ((s5-2 (process-spawn touch-tracker :init touch-tracker-init (-> self control trans) 4096.0 40 :to self)))
+              (send-event (ppointer->process s5-2) 'event 'attack 'flop)
+              (send-event (ppointer->process s5-2)
+                          'function
+                          (lambda ((arg0 target))
+                            (let ((f0-3 (seek (-> arg0 control root-prim local-sphere w)
+                                              (the-as float 49152.0)
+                                              (* 409600.0 DISPLAY_FPS_RATIO 0.016666668))))
+                              (set! (-> arg0 control root-prim local-sphere w) f0-3)
+                              f0-3)))))
           (go target-flop-hit-ground gp-1)))
       (when (and (= (-> self fact eco-type) (pickup-type eco-red)) (>= (-> self fact eco-level) 1.0))
         (effect-control-method-10 (-> self skel effect)

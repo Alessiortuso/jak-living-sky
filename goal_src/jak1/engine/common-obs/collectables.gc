@@ -1682,6 +1682,107 @@
     (else (pc-enhanced-denied)))
   (none))
 
+;; Jak Living Sky: Dark Jak. With the dark eco ring full, L1 and R1 together turn Jak into him for 20 s, the
+;; ring draining meanwhile: pale and ashen, black eyes (merc2.frag: 8 in his color-emissive's w), dark eco
+;; about him; his hits reach further, he takes no hurt from enemies, runs and jumps more, and his dive ends in
+;; a dark bomb (target.gc). Like Jak 2's and 3's, on Jak 1's own model
+(defpart 3002
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 0.8)
+   (:x (meters -0.8) (meters 1.6))
+   (:y (meters 0) (meters 2))
+   (:z (meters -0.8) (meters 1.6))
+   (:scale-x (meters 0.2) (meters 0.25))
+   (:scale-y :copy scale-x)
+   (:r 110.0 40.0)
+   (:g 10.0 10.0)
+   (:b 190.0 60.0)
+   (:a 100.0 28.0)
+   (:vel-y (meters 0.015) (meters 0.02))
+   (:fade-a -1.0)
+   (:timer (seconds 0.4) (seconds 0.3))
+   (:flags (bit2 bit3))))
+
+;; the burst when he turns, and the dark bomb's
+(defpart 3003
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 40.0)
+   (:y (meters 1))
+   (:scale-x (meters 0.5) (meters 0.6))
+   (:scale-y :copy scale-x)
+   (:r 120.0 40.0)
+   (:g 10.0 20.0)
+   (:b 200.0 55.0)
+   (:a 128.0)
+   (:vel-y (meters 0.08) (meters 0.1))
+   (:fade-a -0.6)
+   (:accel-y (meters -0.002))
+   (:timer (seconds 1) (seconds 0.4))
+   (:flags (bit2 bit3))
+   (:conerot-x (degrees 0) (degrees 180))
+   (:conerot-y (degrees 0) (degrees 360))))
+
+(define *dark-jak-saved* (new 'static 'array float 8))
+
+;; his reach, speed and jumps more (or back as they were)
+(defun dark-jak-powers ((on symbol))
+  (when (zero? (-> *dark-jak-saved* 0))
+    (set! (-> *dark-jak-saved* 0) (-> *walk-mods* target-speed))
+    (set! (-> *dark-jak-saved* 1) (-> *jump-mods* target-speed))
+    (set! (-> *dark-jak-saved* 2) (-> *double-jump-mods* target-speed))
+    (set! (-> *dark-jak-saved* 3) (-> *TARGET-bank* jump-height-max))
+    (set! (-> *dark-jak-saved* 4) (-> *TARGET-bank* double-jump-height-max)))
+  (let ((k (if on 1.3 1.0))
+        (j (if on 1.3 1.0)))
+    (set! (-> *walk-mods* target-speed) (* k (-> *dark-jak-saved* 0)))
+    (set! (-> *jump-mods* target-speed) (* k (-> *dark-jak-saved* 1)))
+    (set! (-> *double-jump-mods* target-speed) (* k (-> *dark-jak-saved* 2)))
+    (set! (-> *TARGET-bank* jump-height-max) (* j (-> *dark-jak-saved* 3)))
+    (set! (-> *TARGET-bank* double-jump-height-max) (* j (-> *dark-jak-saved* 4))))
+  (none))
+
+(defun dark-jak-end ()
+  (when *dark-jak*
+    (set! *dark-jak* #f)
+    (dark-jak-powers #f)
+    (when *target*
+      (set-vector! (-> *target* draw color-emissive) 0.0 0.0 0.0 0.0)
+      (sound-play "death-darkeco" :pitch 1.0)))
+  (none))
+
+(defun dark-jak-update ()
+  (cond
+    ((not *dark-jak*)
+     ;; turning: the ring full, L1 and R1 together, Jak free and in play
+     (when (and *target*
+                (>= *soul-dark* 100.0)
+                (= *master-mode* 'game)
+                (not (movie?))
+                (cpad-hold? 0 l1)
+                (cpad-hold? 0 r1)
+                (or (cpad-pressed? 0 l1) (cpad-pressed? 0 r1))
+                (not (logtest? (-> *target* state-flags) (state-flags grabbed dying))))
+       (set! *dark-jak* #t)
+       (set! *dark-jak-start* (current-time))
+       (dark-jak-powers #t)
+       (sound-play "death-darkeco" :pitch -0.6)
+       (activate! *camera-smush-control* 819.2 37 600 1.0 0.995)
+       (cpad-set-buzz! (-> *cpad-list* cpads 0) 1 255 (seconds 0.5))
+       (launch-particles (-> *part-id-table* 3003) (-> *target* control trans))))
+    (else
+     (let ((spent (/ (the float (- (current-time) *dark-jak-start*)) (the float (seconds 20)))))
+       (set! *soul-dark* (fmax 0.0 (* 100.0 (- 1.0 spent))))
+       (cond
+         ((or (not *target*) (>= spent 1.0)) (dark-jak-end))
+         (else
+          ;; (the 8: merc2.vert's mark for Dark Jak; Daxter, copying it, keeps his own look: sidekick.gc)
+          (set-vector! (-> *target* draw color-mult) 1.0 1.0 1.0 1.0)
+          (set-vector! (-> *target* draw color-emissive) 0.0 0.0 0.0 8.0)
+          (launch-particles (-> *part-id-table* 3002) (-> *target* control trans)))))))
+  (none))
+
 ;; Jak Living Sky: in Rock Village with the 45 cells the levitator used to want, Keira radios: it needs
 ;; 60, but the warp gate picks up a signal from Brume Village (brume-radio-play, in mod-custom-code)
 (define-extern brume-radio-play (function none))
@@ -1704,6 +1805,7 @@
   (brume-radio-update)
   (soul-dark-enemies-update)
   (soul-dark-meter-update)
+  (dark-jak-update)
   ;; the menu's switch (the rest of the rules follow it, the life's display after a restart)
   (set! *soul-on* (!= 0 (pc-enhanced-hard-rules)))
   (set! *soul-enemy-speed* (if *soul-on* 1.25 1.0))

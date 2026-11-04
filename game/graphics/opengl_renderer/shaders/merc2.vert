@@ -37,7 +37,7 @@ out vec3 enh_ambient;  // the ambient light, for the shadow side's rim
 out vec3 enh_pos;  // world offset from the camera (for the face normal)
 uniform mat3 enh_world_to_view;
 // Jak Living Sky: corrupted by dark eco (the game marks it with 4 in its color-emissive's w: the ambient
-// light's w then over 3)
+// light's w then over 3): 1; Dark Jak (8: over 6): 2
 out float enh_dark;
 
 struct MercMatrixData {
@@ -87,7 +87,7 @@ void main() {
   vec3 light_intensity = light_dir0_fade.xyz * rotated_nrm.x + light_dir1_fade_en.xyz * rotated_nrm.y + light_dir2 * rotated_nrm.z;
   light_intensity = max(light_intensity, vec3(0, 0, 0));
 
-  float dark = light_ambient.w > 3.0 ? 1.0 : 0.0;
+  float dark = light_ambient.w > 6.0 ? 2.0 : light_ambient.w > 3.0 ? 1.0 : 0.0;
   vec4 ambient = light_ambient - vec4(0.0, 0.0, 0.0, 4.0 * dark);
   enh_dark = dark;
   vec4 light_color = ambient

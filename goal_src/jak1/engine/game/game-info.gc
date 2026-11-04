@@ -142,7 +142,13 @@
 (define *enhanced-start-name* (new 'global 'string 64 (the-as string #f)))
 
 ;; Jak Living Sky: Jak's white eco stays behind (any left there from before is lost)
+(define-extern dark-jak-end (function none))
+
 (defun soul-drop-eco ((this game-info))
+  ;; (and Dark Jak is gone, his dark eco spent)
+  (when *dark-jak*
+    (dark-jak-end)
+    (set! *soul-dark* 0.0))
   (when (and *soul-on* *target* (= (-> this mode) 'play))
     (set! (-> *soul-pile* w) 0.0)
     (when (< 0.0 *soul-eco*)
