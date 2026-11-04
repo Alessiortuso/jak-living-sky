@@ -134,8 +134,7 @@
    ;; not looked for yet, -1 none)
    (dark                symbol)
    (dark-eye            int16 2)
-   ;; Jak Living Sky: Dark Jak's repelling: since when it's been too near him, and its push away (strength,
-   ;; way)
+   ;; Jak Living Sky: Dark Jak's repelling: since when it's been too near him, and where it leaps away to
    (dark-near           time-frame)
    (dark-push           float)
    (dark-push-dir       vector :inline))
