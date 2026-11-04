@@ -1333,6 +1333,8 @@
 (define-extern dark-jak-begin (function none))
 (define-extern dark-jak-discharge (function float symbol none))
 
+(define-extern daxter-dark-jak-line (function none))
+
 (defstate target-dark-transform (target)
   :event target-standard-event-handler
   :exit target-exit
@@ -1345,6 +1347,7 @@
       (set-time! (-> self state-time))
       (set! (-> self control mod-surface) *double-jump-mods*)
       (play-sound-file "voice/darkjak-transform.mp3" 100)
+      (if (zero? *daxter-dark-jak-seen*) (daxter-dark-jak-line))
       (dark-jak-begin)
       (dark-jak-discharge (meters 8) #t)
       (ja-channel-push! 1 (seconds 0.05))

@@ -168,6 +168,14 @@
   (daxter-dark-line "voice/daxter-dark-eco.mp3" #x464f (seconds 5.3))
   (none))
 
+;; the first time Jak turns into Dark Jak (target2.gc), once the turning's roar is over: "Jak? Are... are you
+;; still in there? Give me a sign..." (daxter-dark-jak.mp3, 5.9 s)
+(defun daxter-dark-jak-line ()
+  (set! *daxter-dark-jak-seen* 1.0)
+  (set! *daxter-talk-until* (max *daxter-talk-until* (+ (current-time) (seconds 2))))
+  (daxter-dark-line "voice/daxter-dark-jak.mp3" #x4650 (seconds 6.1))
+  (none))
+
 ;; kept off the radio's stack (a spawned process's stack is saved in 256 bytes when it suspends)
 (define *brume-cam-gate* (new 'global 'vector))
 (define *brume-cam-pos* (new 'global 'vector))
