@@ -713,7 +713,8 @@
    (bridge-assembled          symbol)
    (at-near-spot              symbol)
    (submerged                 symbol)
-   (try-counted               symbol))
+   (try-counted               symbol)
+   (dark                      symbol))
   (:states
    ogreboss-dead
    ogreboss-die
@@ -1006,7 +1007,65 @@
   0
   (none))
 
+;; Jak Living Sky: with the hard rules, Klaww's third fall doesn't finish him: dark eco powers him up for a
+;; fourth round, harder; his eyes purple and glowing (their texture then custom_assets/jak1/texture_swap/
+;; ogre-eye.png), pale and ashen as Dark Jak, dark eco crackling about his head
+(defpart 2996
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:scale-x (meters 4) (meters 0.8))
+   (:scale-y :copy scale-x)
+   (:r 170.0)
+   (:g 40.0)
+   (:b 255.0)
+   (:a 64.0 16.0)
+   (:fade-a -3.2)
+   (:timer (seconds 0.05))
+   (:flags (bit2 bit3))))
+
+(defpart 2997
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 1.0)
+   (:x (meters -7) (meters 14))
+   (:y (meters -4) (meters 10))
+   (:z (meters -7) (meters 14))
+   (:scale-x (meters 0.8) (meters 1))
+   (:scale-y :copy scale-x)
+   (:r 110.0 40.0)
+   (:g 20.0)
+   (:b 200.0 55.0)
+   (:a 96.0 32.0)
+   (:vel-y (meters 0.05) (meters 0.05))
+   (:fade-a -0.8)
+   (:timer (seconds 0.5) (seconds 0.3))
+   (:flags (bit2 bit3))))
+
+(defbehavior ogreboss-dark ogreboss ()
+  (when (-> self dark)
+    (set-vector! (-> self draw color-mult) 0.5 0.48 0.55 1.0)
+    (set-vector! (-> self draw color-emissive) 0.42 0.4 0.48 1.0)
+    ;; (the glows by his brows, a little toward the camera: in front of the eyes)
+    (let ((eye (new 'stack-no-clear 'vector))
+          (out (new 'stack-no-clear 'vector)))
+      (vector<-cspace! eye (-> self node-list data 23))
+      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 2))
+      (launch-particles (-> *part-id-table* 2996) (vector+! eye eye out))
+      (vector<-cspace! eye (-> self node-list data 24))
+      (vector-normalize! (vector-! out (math-camera-pos) eye) (meters 2))
+      (launch-particles (-> *part-id-table* 2996) (vector+! eye eye out))
+      (vector<-cspace! eye (-> self node-list data 7))
+      (launch-particles (-> *part-id-table* 2997) eye)))
+  (none))
+
+(defbehavior ogreboss-dark-transform-post ogreboss ()
+  (ogreboss-dark)
+  (transform-post)
+  (none))
+
 (defbehavior ogreboss-post ogreboss ()
+  (ogreboss-dark)
   (transform-post)
   (send-event *camera* 'point-of-interest (-> self node-list data 5 bone transform vector 3))
   0
@@ -1301,7 +1360,15 @@
   :code
     (behavior ()
       (+! (-> self level) 1.0)
-      (if (< 2.0 (-> self level)) (go ogreboss-die))
+      (when (< 2.0 (-> self level))
+        (cond
+          ((and *soul-on* (not (-> self dark)))
+           (set! (-> self dark) #t)
+           (set! (-> self level) 2.0)
+           (set! (-> self difficulty) (* 1.2 (-> self difficulty)))
+           (pc-enhanced-texture-swap "ogre-eye" #t)
+           (sound-play "death-darkeco"))
+          (else (go ogreboss-die))))
       (send-event (handle->process (-> self boulder)) 'go-hit)
       (ja-channel-push! 1 (seconds 0.2))
       (ja-no-eval :group! ogreboss-hit-ja :num! (seek!) :frame-num 0.0)
@@ -1313,7 +1380,7 @@
       (while (handle->process (-> self boulder))
         (suspend))
       (go ogreboss-stage1))
-  :post transform-post)
+  :post ogreboss-dark-transform-post)
 
 (defbehavior ogreboss-trigger-steps ogreboss ()
   (let ((gp-0 (entity-actor-count (-> self entity) 'trigger-actor)))
@@ -1332,6 +1399,7 @@
 (defstate ogreboss-die (ogreboss)
   :code
     (behavior ()
+      (pc-enhanced-texture-swap "ogre-eye" #f)
       (ogreboss-reset-camera)
       (send-event (handle->process (-> self boulder)) 'go-die)
       (ja-channel-push! 1 (seconds 0.2))
@@ -1468,6 +1536,8 @@
   (set! (-> this lava) (entity-actor-lookup (-> this entity) 'water-actor 0))
   (set! *ogreboss* (the-as ogreboss (process->ppointer this)))
   (set! (-> this level) 0.0)
+  (set! (-> this dark) #f)
+  (pc-enhanced-texture-swap "ogre-eye" #f)
   (set! (-> this vulnerable) #f)
   (set! (-> this bridge-assembled) #f)
   (set! (-> this submerged) #f)
