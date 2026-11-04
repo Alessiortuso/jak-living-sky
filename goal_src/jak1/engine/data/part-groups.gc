@@ -687,3 +687,4 @@
 (defconstant group-soul-wisp (-> *part-group-id-table* 710))
 (defconstant group-soul-dark-wisp (-> *part-group-id-table* 721))
 (defconstant group-dark-jak-shot (-> *part-group-id-table* 725))
+(defconstant group-dark-jak-shot-hit (-> *part-group-id-table* 726))
