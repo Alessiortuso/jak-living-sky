@@ -856,6 +856,16 @@
 (defmacro store-u32 (addr val)
   `(set! (-> (the-as (pointer uint32) ,addr)) ,val))
 
+(define-extern *dark-jak* symbol)
+
+;; Jak Living Sky: Dark Jak's face, out of Jak's own 14 blend shapes (what each moves measured from his model):
+;; brows knit (10 against itself), lids narrowed (11, 12), the mouth's corners down (0 up, 2, 3, 13 against
+;; themselves) and a little open in a snarl (5). Over his gameplay face; a cutscene's own face wins
+(define *dark-jak-face* (new 'static 'array float 14 0.6 0.0 -0.8 -0.8 0.0 0.3 0.0 0.0 0.0 0.0 -0.9 0.55 0.55 -0.6))
+
+(defun dark-jak-face? ((pd process-drawable))
+  (and *dark-jak* *target* (= pd *target*) (nonzero? (-> pd draw mgeo)) (= 14 (-> pd draw mgeo header blend-target-count))))
+
 (defun pc-merc-blend-shape ((pd process-drawable) (blerc-weights-out (pointer float)))
   "PC implementation to get blerc weights as floats and avoid the u16 rounding.
   Returns #f if there is no blerc running, which means that we should use base positions.
@@ -895,6 +905,11 @@
                  (set! got-weights #t)
                  (dotimes (a3-7 num-targets)
                    (set! (-> blerc-weights-out a3-7) (the float (* (+ (-> (the-as (pointer uint8) (&+ frame-1-data a3-7))) -64) 64)))))))))))
+    ;; Jak Living Sky: Dark Jak's face (in the weights' scale: 63 x 64 is all of a shape)
+    (when (and (not got-weights) (dark-jak-face? pd))
+      (dotimes (i 14)
+        (set! (-> blerc-weights-out i) (* 4032.0 (-> *dark-jak-face* i))))
+      (set! got-weights #t))
     got-weights))
 
 ;; name   (128 char, 8 qw)
@@ -1274,7 +1289,8 @@
                   (let* ((pd (the process-drawable (-> arg0 process)))
                          (jc (-> pd skel)))
                     (when (nonzero? jc)
-                      (when (logtest? (-> jc status) (janim-status blerc))
+                      (when (or (logtest? (-> jc status) (janim-status blerc))
+                                (dark-jak-face? (the process-drawable (-> arg0 process))))
                         (if *blerc-hack*
                           (if *use-fp-blerc*
                             (set! pc-merc-vtx-update 'blerc) ;; C++ blerc
