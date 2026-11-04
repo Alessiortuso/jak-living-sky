@@ -243,8 +243,9 @@
       (while kid
         (let ((pd (the-as process-drawable (ppointer->process kid))))
           (when (and (type-type? (-> pd type) process-drawable) (not (type-type? (-> pd type) aphid)) (nonzero? (-> pd draw)))
-            (set-vector! (-> pd draw color-mult) 0.7 0.68 0.75 1.0)
-            (set-vector! (-> pd draw color-emissive) 0.2 0.19 0.24 1.0)))
+            ;; (its arms, vines and roots paler than the head: their colors are their models', not textures')
+            (set-vector! (-> pd draw color-mult) 0.55 0.53 0.6 1.0)
+            (set-vector! (-> pd draw color-emissive) 0.32 0.3 0.36 1.0)))
         (set! kid (-> kid 0 brother)))))
   (when (and (-> self dark) (> (-> self health) 0.0))
     ;; (each eye's glow between its joint and its brow's, about the middle of it, and a little toward the
