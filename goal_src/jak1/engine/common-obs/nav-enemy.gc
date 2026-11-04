@@ -120,6 +120,8 @@
   (case arg2
     (('touch) (set-time! (-> self touch-time)) (touch-handler self arg0 arg3))
     (('attack) (nav-enemy-set-hit-from-direction arg0) (attack-handler self arg0 arg3))
+    ;; Jak Living Sky: Dark Jak's discharge: stunned a while, thrown back, chasing and attacking him no more
+    (('dark-repel) (set-time! (-> self dark-stun)) (go-virtual nav-enemy-flee))
     (('instant-death)
      (let ((gp-1 (-> self hit-from-dir)))
        (vector-z-quaternion! gp-1 (-> self collide-info quat))
@@ -611,7 +613,9 @@ nav-enemy-default-event-handler
       (set-time! (-> self state-time)))
   :trans
     (behavior ()
-      (when (time-elapsed? (-> self state-time) (-> self reaction-time))
+      (when (and (time-elapsed? (-> self state-time) (-> self reaction-time))
+                 ;; (not while Dark Jak's discharge has it stunned)
+                 (or (zero? (-> self dark-stun)) (time-elapsed? (-> self dark-stun) (seconds 2.5))))
         (if (or (or (not *target*)
                     (< (-> self nav-info stop-chase-distance)
                        (vector-vector-distance (-> self collide-info trans) (-> *target* control trans))))
@@ -1157,6 +1161,7 @@ nav-enemy-default-event-handler
   (set! (-> this dark-eye 1) -2)
   (set! (-> this dark-near) 0)
   (set! (-> this dark-push) 0.0)
+  (set! (-> this dark-stun) 0)
   (logior! (-> this nav-enemy-flags) (nav-enemy-flags enable-rotate enable-travel navenmf5 navenmf6 navenmf12))
   0
   (none))
@@ -1357,6 +1362,42 @@ nav-enemy-default-event-handler
    (:flags (bit2 bit3))))
 
 (define-extern *dark-jak* symbol)
+(define *dark-blast-center* (new 'global 'vector))
+(define *dark-blast-reach* 0.0)
+
+;; thrown back from him by his dark eco: stunned 2.5 s (chasing and attacking him no more: its flee state
+;; holds it), pushed away about 5 m
+(defun soul-dark-jak-throw ((this nav-enemy))
+  (vector-! (-> this dark-push-dir) (-> this root trans) (-> *target* control trans))
+  (set! (-> this dark-push-dir y) 0.0)
+  (vector-normalize! (-> this dark-push-dir) 1.0)
+  (set! (-> this dark-push) 1.0)
+  (send-event this 'dark-repel)
+  (none))
+
+;; his charged blast: an arc to each enemy within reach, each thrown back
+(defun soul-dark-jak-blast ((center vector) (reach float))
+  (set! (-> *dark-blast-center* quad) (-> center quad))
+  (set! *dark-blast-reach* reach)
+  (iterate-process-tree
+    *active-pool*
+    (lambda ((p process))
+      (when (and (type-type? (-> p type) nav-enemy) (nonzero? (-> (the-as nav-enemy p) root)))
+        (let ((e (the-as nav-enemy p)))
+          (when (< (vector-vector-distance (-> e root trans) *dark-blast-center*) *dark-blast-reach*)
+            (let ((at (new 'stack-no-clear 'vector)))
+              (set! (-> at quad) (-> e root trans quad))
+              (+! (-> at y) (meters 1))
+              (dotimes (i 9)
+                (let ((q (new 'stack-no-clear 'vector)))
+                  (vector-lerp! q *dark-blast-center* at (* 0.125 (the float i)))
+                  (+! (-> q y) (* (meters 0.5) (sin (* 4096.0 (the float (* i 5))))))
+                  (launch-particles (-> *part-id-table* 3009) q)))
+              (launch-particles (-> *part-id-table* 3003) at))
+            (soul-dark-jak-throw e))))
+      #t)
+    *null-kernel-context*)
+  (none))
 
 ;; Dark Jak: an enemy too near him (2 m) for half a second is thrown back by a discharge of dark eco
 (defun soul-dark-jak-repel ((this nav-enemy))
@@ -1379,14 +1420,12 @@ nav-enemy-default-event-handler
                (launch-particles (-> *part-id-table* 3009) p)))
            (launch-particles (-> *part-id-table* 3003) at)
            (sound-play "shield-zap" :position (the-as symbol at)))
-         ;; thrown back: a leap of its own, 5 m away from him (its own jump: moved by hand, it was put back
-         ;; where its walking had it)
-         (vector-! (-> this dark-push-dir) (-> this root trans) (-> *target* control trans))
-         (set! (-> this dark-push-dir y) 0.0)
-         (vector-normalize! (-> this dark-push-dir) (meters 5))
-         (vector+! (-> this dark-push-dir) (-> this dark-push-dir) (-> this root trans))
-         (send-event this 'jump (-> this dark-push-dir) #f)
+         (soul-dark-jak-throw this)
          (set! (-> this dark-near) 0)))))
+  ;; the push away, while it's stunned (not walking: it stays where it's thrown)
+  (when (< 0.0 (-> this dark-push))
+    (vector+*! (-> this root trans) (-> this root trans) (-> this dark-push-dir) (* (meters 0.5) (-> this dark-push)))
+    (set! (-> this dark-push) (- (-> this dark-push) 0.09)))
   (none))
 
 (defun soul-dark-enemies-update ()

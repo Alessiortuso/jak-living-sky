@@ -96,10 +96,11 @@ claw_png=png(Image.fromarray(np.clip(t,0,255).astype(np.uint8)))
 # horns: on top of the head, up and curving back, a little outward (model space, then into neckB's space)
 parts=[]
 for sx in (1,-1):
-    p0=np.array([0.11*sx,2.74,0.10]); p1=np.array([0.15*sx,3.02,0.12]); p2=np.array([0.21*sx,3.30,-0.02]); p3=np.array([0.26*sx,3.40,-0.26])
+    # (from the forehead, over the goggles, up and sweeping back over the hair: in front of it, not in it)
+    p0=np.array([0.10*sx,2.78,0.22]); p1=np.array([0.14*sx,3.06,0.34]); p2=np.array([0.21*sx,3.36,0.22]); p3=np.array([0.27*sx,3.50,-0.04])
     path=bez(p0,p1,p2,p3,22)
     k=np.linspace(0,1,22)
-    radii=0.058*(1-k)**0.8+0.004
+    radii=0.068*(1-k)**0.8+0.004
     V,Nm,UV,I=tube(path,radii)
     V,Nm=to_joint(V,Nm,'neckB')
     if sx<0:  # (winding kept: the tube's own)

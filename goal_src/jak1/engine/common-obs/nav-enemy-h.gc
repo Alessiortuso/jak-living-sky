@@ -137,7 +137,8 @@
    ;; Jak Living Sky: Dark Jak's repelling: since when it's been too near him, and where it leaps away to
    (dark-near           time-frame)
    (dark-push           float)
-   (dark-push-dir       vector :inline))
+   (dark-push-dir       vector :inline)
+   (dark-stun           time-frame))
   (:state-methods
    nav-enemy-attack
    nav-enemy-chase
