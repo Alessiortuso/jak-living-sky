@@ -1567,7 +1567,8 @@
             (cond
               ((-> self dark)
                ;; dark eco: into the eco meter's ring, for good
-               (set! *soul-dark* (fmin 100.0 (+ *soul-dark* (-> self value))))
+               ;; (twice as much, bought in the shop)
+               (set! *soul-dark* (fmin 100.0 (+ *soul-dark* (* (+ 1.0 *soul-dark-double*) (-> self value)))))
                (sound-play "get-red-eco" :pitch -0.6)
                (if (-> *hud-parts* power) (send-event (ppointer->process (-> *hud-parts* power)) 'show)))
               (else
@@ -1602,7 +1603,7 @@
   (none))
 
 ;; The white eco's shop, what's on sale. To add an item: raise the count and add a line to each of these.
-(defconstant SOUL-SHOP-ITEMS 4)
+(defconstant SOUL-SHOP-ITEMS 5)
 
 ;; its name, in capitals (small letters are other characters in the game's font)
 (defun soul-item-name ((i int))
@@ -1611,6 +1612,7 @@
     ((1) "ECO BIANCO X2 DAI NEMICI")
     ((2) "AUMENTA DURATA ECO")
     ((3) "AUMENTA DURATA DARK JAK")
+    ((4) "ECO OSCURO X2 DAI NEMICI")
     (else "")))
 
 ;; how much of it Jak has
@@ -1620,6 +1622,7 @@
     ((1) (the int *soul-double*))
     ((2) (the int *soul-eco-time*))
     ((3) (the int *soul-dark-time*))
+    ((4) (the int *soul-dark-double*))
     (else 0)))
 
 ;; the most he can have
@@ -1629,6 +1632,7 @@
     ((1) 1)
     ((2) 3)
     ((3) 2)
+    ((4) 1)
     (else 0)))
 
 ;; what the next one costs
@@ -1646,6 +1650,7 @@
     ((3) (case (the int *soul-dark-time*)
            ((0) 500)
            (else 1000)))
+    ((4) 800)
     (else 0)))
 
 ;; giving it to him
@@ -1656,7 +1661,8 @@
      (if *target* (set! (-> *target* fact health) (+ 2.0 *soul-life*))))
     ((1) (set! *soul-double* 1.0))
     ((2) (set! *soul-eco-time* (+ *soul-eco-time* 1.0)))
-    ((3) (set! *soul-dark-time* (+ *soul-dark-time* 1.0))))
+    ((3) (set! *soul-dark-time* (+ *soul-dark-time* 1.0)))
+    ((4) (set! *soul-dark-double* 1.0)))
   (none))
 
 ;; resting at a warp gate: Jak's health full, and every enemy killed back where it was (what reset-actors does

@@ -218,6 +218,7 @@
      (set! *soul-eco-time* 0.0)
      (set! *soul-dark* 0.0)
      (set! *soul-dark-time* 0.0)
+     (set! *soul-dark-double* 0.0)
      (set! (-> this fuel) 0.0)
      (set! (-> this money-total) 0.0)
      (set! (-> this buzzer-total) 0.0)

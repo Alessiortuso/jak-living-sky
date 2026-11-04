@@ -1681,7 +1681,7 @@
       (set! (-> this particles s5-4) (new 'static 'hud-particle))
       (set! (-> this particles s5-4 part) (create-launch-control group-part-hud-darkjak-buttons this))
       (set! (-> this particles s5-4 init-pos x) 435.0)
-      (set! (-> this particles s5-4 init-pos y) 312.0)
+      (set! (-> this particles s5-4 init-pos y) 264.0)
       (set! (-> this particles s5-4 init-pos z) 1.0)
       (set! (-> this particles s5-4 part matrix) -1))
     (+! (-> this nb-of-particles) 1))
