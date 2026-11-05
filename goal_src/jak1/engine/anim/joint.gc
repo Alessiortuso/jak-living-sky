@@ -132,6 +132,13 @@
       (set! (-> jc channel chan-idx inspector-amount) (-> this blend-stack 0 weights chan-idx))))
   (none))
 
+;; Jak Living Sky: an animation still good to play: a real art-joint-anim, its frames in memory. A channel
+;; weighing in with anything else (Brume's mountain had one) crashed the game: left out, and told (a few times)
+(defun joint-anim-playable? ((anim art-joint-anim))
+  (and (valid? anim art-joint-anim #f #f 0) (valid? (-> anim frames) (the-as type #f) #f #f 0)))
+
+(define *bad-anim-told* 0)
+
 (defmethod build-requests! ((this new-joint-decompressor-work) (jc joint-control))
   "Use the anim weights computed by eval-blend-tree! to build decompression requests"
   (set! (-> this num-requests) 0)
@@ -139,7 +146,14 @@
     (dotimes (chan-idx num-channels)
       (let ((weight (-> this blend-stack 0 weights chan-idx))
             (chan (-> jc channel chan-idx)))
-        (when (> weight 0.001) ;; only both if weight is nonzero
+        (when (and (> weight 0.001) ;; only both if weight is nonzero
+                   (or (joint-anim-playable? (-> chan frame-group))
+                       (begin
+                         (when (< *bad-anim-told* 8)
+                           (+! *bad-anim-told* 1)
+                           (format 0 "ERROR: joint-control #x~X channel ~D of ~D weighs in (~f) with a bad animation #x~X: left out~%"
+                                   jc chan-idx num-channels weight (-> chan frame-group)))
+                         #f)))
           (let* ((req (-> this requests (-> this num-requests))) ;; request to create
                  (jacc (-> chan frame-group frames)) ;; compressed animation
                  (frame-num (-> chan frame-num)) ;; floating-point frame (eg 1.23)
@@ -1438,22 +1452,7 @@
 
 (def-mips2c calc-animation-from-spr (function (inline-array vector) int none))
 
-;; Jak Living Sky: an animation still good to play: a real art-joint-anim, its frames in memory (one left from an
-;; unloaded level's art crashed the game, arriving in Brume's mountain)
-(defun joint-anim-playable? ((anim art-joint-anim))
-  (and (valid? anim art-joint-anim #f #f 0) (valid? (-> anim frames) (the-as type #f) #f #f 0)))
-
 (defun create-interpolated-joint-animation-frame ((arg0 (inline-array vector)) (arg1 int) (arg2 process-drawable))
-  ;; Jak Living Sky: a channel's animation gone bad: not played (this frame's pose left as it was), its owner told
-  (let ((jc (-> arg2 skel))
-        (bad -1))
-    (dotimes (i (-> jc active-channels))
-      (let ((chan (-> jc channel i)))
-        (if (and (!= (-> chan command) 'stack) (not (joint-anim-playable? (-> chan frame-group)))) (set! bad i))))
-    (when (>= bad 0)
-      (format 0 "ERROR: ~A (~A) channel ~D plays a bad animation #x~X: not played~%"
-              (-> arg2 name) (-> arg2 type) bad (-> jc channel bad frame-group))
-      (return 0)))
   (cond
     (*use-new-decompressor* (new-joint-decompressor (the joint-anim-frame arg0) arg1 (-> arg2 skel)))
     (else (flatten-joint-control-to-spr (-> arg2 skel)) (make-joint-jump-tables) (calc-animation-from-spr arg0 arg1)))
