@@ -6,6 +6,10 @@
 (
  "static-screen.o"
  "blocking-plane.o"
+ ;; Jak Living Sky: the Flut Flut's code (Snowy's order: in Brume's own build it was in GAME.CGO)
+ "flut-part.o"
+ "flutflut.o"
+ "target-flut.o"
  "wall-plat.o"
  "target-tube.o"
  "jungle-obs.o"

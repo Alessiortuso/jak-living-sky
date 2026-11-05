@@ -6,6 +6,14 @@
 (
  "static-screen.o"
  "blocking-plane.o"
+ ;; Jak Living Sky: the zoomer's code (Fire Canyon's order: in Brume's own build it was in GAME.CGO)
+ "target-racer-h.o"
+ "racer-part.o"
+ "racer.o"
+ "target-racer.o"
+ "racer-states.o"
+ "collide-reaction-racer.o"
+ "tpage-1119.go"
  ;; "test-zone-obs.o"     TESTING CRASH
  "mount-obs.o"
 ;; "village-obs.o" TESTING CRASH
