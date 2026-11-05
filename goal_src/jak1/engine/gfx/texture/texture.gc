@@ -1890,6 +1890,12 @@
             (let ((link-slot (&-> link-arr 0))
                   (shader (the-as adgif-shader (* (-> link-arr 0 shader) 16))))
               (while (nonzero? (the-as int shader))
+                ;; Jak Living Sky: a link to nowhere (a shader freed without being unlinked, its memory reused:
+                ;; crashed teleporting from Brume's underground): the chain cut there, not followed
+                (when (or (< (the-as uint shader) #x80000) (>= (the-as uint shader) END_OF_MEMORY))
+                  (format 0 "ERROR: texture link to #x~X (tpage entry ~D, texture ~D): chain cut~%" shader entry-idx tex-idx)
+                  (set! (-> link-slot 0) (the-as shader-ptr 0))
+                  (goto cfg-cut))
                 ;; got a shader, lets see if we should unlink it
                 ;; some clever branching here:
                 ;; branch to cfg-7 if we're below mem start
@@ -1908,7 +1914,7 @@
                 (label cfg-8)
                 ;; move on to the next shader, this should work if we spliced or not.
                 (set! shader (the-as adgif-shader (* (-> shader next shader) 16)))) ;; end loop over linked list
-              )
+              (label cfg-cut))
             (set! link-arr (&-> link-arr 1))) ;; end loop over textures
           ))) ;; end loop over tpages
     )
