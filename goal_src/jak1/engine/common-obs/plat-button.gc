@@ -143,7 +143,15 @@
                                  (not (logtest? (-> *target* control status) (cshape-moving-flags onsurf)))))))
           (set! (-> self go-back-if-lost-player?) #f)
           (go-virtual plat-button-move-upward)))
-      (let ((f0-4 (seek-with-smooth (-> self path-pos) 1.0 (* 0.1 (seconds-per-frame)) 0.25 0.001)))
+      ;; (Jak Living Sky: slower in Brume and its underground, as its author made them)
+      (let ((f0-4 (seek-with-smooth (-> self path-pos)
+                                    1.0
+                                    (* (case (-> (level-get-target-inside *level*) name)
+                                         (('brume 'preundg) 0.08)
+                                         (else 0.1))
+                                       (seconds-per-frame))
+                                    0.25
+                                    0.001)))
         (set! (-> self path-pos) f0-4)
         (let ((gp-0 (new 'stack-no-clear 'vector)))
           (eval-path-curve! (-> self path) gp-0 f0-4 'interp)

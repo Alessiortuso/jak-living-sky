@@ -4,18 +4,23 @@
 // UVs kept, Draco on again. Their meshes split each point some four ways (UV seams, colours, normals): the
 // simplifier's permissive mode collapses across those splits, the attributes weighing in.
 //
-//   node lighten_level.mjs <in.glb> <out.glb> [ratio=0.35] [error=0.01]
+//   node lighten_level.mjs <in.glb> <out.glb> [ratio=0.35] [error=0.02]
+//
+// Only the decoration (drawn, not collided with: extras ignore: 1 or no set_collision): the floors and walls
+// Jak stands on and bumps into (set_collision, and set_invisible ones never drawn) are left exactly as made.
+// Simplified, a large floor moved by metres (2% of its size): invisible walls, gaps onto the void. They're
+// few (a tenth of the triangles); the decoration is the rest.
 //
 // (needs, from npm: @gltf-transform/core, extensions and functions, draco3dgltf, meshoptimizer)
 import { NodeIO } from '@gltf-transform/core';
-import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { ALL_EXTENSIONS, KHRDracoMeshCompression } from '@gltf-transform/extensions';
 import { compactPrimitive } from '@gltf-transform/functions';
 import { MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
 
 const [input, output, ratioArg, errorArg] = process.argv.slice(2);
 const ratio = Number(ratioArg ?? 0.35);
-const error = Number(errorArg ?? 0.01);
+const error = Number(errorArg ?? 0.02);
 
 // the attributes the simplifier weighs (how much each matters against the shape)
 const WEIGHTS = { NORMAL: 0.5, TEXCOORD_0: 1.0, COLOR_0: 0.5 };
@@ -77,9 +82,28 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies(
 });
 const doc = await io.read(input);
 await MeshoptSimplifier.ready;
-const prims = doc.getRoot().listMeshes().flatMap((m) => m.listPrimitives());
+// the meshes collided with, or never drawn: kept
+const kept = new Set();
+for (const node of doc.getRoot().listNodes()) {
+  const m = node.getMesh();
+  const x = node.getExtras() || {};
+  if (m && ((x.set_collision && !x.ignore) || x.set_invisible)) kept.add(m);
+}
+const prims = doc.getRoot().listMeshes().filter((m) => !kept.has(m)).flatMap((m) => m.listPrimitives());
 const before = prims.reduce((a, p) => a + count(p), 0);
 prims.forEach(lighten);
 const after = prims.reduce((a, p) => a + count(p), 0);
+// (Draco at full precision: its default 14 bits moved a large floor by centimetres, cracks between pieces)
+const draco = doc.getRoot().listExtensionsUsed().find((x) => x.extensionName === 'KHR_draco_mesh_compression');
+if (draco) {
+  draco.setEncoderOptions({
+    method: KHRDracoMeshCompression.EncoderMethod.EDGEBREAKER,
+    quantizePosition: 20,
+    quantizeNormal: 12,
+    quantizeTexcoord: 16,
+    quantizeColor: 12,
+    quantizeGeneric: 16,
+  });
+}
 await io.write(output, doc);
 console.log(`${before} -> ${after} triangles (${Math.round((100 * after) / before)}%)`);
