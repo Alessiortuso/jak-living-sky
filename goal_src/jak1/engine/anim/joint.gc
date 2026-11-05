@@ -134,8 +134,12 @@
 
 ;; Jak Living Sky: an animation still good to play: a real art-joint-anim, its frames in memory. A channel
 ;; weighing in with anything else (Brume's mountain had one) crashed the game: left out, and told (a few times)
+;; (somewhere in the game's memory: not valid?'s symbol table onwards, the title's own art sits lower)
+(defun joint-mem? ((p pointer))
+  (and (< #x10000 (the-as uint p)) (< (the-as uint p) END_OF_MEMORY)))
+
 (defun joint-anim-playable? ((anim art-joint-anim))
-  (and (valid? anim art-joint-anim #f #f 0) (valid? (-> anim frames) (the-as type #f) #f #f 0)))
+  (and (joint-mem? (the-as pointer anim)) (= (-> anim type) art-joint-anim) (joint-mem? (the-as pointer (-> anim frames)))))
 
 (define *bad-anim-told* 0)
 
@@ -175,9 +179,9 @@
             ;; Jak Living Sky: its frames' data in memory too (a streamed animation's buffer gone, crashing in
             ;; Brume's mountain): else left out, and told
             (when (not (and (< 0 (the int (-> jacc num-frames))) (< (the int (-> jacc num-frames)) 10000)
-                            (valid? (-> jacc fixed) (the-as type #f) #f #f 0)
-                            (valid? (-> jacc data base-frame) (the-as type #f) #f #f 0)
-                            (or (= frac-frame 0.0) (valid? (-> jacc data (+ base-frame 1)) (the-as type #f) #f #f 0))))
+                            (joint-mem? (the-as pointer (-> jacc fixed)))
+                            (joint-mem? (the-as pointer (-> jacc data base-frame)))
+                            (or (= frac-frame 0.0) (joint-mem? (the-as pointer (-> jacc data (+ base-frame 1)))))))
               (-! (-> this num-requests) 1)
               (when (< *bad-anim-told* 8)
                 (+! *bad-anim-told* 1)
