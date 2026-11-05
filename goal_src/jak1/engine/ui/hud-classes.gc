@@ -1503,8 +1503,11 @@
 
 ;; the picture for the dark eco now: 0 to 20 by twentieths, full pulsing between 20 and 21 (brighter)
 (defun soul-dark-meter-update ()
+  ;; (not while something has hidden the HUD lately: the zoomer's, a door's "press X" wait for it all hidden)
   (when (and (>= *soul-dark* 100.0) (not *dark-jak*) (-> *hud-parts* power) (soul-in-play?)
-             (zero? (logand (the int (-> *display* integral-frame-counter)) 15)))
+             (zero? (logand (the int (-> *display* integral-frame-counter)) 15))
+             (time-elapsed? (-> *hud-parts* power 0 last-hide-time) (seconds 2))
+             (not (level-hint-displayed?)))
     (pc-enhanced-texture-file "checker" "hud-darkjak-buttons")
     (send-event (ppointer->process (-> *hud-parts* power)) 'show))
   (let ((pic (if (>= *soul-dark* 100.0)
