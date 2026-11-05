@@ -171,7 +171,18 @@
             (set! (-> req jacc) jacc)
             (set! (-> req frame) base-frame)
             (set! (-> req frame-interp) frac-frame)
-            (set! (-> req amount) weight))))))
+            (set! (-> req amount) weight)
+            ;; Jak Living Sky: its frames' data in memory too (a streamed animation's buffer gone, crashing in
+            ;; Brume's mountain): else left out, and told
+            (when (not (and (< 0 (the int (-> jacc num-frames))) (< (the int (-> jacc num-frames)) 10000)
+                            (valid? (-> jacc fixed) (the-as type #f) #f #f 0)
+                            (valid? (-> jacc data base-frame) (the-as type #f) #f #f 0)
+                            (or (= frac-frame 0.0) (valid? (-> jacc data (+ base-frame 1)) (the-as type #f) #f #f 0))))
+              (-! (-> this num-requests) 1)
+              (when (< *bad-anim-told* 8)
+                (+! *bad-anim-told* 1)
+                (format 0 "ERROR: joint-control #x~X channel ~D plays ~A whose frames are gone: left out~%"
+                        jc chan-idx (-> chan frame-group name)))))))))
   (none))
 
 (defmethod init-frame! ((this new-joint-decompressor-work) (output-frame joint-anim-frame) (num-joints int))
