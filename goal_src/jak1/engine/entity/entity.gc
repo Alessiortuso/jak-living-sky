@@ -21623,6 +21623,13 @@
   (set! (-> arg0 root trans quad) (-> arg1 extra trans quad))
   (quaternion-copy! (-> arg0 root quat) (-> arg1 quat))
   (vector-identity! (-> arg0 root scale))
+  ;; Brume Village's levels (Cuttlefishthesage): a size for any actor, from its "scale" lump (their water and
+  ;; dark eco pools are sized by it, as in Brume's own build). Only there: some of the game's own actors have
+  ;; a "scale" of their own
+  (when (and (-> arg1 extra level)
+             (let ((lev (-> arg1 extra level name))) (or (= lev 'brume) (= lev 'abandon) (= lev 'mount) (= lev 'preundg))))
+    (let ((scale (res-lump-float arg1 'scale :default 1.0)))
+      (set-vector! (-> arg0 root scale) scale scale scale 1.0)))
   (none))
 
 (defmethod update-perm! ((this entity-perm) (arg0 symbol) (arg1 entity-perm-status))
