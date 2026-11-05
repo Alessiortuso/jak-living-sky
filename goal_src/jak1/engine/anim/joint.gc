@@ -1438,7 +1438,22 @@
 
 (def-mips2c calc-animation-from-spr (function (inline-array vector) int none))
 
+;; Jak Living Sky: an animation still good to play: a real art-joint-anim, its frames in memory (one left from an
+;; unloaded level's art crashed the game, arriving in Brume's mountain)
+(defun joint-anim-playable? ((anim art-joint-anim))
+  (and (valid? anim art-joint-anim #f #f 0) (valid? (-> anim frames) (the-as type #f) #f #f 0)))
+
 (defun create-interpolated-joint-animation-frame ((arg0 (inline-array vector)) (arg1 int) (arg2 process-drawable))
+  ;; Jak Living Sky: a channel's animation gone bad: not played (this frame's pose left as it was), its owner told
+  (let ((jc (-> arg2 skel))
+        (bad -1))
+    (dotimes (i (-> jc active-channels))
+      (let ((chan (-> jc channel i)))
+        (if (and (!= (-> chan command) 'stack) (not (joint-anim-playable? (-> chan frame-group)))) (set! bad i))))
+    (when (>= bad 0)
+      (format 0 "ERROR: ~A (~A) channel ~D plays a bad animation #x~X: not played~%"
+              (-> arg2 name) (-> arg2 type) bad (-> jc channel bad frame-group))
+      (return 0)))
   (cond
     (*use-new-decompressor* (new-joint-decompressor (the joint-anim-frame arg0) arg1 (-> arg2 skel)))
     (else (flatten-joint-control-to-spr (-> arg2 skel)) (make-joint-jump-tables) (calc-animation-from-spr arg0 arg1)))
