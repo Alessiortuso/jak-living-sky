@@ -21618,6 +21618,11 @@
                   (deactivate s2-0))))))))))
   (none))
 
+;; Jak Living Sky: an actor of Brume Village's levels (Cuttlefishthesage's), built for his engine's ways
+(defun brume-actor? ((arg0 entity-actor))
+  (and (-> arg0 extra level)
+       (let ((lev (-> arg0 extra level name))) (or (= lev 'brume) (= lev 'abandon) (= lev 'mount) (= lev 'preundg)))))
+
 (defun process-drawable-from-entity! ((arg0 process-drawable) (arg1 entity-actor))
   (logior! (-> arg0 mask) (process-mask actor-pause))
   (set! (-> arg0 root trans quad) (-> arg1 extra trans quad))
@@ -21626,8 +21631,7 @@
   ;; Brume Village's levels (Cuttlefishthesage): a size for any actor, from its "scale" lump (their water and
   ;; dark eco pools are sized by it, as in Brume's own build). Only there: some of the game's own actors have
   ;; a "scale" of their own
-  (when (and (-> arg1 extra level)
-             (let ((lev (-> arg1 extra level name))) (or (= lev 'brume) (= lev 'abandon) (= lev 'mount) (= lev 'preundg))))
+  (when (brume-actor? arg1)
     (let ((scale (res-lump-float arg1 'scale :default 1.0)))
       (set-vector! (-> arg0 root scale) scale scale scale 1.0)))
   (none))
