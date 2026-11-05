@@ -1917,7 +1917,17 @@
               (label cfg-cut))
             (set! link-arr (&-> link-arr 1))) ;; end loop over textures
           ))) ;; end loop over tpages
-    )
+    ;; Jak Living Sky: a page's links kept in this heap, going (it was the first of two levels to load that
+    ;; page: Brume's levels share Sandover's), dropped with it. The page's unload! only drops them when this
+    ;; level owns the page, and the other level had taken it over: the links were left in freed memory, then
+    ;; overwritten by the next level loaded (a crash, teleporting from Brume's underground). The next level to
+    ;; use the page makes new ones; the other level's textures are drawn as before
+    (dotimes (entry-idx (-> this length))
+      (let ((link (-> this entries entry-idx link)))
+        (when (and link
+                   (>= (the-as int (- (the-as int link) (the-as int mem-start))) 0)
+                   (< (the-as int (- (the-as int link) (the-as int mem-end))) 0))
+          (set! (-> this entries entry-idx link) #f)))))
   0)
 
 ;; TODO method 9
