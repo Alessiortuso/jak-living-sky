@@ -144,6 +144,33 @@
 
 ;; Jak Living Sky: a line someone says (file: custom_assets/jak1/audio/voice/..., text: its subtitle's id, len:
 ;; how long), after any other of these still going
+;; (a long one: its subtitle in parts, each for its own time: parts holds text id, ticks (300 a second), text
+;; id, ticks...)
+(defun quest-line2 ((speaker string) (file string) (parts (array int32)))
+  (process-spawn-function
+    process
+    (lambda :behavior process ((speaker string) (file string) (parts (array int32)))
+      (let ((total 0))
+        (dotimes (i (/ (-> parts length) 2))
+          (+! total (-> parts (+ (* 2 i) 1))))
+        (while (< (current-time) *daxter-talk-until*)
+          (suspend))
+        (set! *daxter-talk-until* (+ (current-time) total (seconds 0.5)))
+        (play-sound-file file 200)
+        (let ((start (current-time)))
+          (while (not (time-elapsed? start total))
+            (let ((at (- (current-time) start))
+                  (k 0))
+              (while (and (< (+ k 2) (-> parts length)) (>= at (-> parts (+ k 1))))
+                (set! at (- at (-> parts (+ k 1))))
+                (+! k 2))
+              (brume-radio-subtitle speaker (-> parts k)))
+            (suspend))))
+      (none))
+    speaker file parts
+    :to *entity-pool*)
+  (none))
+
 (defun quest-line ((speaker string) (file string) (text int) (len time-frame))
   (process-spawn-function
     process

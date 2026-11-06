@@ -981,6 +981,8 @@ nav-enemy-default-event-handler
   :shadow fisher-shadow-mg)
 
 (define-extern quest-line (function string string int time-frame none))
+(define-extern quest-line2 (function string string (array int32) none))
+(define-extern *daxter-talk-until* time-frame)
 ;; (the power cell he's given, while it's there)
 (define *fisher-cell* (the-as handle #f))
 
@@ -997,7 +999,9 @@ nav-enemy-default-event-handler
           (print-game-text (lookup-text! *common-text* (text-id press-to-talk) #f)
                            gp-0 #f 128 22)))
       (when (and (cpad-pressed? 0 circle)
-           (time-elapsed? (-> self chat-time) (seconds 5)))
+           (time-elapsed? (-> self chat-time) (seconds 5))
+           ;; (Jak Living Sky: not while he, or Daxter, is still talking)
+           (>= (current-time) *daxter-talk-until*))
   (set-time! (-> self chat-time))
   ;; Jak Living Sky: his rivers, dark with dark eco from Abandoned Caves (the pump there: collectables.gc)
   (cond
@@ -1018,7 +1022,9 @@ nav-enemy-default-event-handler
                                                       (the-as fact-info #f))))))
     ((zero? *fisher-quest*)
      (set! *fisher-quest* 1.0)
-     (quest-line "PESCATORE" "voice/fisher-ask.mp3" #x4654 (seconds 14)))
+     ;; (two recordings, each subtitled in two parts at its pause)
+     (quest-line2 "PESCATORE" "voice/fisher-ask.mp3" (new 'static 'boxed-array :type int32 #x4654 3180 #x4659 3450))
+     (quest-line2 "PESCATORE" "voice/fisher-ask2.mp3" (new 'static 'boxed-array :type int32 #x465a 1335 #x465c 3915 #x465b 3720)))
     (else
      (quest-line "PESCATORE" "voice/fisher-reminder.mp3" #x4655 (seconds 4.9)))))))
   :code
