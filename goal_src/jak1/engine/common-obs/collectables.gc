@@ -2090,7 +2090,10 @@
 ;; where it stands (metres) and which way it faces
 (define *darkpump-pos* (new 'static 'vector :x (meters -1279.6) :y (meters 188.84) :z (meters 488.81) :w 1.0))
 (define *darkpump-yaw* 0.0)
-(define *darkpump* (the-as handle #f))
+;; (its handle in a 64-bit slot: a global symbol holds 32 bits, a handle cut down to them never matched, a new
+;; pump spawned every frame until the game ran out of processes)
+(define *darkpump-handle* (new 'static 'array handle 1))
+(set! (-> *darkpump-handle* 0) (the-as handle #f))
 
 (deftype darkpump (process-drawable)
   ((root      collide-shape :override)
@@ -2198,14 +2201,14 @@
 ;; the pump there while Abandoned Caves is, until broken
 (defun darkpump-update ()
   (let ((lev (level-get *level* 'abandon))
-        (proc (handle->process *darkpump*)))
+        (proc (handle->process (-> *darkpump-handle* 0))))
     (cond
       ((and lev (= (-> lev status) 'active) (< *fisher-quest* 3.0) *target*)
        (if (not proc)
-         (set! *darkpump* (ppointer->handle (process-spawn darkpump :init darkpump-init :to *entity-pool*)))))
+         (set! (-> *darkpump-handle* 0) (ppointer->handle (process-spawn darkpump :init darkpump-init :to *entity-pool*)))))
       (proc
        (deactivate proc)
-       (set! *darkpump* (the-as handle #f)))))
+       (set! (-> *darkpump-handle* 0) (the-as handle #f)))))
   (brume-waters-update)
   (none))
 

@@ -984,7 +984,8 @@ nav-enemy-default-event-handler
 (define-extern quest-line2 (function string string (array int32) none))
 (define-extern *daxter-talk-until* time-frame)
 ;; (the power cell he's given, while it's there)
-(define *fisher-cell* (the-as handle #f))
+(define *fisher-cell* (new 'static 'array handle 1))
+(set! (-> *fisher-cell* 0) (the-as handle #f))
 
 (defstate fisherman-v4-idle (fisherman-v4)
   :trans
@@ -1011,8 +1012,8 @@ nav-enemy-default-event-handler
      ;; thanks, and the power cell (again if left behind)
      (set-time! (-> self chat-time))
      (quest-line "PESCATORE" "voice/fisher-thanks.mp3" #x4658 (seconds 8))
-     (when (not (handle->process *fisher-cell*))
-       (set! *fisher-cell*
+     (when (not (handle->process (-> *fisher-cell* 0)))
+       (set! (-> *fisher-cell* 0)
              (ppointer->handle (birth-pickup-at-point (vector+! (new 'stack-no-clear 'vector) (-> self root trans)
                                                                 (new 'static 'vector :y 12288.0 :z 8192.0 :w 1.0))
                                                       (pickup-type fuel-cell)
