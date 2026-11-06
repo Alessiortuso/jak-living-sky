@@ -2135,7 +2135,7 @@
       (when (and *target* (< *fisher-quest* 2.0)
                  (< (vector-vector-distance (-> self root trans) (-> *target* control trans)) (meters 22)))
         (set! *fisher-quest* 2.0)
-        (quest-line "DAXTER" "voice/daxter-pump.mp3" #x4656 (seconds 5))))
+        (quest-line "DAXTER" "voice/daxter-pump.mp3" #x4656 (seconds 5.6))))
   :code
     (behavior ()
       (loop
@@ -2153,7 +2153,7 @@
           (darkpump-spot self v (rand-vu-float-range -1.2 1.2) (rand-vu-float-range 0.5 3.8) (rand-vu-float-range -1.2 1.2))
           (process-spawn part-tracker :init part-tracker-init group-dark-jak-shot-hit -1 #f #f #f v :to *entity-pool*)))
       (logior! (-> self draw status) (draw-status hidden))
-      (quest-line "DAXTER" "voice/daxter-pump-broken.mp3" #x4657 (seconds 5))
+      (quest-line "DAXTER" "voice/daxter-pump-broken.mp3" #x4657 (seconds 5.4))
       (suspend-for (seconds 2))
       (deactivate self)))
 
