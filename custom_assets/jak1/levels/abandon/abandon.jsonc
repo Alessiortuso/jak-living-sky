@@ -2810,18 +2810,9 @@
 
 ///powercell////
 
-{
-  "trans": [ -1279.56, 192.64, 489.88 ],
-  "etype": "fuel-cell",
-  "game_task": "(game-task abandon-findcell-1)",
-  "quat": [ 0, 0, 0, 1 ],
-  "bsphere": [ -1470.74, 184.33, 36.12, 10 ],
-  "lump": {
-    "name": "abandon-fuel-cell-01",
-    "eco-info": ["cell-info", "(game-task abandon-findcell-1)"],
-    "movie-pos": [ "movie-pos", [ -1279.56, 191.64, 489.88, 1.255 ] ]
-  }
-},
+// (Jak Living Sky: abandon-fuel-cell-01 removed: where the dark eco pump stands; that power cell is now the
+// fisherman's, in Brume)
+
 
 {
   "trans": [ -1309.39, 192.17, 623.76 ],

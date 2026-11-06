@@ -2185,29 +2185,8 @@
   (go darkpump-idle)
   (none))
 
-;; the island's power cell (abandon-fuel-cell-01, by the pump): hidden, not to be taken, while the pump runs; the
-;; moment it breaks, there in a burst of light
-(define *darkpump-cell-shown* #f)
-
-(defun darkpump-cell-update ()
-  (let ((cell (the-as process-drawable (process-by-name "abandon-fuel-cell-01" *active-pool*))))
-    (when (and cell (nonzero? (-> cell draw)) (nonzero? (-> cell root)) (type-type? (-> cell root type) collide-shape))
-      (cond
-        ((< *fisher-quest* 3.0)
-         (set! *darkpump-cell-shown* #f)
-         (logior! (-> cell draw status) (draw-status hidden))
-         (clear-collide-with-as (the-as collide-shape (-> cell root))))
-        ((not *darkpump-cell-shown*)
-         (set! *darkpump-cell-shown* #t)
-         (logclear! (-> cell draw status) (draw-status hidden))
-         (restore-collide-with-as (the-as collide-shape (-> cell root)))
-         (process-spawn part-tracker :init part-tracker-init group-dark-jak-shot-hit -1 #f #f #f (-> cell root trans) :to *entity-pool*)
-         (sound-play "cell-prize")))))
-  (none))
-
 ;; the lake and the pool's looks: the lake purple while the pump runs; once broken the pool is water too
 (defun brume-waters-update ()
-  (darkpump-cell-update)
   (when (zero? (logand (the int (-> *display* integral-frame-counter)) 15))
     (let ((lake (the-as process-drawable (process-by-name "WaterShape-8" *active-pool*)))
           (pool (the-as process-drawable (process-by-name "WaterShape-13-second" *active-pool*)))

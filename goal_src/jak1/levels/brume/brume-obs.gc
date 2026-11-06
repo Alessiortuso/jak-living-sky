@@ -1024,7 +1024,7 @@ nav-enemy-default-event-handler
     ((zero? *fisher-quest*)
      (set! *fisher-quest* 1.0)
      ;; (two recordings, each subtitled in two parts at its pause)
-     (quest-line2 "PESCATORE" "voice/fisher-ask.mp3" (new 'static 'boxed-array :type int32 #x4654 3180 #x4659 3450))
+     (quest-line2 "PESCATORE" "voice/fisher-ask.mp3" (new 'static 'boxed-array :type int32 #x4654 3090 #x4659 3600))
      (quest-line2 "PESCATORE" "voice/fisher-ask2.mp3" (new 'static 'boxed-array :type int32 #x465a 1335 #x465c 3915 #x465b 3720)))
     (else
      (quest-line "PESCATORE" "voice/fisher-reminder.mp3" #x4655 (seconds 4.9)))))))
