@@ -981,17 +981,123 @@ nav-enemy-default-event-handler
   :shadow fisher-shadow-mg)
 
 (define-extern quest-line (function string string int time-frame none))
-(define-extern quest-line2 (function string string (array int32) none))
 (define-extern *daxter-talk-until* time-frame)
 (define-extern quest-now (function time-frame))
 ;; (the power cell he's given, while it's there)
 (define *fisher-cell* (new 'static 'array handle 1))
 (set! (-> *fisher-cell* 0) (the-as handle #f))
 
+;; ---------------------------------------------------------------------------------------------------------
+;; Jak Living Sky: the fisherman's talk as a scene: black bars, the HUD away, Jak held, the camera cutting between
+;; shots in time with what he says (the voice lines' own clock: quest-now). Triangle skips it.
+(define-extern quest-line2 (function string string (array int32) time-frame))
+(define-extern quest-lines-cancel (function none))
+(define-extern quest-now (function time-frame))
+(define-extern *quest-gen* int)
+(define-extern set-letterbox-frames (function time-frame none))
+
+(define *fcine-f* (new 'static 'vector))   ;; the fisherman's head
+(define *fcine-j* (new 'static 'vector))   ;; Jak's
+(define *fcine-cam* (new 'static 'vector))
+(define *fcine-at* (new 'static 'vector))
+(define *fcine-dir* (new 'static 'vector))
+(define *fcine-on* #f)
+
+;; the shot: where the camera is (*fcine-cam*), what it looks at (*fcine-at*). 0 the fisherman close, 1 the empty
+;; village from above, 2 the warp gate in the sage's hut, 3 Jak and Daxter over the fisherman's shoulder, 4 towards
+;; the caverns, 5 the two of them side on
+(defun fisher-cine-shot ((shot int))
+  (let ((f *fcine-f*)
+        (j *fcine-j*)
+        (cam *fcine-cam*)
+        (at *fcine-at*)
+        (d (new 'stack-no-clear 'vector))
+        (side (new 'stack-no-clear 'vector)))
+    (vector-! d j f)
+    (set! (-> d y) 0.0)
+    (vector-normalize! d 1.0)
+    (set-vector! side (- (-> d z)) 0.0 (-> d x) 1.0)
+    (case shot
+      ((0)
+       (set! (-> at quad) (-> f quad))
+       (vector+float*! cam f d (meters 2.6))
+       (vector+float*! cam cam side (meters 0.7))
+       (+! (-> cam y) (meters 0.15)))
+      ((1)
+       (set-vector! cam (meters -1765.0) (meters 238.0) (meters 300.0) 1.0)
+       (set-vector! at (meters -1815.0) (meters 205.0) (meters 395.0) 1.0))
+      ((2)
+       (set-vector! at (meters -2032.6) (meters 183.0) (meters 203.5) 1.0)
+       (set-vector! cam (meters -2022.0) (meters 187.0) (meters 212.0) 1.0))
+      ((3)
+       (set! (-> at quad) (-> j quad))
+       (vector+float*! cam f d (meters -1.8))
+       (vector+float*! cam cam side (meters 1.0))
+       (+! (-> cam y) (meters 0.5)))
+      ((4)
+       (set-vector! at (meters -1220.0) (meters 185.0) (meters 500.0) 1.0)
+       (let ((e (new 'stack-no-clear 'vector)))
+         (vector-! e at f)
+         (set! (-> e y) 0.0)
+         (vector-normalize! e 1.0)
+         (vector+float*! cam f e (meters -3.0))
+         (+! (-> cam y) (meters 2.0))))
+      (else
+       (vector-lerp! at f j 0.5)
+       (vector+float*! cam at side (meters 5.5))
+       (+! (-> cam y) (meters 0.8)))))
+  (none))
+
+(defun fisher-cine-camera ()
+  (let ((dir *fcine-dir*))
+    (vector-! dir *fcine-at* *fcine-cam*)
+    (vector-normalize! dir 1.0)
+    (dotimes (i (-> *camera* num-slaves))
+      (let ((cam (-> *camera* slave i 0)))
+        (set! (-> cam saved-pt quad) (-> *fcine-cam* quad))
+        (set! (-> cam trans quad) (-> *fcine-cam* quad))
+        (forward-down->inv-matrix (-> cam tracking inv-mat) dir (-> *camera* local-down)))))
+  (none))
+
+;; the scene from t0 (when his voice starts), shots: until (ticks from t0), shot, until, shot...
+(defun fisher-cine ((fisher process-drawable) (t0 time-frame) (shots (array int32)))
+  (set! (-> *fcine-f* quad) (-> fisher root trans quad))
+  (+! (-> *fcine-f* y) (meters 1.7))
+  (set! (-> *fcine-j* quad) (-> *target* control trans quad))
+  (+! (-> *fcine-j* y) (meters 1.3))
+  (set! *fcine-on* #t)
+  (process-spawn-function
+    process
+    (lambda :behavior process ((t0 time-frame) (shots (array int32)) (gen int))
+      (send-event *target* 'change-mode 'grab)
+      (send-event *camera* 'change-state cam-fixed 0)
+      (let ((end (-> shots (- (-> shots length) 2))))
+        (while (and (< (quest-now) (+ t0 end)) (= gen *quest-gen*))
+          (let ((at (- (quest-now) t0))
+                (k 0))
+            (while (and (< (+ k 2) (-> shots length)) (>= at (-> shots k)))
+              (+! k 2))
+            (fisher-cine-shot (-> shots (+ k 1))))
+          (fisher-cine-camera)
+          (set-letterbox-frames (seconds 0.1))
+          (hide-hud)
+          (when (cpad-pressed? 0 triangle)
+            (cpad-clear! 0 triangle)
+            (quest-lines-cancel))
+          (suspend)))
+      (send-event *camera* 'change-state *camera-base-mode* 0)
+      (send-event *target* 'end-mode)
+      (set! *fcine-on* #f)
+      (none))
+    t0 shots *quest-gen*
+    :to *entity-pool*)
+  (none))
+
 (defstate fisherman-v4-idle (fisherman-v4)
   :trans
   (behavior ()
     (when (and *target*
+               (not *fcine-on*)
                (>= 51920.0 (vector-vector-distance (-> self root trans) (-> *target* control trans))))
       (when (hud-hidden?)
         (let ((gp-0 (new 'stack 'font-context *font-default-matrix* 32 160 0.0
@@ -1012,7 +1118,9 @@ nav-enemy-default-event-handler
     ((>= *fisher-quest* 3.0)
      ;; thanks, and the power cell (again if left behind)
      (set-time! (-> self chat-time))
-     (quest-line2 "PESCATORE" "voice/fisher-thanks.mp3" (new 'static 'boxed-array :type int32 #x4658 1395 #x4663 948))
+     (fisher-cine self
+                  (quest-line2 "PESCATORE" "voice/fisher-thanks.mp3" (new 'static 'boxed-array :type int32 #x4658 1395 #x4663 948))
+                  (new 'static 'boxed-array :type int32 1395 0 2343 5))
      (when (not (handle->process (-> *fisher-cell* 0)))
        (set! (-> *fisher-cell* 0)
              (ppointer->handle (birth-pickup-at-point (vector+! (new 'stack-no-clear 'vector) (-> self root trans)
@@ -1025,8 +1133,12 @@ nav-enemy-default-event-handler
     ((zero? *fisher-quest*)
      (set! *fisher-quest* 1.0)
      ;; (two recordings, each subtitled in two parts at its pause)
-     (quest-line2 "PESCATORE" "voice/fisher-ask.mp3" (new 'static 'boxed-array :type int32 #x4654 1890 #x4659 1254 #x465d 2061 #x465e 1485))
-     (quest-line2 "PESCATORE" "voice/fisher-ask2.mp3" (new 'static 'boxed-array :type int32 #x465a 1395 #x465c 1512 #x465f 1683 #x4660 708 #x465b 1230 #x4661 1098 #x4662 1317)))
+     ;; (the shots in time with what he says: who he is, the empty village, the warp gate in the sage's hut, Jak
+     ;; and Daxter; then the caverns, the rivers, the poisoned fish, the lurkers, Jak and Daxter, the reward)
+     (let ((t0 (quest-line2 "PESCATORE" "voice/fisher-ask.mp3" (new 'static 'boxed-array :type int32 #x4654 1890 #x4659 1254 #x465d 2061 #x465e 1485))))
+       (quest-line2 "PESCATORE" "voice/fisher-ask2.mp3" (new 'static 'boxed-array :type int32 #x465a 1395 #x465c 1512 #x465f 1683 #x4660 708 #x465b 1230 #x4661 1098 #x4662 1317))
+       (fisher-cine self t0 (new 'static 'boxed-array :type int32
+                                 1890 0 3144 1 5205 2 7099 3 8494 4 10006 0 11689 5 12397 0 13627 4 14725 3 16042 0))))
     (else
      (quest-line "PESCATORE" "voice/fisher-reminder.mp3" #x4655 (seconds 4.9)))))))
   :code

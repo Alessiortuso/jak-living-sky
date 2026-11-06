@@ -160,9 +160,17 @@
 (defun quest-line-latency ((len time-frame))
   (the-as time-frame (+ (seconds 0.3) (/ (the int len) 64))))
 
+;; (lines given up, all those queued: a scene skipped. Each line keeps the count it was queued under)
+(define *quest-gen* 0)
+
+(defun quest-lines-cancel ()
+  (+! *quest-gen* 1)
+  (set! *daxter-talk-until* (quest-now))
+  (none))
+
 ;; a line someone says (file: custom_assets/jak1/audio/voice/..., parts: subtitle text id, ticks (300 a
 ;; second), text id, ticks...: each part for its own time), after any other still going: its turn fixed now, in
-;; the order asked for
+;; the order asked for. Returns when its voice will start (quest-now's time)
 (defun quest-line2 ((speaker string) (file string) (parts (array int32)))
   (let ((total 0))
     (dotimes (i (/ (-> parts length) 2))
@@ -173,8 +181,9 @@
       (process-spawn-function
         process
         (lambda :behavior process ((speaker string) (file string) (parts (array int32)) (start-at time-frame)
-                                   (late time-frame))
+                                   (late time-frame) (gen int))
           (while (< (quest-now) start-at)
+            (if (!= gen *quest-gen*) (deactivate self))
             (suspend))
           (play-sound-file file 200)
           (let ((start (+ (quest-now) late))
@@ -182,6 +191,9 @@
             (dotimes (i (/ (-> parts length) 2))
               (+! total (-> parts (+ (* 2 i) 1))))
             (while (< (quest-now) (+ start total))
+              (when (!= gen *quest-gen*)
+                (stop-sound-file file)
+                (deactivate self))
               (let ((at (- (quest-now) start))
                     (k 0))
                 (while (and (< (+ k 2) (-> parts length)) (>= at (-> parts (+ k 1))))
@@ -190,9 +202,9 @@
                 (if (>= at 0) (brume-radio-subtitle speaker (-> parts k))))
               (suspend)))
           (none))
-        speaker file parts start-at late
-        :to *entity-pool*)))
-  (none))
+        speaker file parts start-at late *quest-gen*
+        :to *entity-pool*)
+      (the-as time-frame (+ start-at late)))))
 
 ;; (one subtitle for all of it)
 (defun quest-line ((speaker string) (file string) (text int) (len time-frame))
