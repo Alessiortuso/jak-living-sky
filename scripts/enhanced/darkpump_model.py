@@ -16,11 +16,12 @@ from PIL import Image
 
 OUT = sys.argv[1]
 
-METAL = (0.42, 0.42, 0.46)
-RUST = (0.70, 0.40, 0.20)
-DARK = (0.20, 0.18, 0.22)
-GLOW = (1.00, 0.45, 1.00)
-BRASS = (0.85, 0.70, 0.32)
+METAL = (0.30, 0.29, 0.31)
+RUST = (0.62, 0.32, 0.14)
+DARK = (0.16, 0.14, 0.17)
+GLOW = (1.00, 0.40, 1.00)
+BRASS = (0.80, 0.62, 0.26)
+SCALE = 1.2  # (a little bigger than first made)
 
 
 def ring_path(n, r, y=0.0):
@@ -111,7 +112,8 @@ def tank_colour(i):
     y = tank_y[i]
     if 1.05 < y < 1.25 or 2.05 < y < 2.25:
         return GLOW
-    return RUST if i % 6 in (0, 1) else METAL
+    # (rust streaks: more of it low down, where the dark eco splashes)
+    return RUST if (i % 4 == 0 or (i < 8 and i % 2 == 0)) else METAL
 
 
 parts.append(tube([(0, y, 0) for y in tank_y], [1.0] * len(tank_y), tank_colour, sides=24))
@@ -123,8 +125,10 @@ parts.append(tube([(0, 3.2, 0), (0, 3.9, 0)], [0.22, 0.22], lambda i: BRASS))
 parts.append(tube([(0, 3.9, 0), (0, 4.05, 0)], [0.38, 0.38], lambda i: DARK))
 # two pipes out of the tank's front, bending down (into the pool), purple at the joints
 for sx in (-0.45, 0.45):
-    path = bez((sx, 1.6, 0.85), (sx, 1.6, 2.2), (sx * 1.4, 1.2, 2.9), (sx * 1.5, -0.6, 3.1), 20)
-    parts.append(tube(path, [0.2] * 20, lambda i: GLOW if i in (0, 1, 18, 19) else METAL, sides=12))
+    # (long enough to reach over the island's edge, down into the pool)
+    path = bez((sx, 1.6, 0.85), (sx, 1.6, 2.4), (sx * 1.4, 1.3, 3.8), (sx * 1.5, -1.6, 4.6), 24)
+    parts.append(tube(path, [0.2] * 24, lambda i: GLOW if i in (0, 1, 11, 12, 22, 23) else (RUST if i % 5 == 0 else METAL),
+                      sides=12))
     # a flange where it leaves the tank
     parts.append(tube([(sx, 1.6, 0.9), (sx, 1.6, 1.08)], [0.3, 0.3], lambda i: BRASS, sides=12))
 # the valve wheel on the front, between the pipes
@@ -142,11 +146,14 @@ for v, n, c, i in parts:
     Nm += list(n)
     C += list(c)
     I += [k + o for k in i]
-V = np.array(V, np.float32)
+V = np.array(V, np.float32) * SCALE
 Nm = np.array(Nm, np.float32)
 Nm /= np.linalg.norm(Nm, axis=1)[:, None]
 C4 = np.ones((len(V), 4), np.float32)
 C4[:, :3] = np.array(C, np.float32) * 0.5  # (merc doubles them)
+# (the purple bands at full strength, glowing against the cave's dark)
+glow = np.all(np.isclose(np.array(C, np.float32), GLOW), axis=1)
+C4[glow, :3] = GLOW
 UV = np.zeros((len(V), 2), np.float32)
 I = np.array(I, np.uint32)
 

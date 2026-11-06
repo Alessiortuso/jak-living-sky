@@ -2083,9 +2083,48 @@
 ;; Jak Living Sky: the fisherman's rivers. In Abandoned Caves, by its dark eco pool, a pump of dark eco: the
 ;; rivers round Brume spring from these caves, purple while it runs. Three hits break it (*fisher-quest* 3); the
 ;; lake runs clear again, the pool turns to water, and the fisherman gives a power cell (brume-obs.gc)
-(def-actor darkpump :bounds (0 2 0 4))
+(def-actor darkpump :bounds (0 2.4 2 6))
 
 (define-extern quest-line (function string string int time-frame none))
+
+;; the dark eco pouring from its pipes into the pool
+(defpart 3016
+  :init-specs
+  ((:texture (hotdot effects))
+   (:num 2.0)
+   (:x (meters -0.08) (meters 0.16))
+   (:z (meters -0.08) (meters 0.16))
+   (:scale-x (meters 0.3) (meters 0.15))
+   (:scale-y :copy scale-x)
+   (:r 120.0 30.0)
+   (:g 10.0 10.0)
+   (:b 200.0 50.0)
+   (:a 110.0 20.0)
+   (:vel-y (meters -0.02) (meters -0.01))
+   (:fade-a -0.6)
+   (:accel-y (meters -0.004))
+   (:timer (seconds 0.6) (seconds 0.2))
+   (:flags (bit2 bit3))))
+
+;; and the purple vapour rising from its top
+(defpart 3017
+  :init-specs
+  ((:texture (bigpuff effects))
+   (:num 0.3)
+   (:x (meters -0.2) (meters 0.4))
+   (:z (meters -0.2) (meters 0.4))
+   (:scale-x (meters 0.6) (meters 0.4))
+   (:scale-y :copy scale-x)
+   (:r 90.0 20.0)
+   (:g 20.0 10.0)
+   (:b 130.0 30.0)
+   (:a 40.0 16.0)
+   (:vel-y (meters 0.012) (meters 0.006))
+   (:scalevel-x (meters 0.008))
+   (:scalevel-y :copy scalevel-x)
+   (:fade-a -0.25)
+   (:timer (seconds 1.6) (seconds 0.6))
+   (:flags (bit2))))
 
 ;; where it stands (metres) and which way it faces
 ;; (on the island in the dark eco pool, at its edge towards the pool, its pipes over it; the island's middle is
@@ -2127,12 +2166,14 @@
            (if (>= (-> self hits) 3) (go darkpump-explode))))))
   :trans
     (behavior ()
-      ;; the dark eco it spills from its pipes, and up from its top
+      ;; the dark eco it pours from its pipes' ends into the pool, the vapour off its top, its hum
       (let ((v (new 'stack-no-clear 'vector)))
-        (launch-particles (-> *part-id-table* 3002) (darkpump-spot self v -0.7 -0.4 3.1))
-        (launch-particles (-> *part-id-table* 3002) (darkpump-spot self v 0.7 -0.4 3.1))
+        (launch-particles (-> *part-id-table* 3016) (darkpump-spot self v -0.81 -1.95 5.52))
+        (launch-particles (-> *part-id-table* 3016) (darkpump-spot self v 0.81 -1.95 5.52))
+        (launch-particles (-> *part-id-table* 3017) (darkpump-spot self v 0.0 4.9 0.0))
         (if (zero? (logand (the int (-> *display* integral-frame-counter)) 3))
-          (launch-particles (-> *part-id-table* 3002) (darkpump-spot self v 0.0 4.2 0.0))))
+          (launch-particles (-> *part-id-table* 3002) (darkpump-spot self v 0.0 1.5 0.0))))
+      (if (nonzero? (-> self sound)) (update! (-> self sound)))
       ;; struck: a flash
       (let ((f (if (time-elapsed? (-> self hit-time) (seconds 0.15)) 1.0 2.2)))
         (set-vector! (-> self draw color-mult) f f f 1.0))
@@ -2158,6 +2199,7 @@
           (darkpump-spot self v (rand-vu-float-range -1.2 1.2) (rand-vu-float-range 0.5 3.8) (rand-vu-float-range -1.2 1.2))
           (process-spawn part-tracker :init part-tracker-init group-dark-jak-shot-hit -1 #f #f #f v :to *entity-pool*)))
       (logior! (-> self draw status) (draw-status hidden))
+      (if (nonzero? (-> self sound)) (stop! (-> self sound)))
       (quest-line "DAXTER" "voice/daxter-pump-broken.mp3" #x4657 (seconds 5.4))
       (suspend-for (seconds 2))
       (deactivate self)))
@@ -2171,7 +2213,7 @@
       (set! (-> prim collide-with) (collide-kind target))
       (set! (-> prim prim-core action) (collide-action solid))
       (set! (-> prim prim-core offense) (collide-offense indestructible))
-      (set-vector! (-> prim local-sphere) 0.0 (meters 1.7) 0.0 (meters 1.7))
+      (set-vector! (-> prim local-sphere) 0.0 (meters 2.0) 0.0 (meters 2.0))
       (set-root-prim! cs prim))
     (backup-collide-with-as cs)
     (set! (-> self root) cs))
@@ -2179,6 +2221,8 @@
   (quaternion-axis-angle! (-> self root quat) 0.0 1.0 0.0 *darkpump-yaw*)
   (vector-identity! (-> self root scale))
   (initialize-skeleton self *darkpump-sg* '())
+  ;; (a machine's hum, heard from close by)
+  (set! (-> self sound) (new 'process 'ambient-sound (static-sound-spec "elev-loop" :fo-max 30) (-> self root trans)))
   (set! (-> self hits) 0)
   (set! (-> self hit-time) 0)
   (transform-post)
