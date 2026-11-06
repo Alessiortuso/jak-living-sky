@@ -1006,7 +1006,7 @@ nav-enemy-default-event-handler
     ((>= *fisher-quest* 3.0)
      ;; thanks, and the power cell (again if left behind)
      (set-time! (-> self chat-time))
-     (quest-line "PESCATORE" "voice/fisher-thanks.mp3" #x4658 (seconds 7))
+     (quest-line "PESCATORE" "voice/fisher-thanks.mp3" #x4658 (seconds 8))
      (when (not (handle->process *fisher-cell*))
        (set! *fisher-cell*
              (ppointer->handle (birth-pickup-at-point (vector+! (new 'stack-no-clear 'vector) (-> self root trans)
@@ -1020,7 +1020,7 @@ nav-enemy-default-event-handler
      (set! *fisher-quest* 1.0)
      (quest-line "PESCATORE" "voice/fisher-ask.mp3" #x4654 (seconds 14)))
     (else
-     (quest-line "PESCATORE" "voice/fisher-reminder.mp3" #x4655 (seconds 5)))))))
+     (quest-line "PESCATORE" "voice/fisher-reminder.mp3" #x4655 (seconds 4.9)))))))
   :code
  (behavior ()
         (loop
