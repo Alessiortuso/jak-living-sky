@@ -2127,9 +2127,8 @@
    (:flags (bit2))))
 
 ;; where it stands (metres) and which way it faces
-;; (on the island in the dark eco pool, at its edge towards the pool, its pipes over it; the island's middle is
-;; abandon-fuel-cell-01's)
-(define *darkpump-pos* (new 'static 'vector :x (meters -1279.6) :y (meters 191.3) :z (meters 494.5) :w 1.0))
+;; (in the middle of the island in the dark eco pool, where abandon-fuel-cell-01 was, its pipes towards the pool)
+(define *darkpump-pos* (new 'static 'vector :x (meters -1279.6) :y (meters 191.3) :z (meters 489.9) :w 1.0))
 (define *darkpump-yaw* 0.0)
 ;; (its handle in a 64-bit slot: a global symbol holds 32 bits, a handle cut down to them never matched, a new
 ;; pump spawned every frame until the game ran out of processes)
