@@ -164,4 +164,7 @@
   ;;WARP;;
 
   (brume-warp 143)
-  (max 144))
+
+  ;; Jak Living Sky: the fisherman's rivers (the dark eco pump in Abandoned Caves)
+  (brume-fisherman 144)
+  (max 145))

@@ -2079,7 +2079,138 @@
 (define-extern soul-dark-enemies-update (function none))
 (define-extern soul-dark-meter-update (function none))
 
+;; ---------------------------------------------------------------------------------------------------------
+;; Jak Living Sky: the fisherman's rivers. In Abandoned Caves, by its dark eco pool, a pump of dark eco: the
+;; rivers round Brume spring from these caves, purple while it runs. Three hits break it (*fisher-quest* 3); the
+;; lake runs clear again, the pool turns to water, and the fisherman gives a power cell (brume-obs.gc)
+(def-actor darkpump :bounds (0 2 0 4))
+
+(define-extern quest-line (function string string int time-frame none))
+
+;; where it stands (metres) and which way it faces
+(define *darkpump-pos* (new 'static 'vector :x (meters -1279.6) :y (meters 188.84) :z (meters 488.81) :w 1.0))
+(define *darkpump-yaw* 0.0)
+(define *darkpump* (the-as handle #f))
+
+(deftype darkpump (process-drawable)
+  ((root      collide-shape :override)
+   (hits      int32)
+   (hit-time  time-frame))
+  (:states
+    darkpump-idle
+    darkpump-explode))
+
+(defun darkpump-spot ((this darkpump) (out vector) (x float) (y float) (z float))
+  "a spot on it (its own metres) in the world"
+  (set-vector! out (meters x) (meters y) (meters z) 1.0)
+  (vector-orient-by-quat! out out (-> this root quat))
+  (vector+! out out (-> this root trans))
+  out)
+
+(defstate darkpump-idle (darkpump)
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (case message
+        (('attack 'touch)
+         (when (and (= message 'attack) (time-elapsed? (-> self hit-time) (seconds 0.5)))
+           (set-time! (-> self hit-time))
+           (+! (-> self hits) 1)
+           (sound-play "death-darkeco" :pitch 0.6)
+           (let ((v (new 'stack-no-clear 'vector)))
+             (darkpump-spot self v 0.0 1.6 1.0)
+             (process-spawn part-tracker :init part-tracker-init group-dark-jak-shot-hit -1 #f #f #f v :to *entity-pool*))
+           (if (>= (-> self hits) 3) (go darkpump-explode))))))
+  :trans
+    (behavior ()
+      ;; the dark eco it spills from its pipes, and up from its top
+      (let ((v (new 'stack-no-clear 'vector)))
+        (launch-particles (-> *part-id-table* 3002) (darkpump-spot self v -0.7 -0.4 3.1))
+        (launch-particles (-> *part-id-table* 3002) (darkpump-spot self v 0.7 -0.4 3.1))
+        (if (zero? (logand (the int (-> *display* integral-frame-counter)) 3))
+          (launch-particles (-> *part-id-table* 3002) (darkpump-spot self v 0.0 4.2 0.0))))
+      ;; struck: a flash
+      (let ((f (if (time-elapsed? (-> self hit-time) (seconds 0.15)) 1.0 2.2)))
+        (set-vector! (-> self draw color-mult) f f f 1.0))
+      ;; Daxter, the first time he sees it
+      (when (and *target* (< *fisher-quest* 2.0)
+                 (< (vector-vector-distance (-> self root trans) (-> *target* control trans)) (meters 22)))
+        (set! *fisher-quest* 2.0)
+        (quest-line "DAXTER" "voice/daxter-pump.mp3" #x4656 (seconds 5))))
+  :code
+    (behavior ()
+      (loop
+        (suspend)))
+  :post transform-post)
+
+(defstate darkpump-explode (darkpump)
+  :code
+    (behavior ()
+      (set! *fisher-quest* 3.0)
+      (clear-collide-with-as (-> self root))
+      (sound-play "death-darkeco" :pitch -0.6)
+      (let ((v (new 'stack-no-clear 'vector)))
+        (dotimes (i 6)
+          (darkpump-spot self v (rand-vu-float-range -1.2 1.2) (rand-vu-float-range 0.5 3.8) (rand-vu-float-range -1.2 1.2))
+          (process-spawn part-tracker :init part-tracker-init group-dark-jak-shot-hit -1 #f #f #f v :to *entity-pool*)))
+      (logior! (-> self draw status) (draw-status hidden))
+      (quest-line "DAXTER" "voice/daxter-pump-broken.mp3" #x4657 (seconds 5))
+      (suspend-for (seconds 2))
+      (deactivate self)))
+
+(defbehavior darkpump-init darkpump ()
+  (logclear! (-> self mask) (process-mask actor-pause))
+  (logior! (-> self mask) (process-mask enemy))
+  (let ((cs (new 'process 'collide-shape self (collide-list-enum hit-by-player))))
+    (let ((prim (new 'process 'collide-shape-prim-sphere cs (the-as uint 0))))
+      (set! (-> prim prim-core collide-as) (collide-kind enemy))
+      (set! (-> prim collide-with) (collide-kind target))
+      (set! (-> prim prim-core action) (collide-action solid))
+      (set! (-> prim prim-core offense) (collide-offense indestructible))
+      (set-vector! (-> prim local-sphere) 0.0 (meters 1.7) 0.0 (meters 1.7))
+      (set-root-prim! cs prim))
+    (backup-collide-with-as cs)
+    (set! (-> self root) cs))
+  (set! (-> self root trans quad) (-> *darkpump-pos* quad))
+  (quaternion-axis-angle! (-> self root quat) 0.0 1.0 0.0 *darkpump-yaw*)
+  (vector-identity! (-> self root scale))
+  (initialize-skeleton self *darkpump-sg* '())
+  (set! (-> self hits) 0)
+  (set! (-> self hit-time) 0)
+  (transform-post)
+  (go darkpump-idle)
+  (none))
+
+;; the lake and the pool's looks: the lake purple while the pump runs; once broken the pool is water too
+(defun brume-waters-update ()
+  (when (zero? (logand (the int (-> *display* integral-frame-counter)) 15))
+    (let ((lake (the-as process-drawable (process-by-name "WaterShape-8" *active-pool*)))
+          (pool (the-as process-drawable (process-by-name "WaterShape-13-second" *active-pool*)))
+          (clean (>= *fisher-quest* 3.0)))
+      (when (and lake (nonzero? (-> lake draw)))
+        (if clean
+          (set-vector! (-> lake draw color-mult) 0.01 0.45 0.5 0.75)
+          (set-vector! (-> lake draw color-mult) 0.3 0.06 0.4 0.85)))
+      (when (and pool (nonzero? (-> pool draw)) clean)
+        (set-vector! (-> pool draw color-mult) 0.05 0.22 0.4 0.85)
+        (set-vector! (-> pool draw color-emissive) 0.0 0.08 0.18 0.0))))
+  (none))
+
+;; the pump there while Abandoned Caves is, until broken
+(defun darkpump-update ()
+  (let ((lev (level-get *level* 'abandon))
+        (proc (handle->process *darkpump*)))
+    (cond
+      ((and lev (= (-> lev status) 'active) (< *fisher-quest* 3.0) *target*)
+       (if (not proc)
+         (set! *darkpump* (ppointer->handle (process-spawn darkpump :init darkpump-init :to *entity-pool*)))))
+      (proc
+       (deactivate proc)
+       (set! *darkpump* (the-as handle #f)))))
+  (brume-waters-update)
+  (none))
+
 (defun soul-pile-update ()
+  (darkpump-update)
   (brume-radio-update)
   (soul-dark-enemies-update)
   (soul-dark-meter-update)

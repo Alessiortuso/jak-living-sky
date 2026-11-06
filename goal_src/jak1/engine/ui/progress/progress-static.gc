@@ -1415,7 +1415,7 @@
  (new 'static 'level-tasks-info
               :level-name-id (text-id brume)
               :text-group-index 3
-              :nb-of-tasks 6
+              :nb-of-tasks 7
               :buzzer-task-index 0
               :task-info
               (new 'static 'array task-info-data 8
@@ -1483,6 +1483,15 @@
                              )
 
                         )
+                    ;; Jak Living Sky: the fisherman's rivers
+                    (new 'static 'task-info-data
+                        :task-id (game-task brume-fisherman)
+                        :task-name
+                        (new 'static 'array text-id 4
+                             (text-id brume-fisherman)
+                             (text-id brume-fisherman)
+                             (text-id brume-fisherman)
+                             (text-id zero)))
 
                    )
 

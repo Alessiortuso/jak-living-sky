@@ -136,10 +136,18 @@
 ;; other): until when he's talking
 (define *daxter-talk-until* (the-as time-frame 0))
 
+(define-extern quest-line (function string string int time-frame none))
+
 (defun daxter-dark-line ((file string) (text int) (len time-frame))
+  (quest-line "DAXTER" file text len)
+  (none))
+
+;; Jak Living Sky: a line someone says (file: custom_assets/jak1/audio/voice/..., text: its subtitle's id, len:
+;; how long), after any other of these still going
+(defun quest-line ((speaker string) (file string) (text int) (len time-frame))
   (process-spawn-function
     process
-    (lambda :behavior process ((file string) (text int) (len time-frame))
+    (lambda :behavior process ((speaker string) (file string) (text int) (len time-frame))
       ;; (another of his lines first: its end, and a breath)
       (while (< (current-time) *daxter-talk-until*)
         (suspend))
@@ -147,10 +155,10 @@
       (play-sound-file file 200)
       (let ((start (current-time)))
         (while (not (time-elapsed? start len))
-          (brume-radio-subtitle "DAXTER" text)
+          (brume-radio-subtitle speaker text)
           (suspend)))
       (none))
-    file text len
+    speaker file text len
     :to *entity-pool*)
   (none))
 

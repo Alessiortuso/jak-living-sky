@@ -224,6 +224,7 @@
      (set! *daxter-dark-eco-seen* 0.0)
      (set! *daxter-dark-jak-seen* 0.0)
      (set! *daxter-dark-jak-end-seen* 0.0)
+     (set! *fisher-quest* 0.0)
      (set! (-> this fuel) 0.0)
      (set! (-> this money-total) 0.0)
      (set! (-> this buzzer-total) 0.0)
