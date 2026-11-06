@@ -1,7 +1,11 @@
-# Jak Living Sky: the dark eco pump in Abandoned Caves (the fisherman's mission): a rusty tank on a base,
-# purple bands glowing, a domed top with a piston, two pipes bent down into the pool, a valve wheel. A glb for
-# build-actor (game.gp), coloured in its vertices (textures don't reach the game for these; merc doubles them,
-# so they're halved here). Units: metres, +Z its front (the pipes' side), Y up.
+# Jak Living Sky: the dark eco pump in Abandoned Caves (the fisherman's mission): a steel tank on a stone base,
+# riveted flanges, welded seams, purple bands glowing, a domed top with a piston, a pressure gauge, two pipes
+# bent down into the pool, a valve wheel. A glb for build-actor (game.gp).
+#
+# Its parts go in three materials named for the renderer's own looks (EnhancedMaterials.h): "steel" and "brass"
+# shine as metal, the base stays dull. No texture reaches the game for these: the colours, wear included (plates
+# uneven, rust running from under the bands, grime at the foot), are painted into the vertices (merc doubles
+# them, so they're halved here). Units: metres (then SCALE), +Z its front (the pipes' side), Y up.
 #
 #   python scripts/enhanced/darkpump_model.py custom_assets/jak1/models
 import io
@@ -23,9 +27,7 @@ GLOW = (1.00, 0.40, 1.00)
 BRASS = (0.80, 0.62, 0.26)
 SCALE = 1.6  # (bigger than first made: a machine you can't miss)
 
-
-def ring_path(n, r, y=0.0):
-    return [(r * math.cos(2 * math.pi * k / n), y, r * math.sin(2 * math.pi * k / n)) for k in range(n + 1)]
+STEEL, BRASS_M, BASE = 'darkpump-steel', 'darkpump-brass', 'darkpump-base'
 
 
 def tube(path, radii, colour_at, sides=16, caps=True):
@@ -100,106 +102,166 @@ def bez(p0, p1, p2, p3, n):
     return (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3
 
 
-parts = []
-# the base: a dark slab, rusty edges
-parts.append(box((-1.5, 0.0, -1.5), (1.5, 0.35, 1.5), DARK))
-parts.append(box((-1.6, 0.0, -1.6), (1.6, 0.12, 1.6), RUST))
-# the tank: rust and metal rings, two purple bands glowing
-tank_y = np.linspace(0.35, 2.75, 25)
+parts = []  # (material, (V, N, C, I))
+# the base: a dark slab on a rusty foot
+parts.append((BASE, box((-1.5, 0.0, -1.5), (1.5, 0.35, 1.5), DARK)))
+parts.append((BASE, box((-1.6, 0.0, -1.6), (1.6, 0.12, 1.6), RUST)))
+# the tank: steel plates, two purple bands glowing, thick flanges top and bottom
+tank_y = np.linspace(0.35, 2.75, 49)
 
 
 def tank_colour(i):
     y = tank_y[i]
-    if 1.05 < y < 1.25 or 2.05 < y < 2.25:
+    if 1.08 < y < 1.22 or 2.08 < y < 2.22:
         return GLOW
-    # (rust streaks: more of it low down, where the dark eco splashes)
-    return RUST if (i % 4 == 0 or (i < 8 and i % 2 == 0)) else METAL
+    return METAL
 
 
-parts.append(tube([(0, y, 0) for y in tank_y], [1.0] * len(tank_y), tank_colour, sides=24))
+parts.append((STEEL, tube([(0, y, 0) for y in tank_y], [1.0] * len(tank_y), tank_colour, sides=40)))
+for y0 in (0.35, 2.62):
+    parts.append((STEEL, tube([(0, y0, 0), (0, y0 + 0.14, 0)], [1.08, 1.08], lambda i: DARK, sides=40)))
+# rivets round the flanges, and above and below each purple band
+for y, r in ((0.42, 1.09), (2.69, 1.09), (1.0, 1.01), (1.3, 1.01), (2.0, 1.01), (2.3, 1.01)):
+    for k in range(20):
+        a = 2 * math.pi * (k + 0.5) / 20
+        d = np.array([math.cos(a), 0, math.sin(a)])
+        c = np.array([0, y, 0]) + d * r
+        parts.append((STEEL, tube([c, c + d * 0.05], [0.035, 0.03], lambda i: METAL, sides=6)))
+# welded seams down the plates
+for k in range(4):
+    a = 2 * math.pi * (k + 0.5) / 4
+    d = np.array([math.cos(a), 0, math.sin(a)])
+    parts.append((STEEL, tube([d * 1.0 + (0, 0.5, 0), d * 1.0 + (0, 2.6, 0)], [0.025, 0.025], lambda i: DARK, sides=5)))
 # the dome on top, and its piston
-dome = [(0, 2.75 + 0.55 * math.sin(a), 0) for a in np.linspace(0, math.pi / 2, 10)]
-dome_r = [1.0 * math.cos(a) + 0.02 for a in np.linspace(0, math.pi / 2, 10)]
-parts.append(tube(dome, dome_r, lambda i: METAL, sides=24, caps=False))
-parts.append(tube([(0, 3.2, 0), (0, 3.9, 0)], [0.22, 0.22], lambda i: BRASS))
-parts.append(tube([(0, 3.9, 0), (0, 4.05, 0)], [0.38, 0.38], lambda i: DARK))
-# two pipes out of the tank's front, bending down (into the pool), purple at the joints
+dome = [(0, 2.76 + 0.55 * math.sin(a), 0) for a in np.linspace(0, math.pi / 2, 14)]
+dome_r = [1.0 * math.cos(a) + 0.02 for a in np.linspace(0, math.pi / 2, 14)]
+parts.append((STEEL, tube(dome, dome_r, lambda i: METAL, sides=40, caps=False)))
+parts.append((BRASS_M, tube([(0, 3.2, 0), (0, 3.9, 0)], [0.22, 0.22], lambda i: BRASS, sides=16)))
+parts.append((STEEL, tube([(0, 3.9, 0), (0, 4.05, 0)], [0.38, 0.38], lambda i: DARK, sides=16)))
+# a pressure gauge on the side: a brass rim round a pale face
+gd = np.array([0.707, 0, 0.707])
+g = np.array([0, 1.75, 0]) + gd * 0.98
+parts.append((BRASS_M, tube([g, g + gd * 0.12], [0.2, 0.2], lambda i: BRASS, sides=16)))
+parts.append((BASE, tube([g + gd * 0.12, g + gd * 0.125], [0.16, 0.16], lambda i: (0.85, 0.82, 0.72), sides=16)))
+# two pipes out of the tank's front, bending down into the pool, purple at the joints
 for sx in (-0.45, 0.45):
     # (long enough to reach over the island's edge, down into the pool)
-    path = bez((sx, 1.6, 0.85), (sx, 1.8, 3.5), (sx * 1.4, 1.6, 5.8), (sx * 1.5, -1.5, 6.6), 24)
-    parts.append(tube(path, [0.2] * 24, lambda i: GLOW if i in (0, 1, 11, 12, 22, 23) else (RUST if i % 5 == 0 else METAL),
-                      sides=12))
-    # a flange where it leaves the tank
-    parts.append(tube([(sx, 1.6, 0.9), (sx, 1.6, 1.08)], [0.3, 0.3], lambda i: BRASS, sides=12))
+    path = bez((sx, 1.6, 0.85), (sx, 1.8, 3.5), (sx * 1.4, 1.6, 5.8), (sx * 1.5, -1.5, 6.6), 40)
+    parts.append((STEEL, tube(path, [0.2] * 40, lambda i: GLOW if i in (0, 1, 19, 20, 38, 39) else METAL, sides=16)))
+    # brass flanges where it leaves the tank, and a third of the way along
+    parts.append((BRASS_M, tube([(sx, 1.6, 0.9), (sx, 1.6, 1.08)], [0.3, 0.3], lambda i: BRASS, sides=16)))
+    tdir = (path[13] - path[11]) / np.linalg.norm(path[13] - path[11])
+    parts.append((BRASS_M, tube([path[12] - tdir * 0.06, path[12] + tdir * 0.06], [0.27, 0.27], lambda i: BRASS,
+                                sides=16)))
 # the valve wheel on the front, between the pipes
-wheel = [(x, y + 0.9, 1.15) for x, y, _ in [(0.4 * math.cos(a), 0.4 * math.sin(a), 0) for a in np.linspace(0, 2 * math.pi, 25)]]
-parts.append(tube(wheel, [0.06] * 25, lambda i: BRASS, sides=8, caps=False))
+wheel = [(0.4 * math.cos(a), 0.9 + 0.4 * math.sin(a), 1.15) for a in np.linspace(0, 2 * math.pi, 33)]
+parts.append((BRASS_M, tube(wheel, [0.06] * 33, lambda i: BRASS, sides=8, caps=False)))
 for a in (0, math.pi / 2):
     d = np.array([math.cos(a), math.sin(a), 0]) * 0.4
-    parts.append(tube([(-d[0], 0.9 - d[1], 1.15), (d[0], 0.9 + d[1], 1.15)], [0.04, 0.04], lambda i: BRASS, sides=6))
-parts.append(tube([(0, 0.9, 1.0), (0, 0.9, 1.15)], [0.08, 0.08], lambda i: DARK, sides=8))
+    parts.append((BRASS_M, tube([(-d[0], 0.9 - d[1], 1.15), (d[0], 0.9 + d[1], 1.15)], [0.04, 0.04], lambda i: BRASS,
+                                sides=6)))
+parts.append((STEEL, tube([(0, 0.9, 1.0), (0, 0.9, 1.15)], [0.08, 0.08], lambda i: DARK, sides=8)))
 
-V, Nm, C, I = [], [], [], []
-for v, n, c, i in parts:
-    o = len(V)
-    V += list(v)
-    Nm += list(n)
-    C += list(c)
-    I += [k + o for k in i]
-V = np.array(V, np.float32) * SCALE
-Nm = np.array(Nm, np.float32)
-Nm /= np.linalg.norm(Nm, axis=1)[:, None]
-C4 = np.ones((len(V), 4), np.float32)
-C4[:, :3] = np.array(C, np.float32) * 0.5  # (merc doubles them)
-# (the purple bands at full strength, glowing against the cave's dark)
-glow = np.all(np.isclose(np.array(C, np.float32), GLOW), axis=1)
-C4[glow, :3] = GLOW
-UV = np.zeros((len(V), 2), np.float32)
-I = np.array(I, np.uint32)
 
-bio = io.BytesIO()
-Image.new('RGB', (4, 4), (255, 255, 255)).save(bio, 'PNG')
-tex = bio.getvalue()
+def weather(V, C):
+    """wear painted into the vertices: the plates uneven, rust running down from under the bands, grime and rust
+    round the foot"""
+    V = np.asarray(V, float)
+    C = np.asarray(C, float).copy()
+    glow = np.all(np.isclose(C, GLOW), axis=1)
+    ang = np.arctan2(V[:, 2], V[:, 0])
+    y = V[:, 1]
+    h = np.sin(V[:, 0] * 13.1 + V[:, 1] * 7.7) * np.sin(V[:, 2] * 11.3 - V[:, 1] * 5.3)
+    C *= (0.9 + 0.12 * h)[:, None]
+    # streaks: thin, at a few angles, from under each band down a while
+    streak = np.clip(np.sin(ang * 9 + 1.3) * np.sin(ang * 4 - 0.6), 0, 1) ** 3
+    run = np.zeros(len(V))
+    for top in (1.08, 2.08):
+        d = top - y
+        run = np.maximum(run, np.where((d > 0) & (d < 0.75), 1 - d / 0.75, 0))
+    rust = np.clip(streak * run * 1.6 + np.clip((0.75 - y) / 0.5, 0, 1) * 0.55, 0, 1)
+    C = C * (1 - rust[:, None]) + np.array(RUST) * rust[:, None]
+    # grime low down
+    grime = np.clip((0.9 - y) / 0.6, 0, 1) * 0.35
+    C *= (1 - grime)[:, None]
+    C[glow] = GLOW
+    return C
+
+
+# merged by material: one primitive each
+groups = {}
+for mat, (v, n, c, i) in parts:
+    g_ = groups.setdefault(mat, [[], [], [], []])
+    o = len(g_[0])
+    g_[0] += list(v)
+    g_[1] += list(n)
+    g_[2] += list(c)
+    g_[3] += [k + o for k in i]
+prims = []
+for mat, (v, n, c, i) in groups.items():
+    V_ = np.array(v, np.float32)
+    C_ = weather(V_, c) if mat == STEEL else np.array(c, float)
+    N_ = np.array(n, np.float32)
+    N_ /= np.linalg.norm(N_, axis=1)[:, None]
+    C4_ = np.ones((len(V_), 4), np.float32)
+    C4_[:, :3] = C_ * 0.5  # (merc doubles them)
+    glow_ = np.all(np.isclose(C_, GLOW), axis=1)
+    C4_[glow_, :3] = GLOW  # (the purple bands at full strength, glowing against the cave's dark)
+    prims.append((mat, (V_ * SCALE).astype(np.float32), N_, np.zeros((len(V_), 2), np.float32), C4_,
+                  np.array(i, np.uint32)))
+
+
+def png_white():
+    bio = io.BytesIO()
+    Image.new('RGB', (4, 4), (255, 255, 255)).save(bio, 'PNG')
+    return bio.getvalue()
 
 
 def write_glb(path, name):
-    blobs = [V.tobytes(), Nm.tobytes(), UV.tobytes(), I.tobytes(), tex, C4.tobytes()]
-    views, data = [], b''
-    for bl in blobs:
+    """one primitive per material, each with its own (white) picture named for it"""
+    data = bytearray()
+    views, accs, mats, texs, imgs, prim_js = [], [], [], [], [], []
+
+    def add(blob, target=None):
         while len(data) % 4:
-            data += b'\0'
-        views.append({'buffer': 0, 'byteOffset': len(data), 'byteLength': len(bl)})
-        data += bl
+            data.append(0)
+        v = {'buffer': 0, 'byteOffset': len(data), 'byteLength': len(blob)}
+        if target:
+            v['target'] = target
+        views.append(v)
+        data.extend(blob)
+        return len(views) - 1
+
+    for k, (mat, V_, N_, UV_, C4_, I_) in enumerate(prims):
+        a0 = len(accs)
+        accs.append({'bufferView': add(V_.tobytes(), 34962), 'componentType': 5126, 'count': len(V_), 'type': 'VEC3',
+                     'min': V_.min(0).tolist(), 'max': V_.max(0).tolist()})
+        accs.append({'bufferView': add(N_.tobytes(), 34962), 'componentType': 5126, 'count': len(V_), 'type': 'VEC3'})
+        accs.append({'bufferView': add(UV_.tobytes(), 34962), 'componentType': 5126, 'count': len(V_), 'type': 'VEC2'})
+        accs.append({'bufferView': add(I_.tobytes(), 34963), 'componentType': 5125, 'count': len(I_), 'type': 'SCALAR'})
+        accs.append({'bufferView': add(C4_.tobytes(), 34962), 'componentType': 5126, 'count': len(V_), 'type': 'VEC4'})
+        imgs.append({'bufferView': add(png_white()), 'mimeType': 'image/png', 'name': mat})
+        texs.append({'source': k, 'sampler': 0})
+        mats.append({'name': mat, 'pbrMetallicRoughness': {'baseColorTexture': {'index': k}, 'metallicFactor': 0.0,
+                                                           'roughnessFactor': 0.6}})
+        prim_js.append({'attributes': {'POSITION': a0, 'NORMAL': a0 + 1, 'TEXCOORD_0': a0 + 2, 'COLOR_0': a0 + 4},
+                        'indices': a0 + 3, 'material': k})
     while len(data) % 4:
-        data += b'\0'
-    for k in range(3):
-        views[k]['target'] = 34962
-    views[3]['target'] = 34963
-    accs = [{'bufferView': 0, 'componentType': 5126, 'count': len(V), 'type': 'VEC3',
-             'min': V.min(0).tolist(), 'max': V.max(0).tolist()},
-            {'bufferView': 1, 'componentType': 5126, 'count': len(V), 'type': 'VEC3'},
-            {'bufferView': 2, 'componentType': 5126, 'count': len(V), 'type': 'VEC2'},
-            {'bufferView': 3, 'componentType': 5125, 'count': len(I), 'type': 'SCALAR'},
-            {'bufferView': 5, 'componentType': 5126, 'count': len(V), 'type': 'VEC4'}]
+        data.append(0)
     g = {'asset': {'version': '2.0'}, 'scene': 0, 'scenes': [{'nodes': [0]}],
-         'nodes': [{'name': name, 'mesh': 0}],
-         'meshes': [{'name': name, 'primitives': [{'attributes': {'POSITION': 0, 'NORMAL': 1, 'TEXCOORD_0': 2,
-                                                                  'COLOR_0': 4}, 'indices': 3, 'material': 0}]}],
-         'materials': [{'name': name + '-tex', 'pbrMetallicRoughness': {'baseColorTexture': {'index': 0},
-                                                                       'metallicFactor': 0.0,
-                                                                       'roughnessFactor': 0.6}}],
-         'textures': [{'source': 0, 'sampler': 0}], 'samplers': [{'magFilter': 9729, 'minFilter': 9987}],
-         'images': [{'bufferView': 4, 'mimeType': 'image/png', 'name': name + '-tex'}],
+         'nodes': [{'name': name, 'mesh': 0}], 'meshes': [{'name': name, 'primitives': prim_js}],
+         'materials': mats, 'textures': texs, 'samplers': [{'magFilter': 9729, 'minFilter': 9987}], 'images': imgs,
          'buffers': [{'byteLength': len(data)}], 'bufferViews': views, 'accessors': accs}
     js = json.dumps(g).encode()
     while len(js) % 4:
         js += b' '
     out = (b'glTF' + struct.pack('<II', 2, 12 + 8 + len(js) + 8 + len(data)) + struct.pack('<I4s', len(js), b'JSON') +
-           js + struct.pack('<I4s', len(data), b'BIN\0') + data)
+           js + struct.pack('<I4s', len(data), b'BIN\0') + bytes(data))
     open(path, 'wb').write(out)
 
 
 # (the same model twice: custom_levels for build-actor, common/<name>-lod0 so the extractor puts it in GAME)
 write_glb(os.path.join(OUT, 'custom_levels', 'darkpump.glb'), 'darkpump')
 write_glb(os.path.join(OUT, 'common', 'darkpump-lod0.glb'), 'darkpump')
-print('ok', len(V), 'vertices', len(I) // 3, 'triangles')
+print('ok', sum(len(p[1]) for p in prims), 'vertices', sum(len(p[5]) for p in prims) // 3, 'triangles',
+      [p[0] for p in prims])
