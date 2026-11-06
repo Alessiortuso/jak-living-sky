@@ -2257,7 +2257,11 @@
   (brume-waters-update)
   (none))
 
+(define-extern quest-now (function time-frame))
+
 (defun soul-pile-update ()
+  ;; (the voice lines' clock kept running: quest-now)
+  (quest-now)
   (darkpump-update)
   (brume-radio-update)
   (soul-dark-enemies-update)

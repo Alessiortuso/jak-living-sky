@@ -138,9 +138,23 @@
 ;; when someone's talking:
 (define *daxter-talk-until* (the-as time-frame 0))
 
+;; (the EE timer, 300,000,000 a second, wraps at 32 bits, every 14 s: its steps are added up instead, called every
+;; frame (soul-pile-update). Kept in an array: a global symbol holds 32 bits. 0: the timer last seen, 1: what's
+;; left over under a tick, 2: the ticks)
+(define *quest-clock* (new 'static 'array int64 3))
+
 (defun quest-now ()
-  "now, by the computer's clock (the EE timer: 300,000,000 a second), in time-frame ticks"
-  (the-as time-frame (/ (the-as int (__read-ee-timer)) 1000000)))
+  "now, by the computer's clock, in time-frame ticks (300 a second)"
+  (let* ((raw (logand (the-as int (__read-ee-timer)) #xffffffff))
+         (step (logand (- raw (-> *quest-clock* 0)) #xffffffff)))
+    (set! (-> *quest-clock* 0) raw)
+    ;; (a step longer than 10 s: the first, or the game held up: not counted)
+    (when (< step 3000000000)
+      (+! (-> *quest-clock* 1) step)
+      (let ((ticks (/ (-> *quest-clock* 1) 1000000)))
+        (+! (-> *quest-clock* 2) ticks)
+        (-! (-> *quest-clock* 1) (* ticks 1000000)))))
+  (the-as time-frame (-> *quest-clock* 2)))
 
 ;; (the game decodes a whole mp3 before it plays it: the longer, the later it starts)
 (defun quest-line-latency ((len time-frame))
