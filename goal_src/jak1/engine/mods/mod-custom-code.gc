@@ -132,66 +132,64 @@
                            font #f 128 22)))
   (none))
 
-;; Jak Living Sky: Daxter's lines about dark eco, each once in a game, one after the other (never over each
-;; other): until when he's talking
+;; Jak Living Sky: lines said by Daxter, the fisherman..., one after the other (never over each other). Timed
+;; by the computer's own clock (300 ticks a second, as time-frames): the game's clocks step by whole frames and
+;; drift from it below 60 fps, the subtitles running ahead of the voice and the next line over the last. Until
+;; when someone's talking:
 (define *daxter-talk-until* (the-as time-frame 0))
 
-(define-extern quest-line (function string string int time-frame none))
+(defun quest-now ()
+  "now, by the computer's clock (the EE timer: 300,000,000 a second), in time-frame ticks"
+  (the-as time-frame (/ (the-as int (__read-ee-timer)) 1000000)))
 
-(defun daxter-dark-line ((file string) (text int) (len time-frame))
-  (quest-line "DAXTER" file text len)
-  (none))
+;; (the game decodes a whole mp3 before it plays it: the longer, the later it starts)
+(defun quest-line-latency ((len time-frame))
+  (the-as time-frame (+ (seconds 0.3) (/ (the int len) 64))))
 
-;; Jak Living Sky: a line someone says (file: custom_assets/jak1/audio/voice/..., text: its subtitle's id, len:
-;; how long), after any other of these still going
-;; (a long one: its subtitle in parts, each for its own time: parts holds text id, ticks (300 a second), text
-;; id, ticks...)
+;; a line someone says (file: custom_assets/jak1/audio/voice/..., parts: subtitle text id, ticks (300 a
+;; second), text id, ticks...: each part for its own time), after any other still going: its turn fixed now, in
+;; the order asked for
 (defun quest-line2 ((speaker string) (file string) (parts (array int32)))
   (let ((total 0))
     (dotimes (i (/ (-> parts length) 2))
       (+! total (-> parts (+ (* 2 i) 1))))
-    ;; (its turn fixed now, in the order lines are asked for: two asked at once played in that order)
-    (let ((start-at (max (current-time) *daxter-talk-until*)))
-      (set! *daxter-talk-until* (+ start-at total (seconds 0.5)))
+    (let* ((start-at (max (quest-now) *daxter-talk-until*))
+           (late (quest-line-latency (the-as time-frame total))))
+      (set! *daxter-talk-until* (+ start-at late total (seconds 0.6)))
       (process-spawn-function
         process
-        (lambda :behavior process ((speaker string) (file string) (parts (array int32)) (start-at time-frame))
-          (while (< (current-time) start-at)
+        (lambda :behavior process ((speaker string) (file string) (parts (array int32)) (start-at time-frame)
+                                   (late time-frame))
+          (while (< (quest-now) start-at)
             (suspend))
           (play-sound-file file 200)
-          (let ((start (current-time))
+          (let ((start (+ (quest-now) late))
                 (total 0))
             (dotimes (i (/ (-> parts length) 2))
               (+! total (-> parts (+ (* 2 i) 1))))
-            (while (not (time-elapsed? start total))
-              (let ((at (- (current-time) start))
+            (while (< (quest-now) (+ start total))
+              (let ((at (- (quest-now) start))
                     (k 0))
                 (while (and (< (+ k 2) (-> parts length)) (>= at (-> parts (+ k 1))))
                   (set! at (- at (-> parts (+ k 1))))
                   (+! k 2))
-                (brume-radio-subtitle speaker (-> parts k)))
+                (if (>= at 0) (brume-radio-subtitle speaker (-> parts k))))
               (suspend)))
           (none))
-        speaker file parts start-at
+        speaker file parts start-at late
         :to *entity-pool*)))
   (none))
 
+;; (one subtitle for all of it)
 (defun quest-line ((speaker string) (file string) (text int) (len time-frame))
-  (let ((start-at (max (current-time) *daxter-talk-until*)))
-    (set! *daxter-talk-until* (+ start-at len (seconds 0.5)))
-    (process-spawn-function
-      process
-      (lambda :behavior process ((speaker string) (file string) (text int) (len time-frame) (start-at time-frame))
-        (while (< (current-time) start-at)
-          (suspend))
-        (play-sound-file file 200)
-        (let ((start (current-time)))
-          (while (not (time-elapsed? start len))
-            (brume-radio-subtitle speaker text)
-            (suspend)))
-        (none))
-      speaker file text len start-at
-      :to *entity-pool*))
+  (let ((parts (new 'global 'boxed-array int32 2)))
+    (set! (-> parts 0) text)
+    (set! (-> parts 1) (the int len))
+    (quest-line2 speaker file parts))
+  (none))
+
+(defun daxter-dark-line ((file string) (text int) (len time-frame))
+  (quest-line "DAXTER" file text len)
   (none))
 
 ;; the first time a corrupted enemy is near (nav-enemy.gc): "Jak, look at that one! Its eyes are purple..."
@@ -212,7 +210,7 @@
 ;; still in there? Give me a sign..." (daxter-dark-jak.mp3, 5.9 s)
 (defun daxter-dark-jak-line ()
   (set! *daxter-dark-jak-seen* 1.0)
-  (set! *daxter-talk-until* (max *daxter-talk-until* (+ (current-time) (seconds 2))))
+  (set! *daxter-talk-until* (max *daxter-talk-until* (+ (quest-now) (seconds 2))))
   (daxter-dark-line "voice/daxter-dark-jak.mp3" #x4650 (seconds 6.1))
   (none))
 

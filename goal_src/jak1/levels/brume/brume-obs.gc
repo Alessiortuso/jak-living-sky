@@ -983,6 +983,7 @@ nav-enemy-default-event-handler
 (define-extern quest-line (function string string int time-frame none))
 (define-extern quest-line2 (function string string (array int32) none))
 (define-extern *daxter-talk-until* time-frame)
+(define-extern quest-now (function time-frame))
 ;; (the power cell he's given, while it's there)
 (define *fisher-cell* (new 'static 'array handle 1))
 (set! (-> *fisher-cell* 0) (the-as handle #f))
@@ -1002,7 +1003,7 @@ nav-enemy-default-event-handler
       (when (and (cpad-pressed? 0 circle)
            (time-elapsed? (-> self chat-time) (seconds 5))
            ;; (Jak Living Sky: not while he, or Daxter, is still talking)
-           (>= (current-time) *daxter-talk-until*))
+           (>= (quest-now) *daxter-talk-until*))
   (set-time! (-> self chat-time))
   ;; Jak Living Sky: his rivers, dark with dark eco from Abandoned Caves (the pump there: collectables.gc)
   (cond
