@@ -2083,7 +2083,7 @@
 ;; Jak Living Sky: the fisherman's rivers. In Abandoned Caves, by its dark eco pool, a pump of dark eco: the
 ;; rivers round Brume spring from these caves, purple while it runs. Three hits break it (*fisher-quest* 3); the
 ;; lake runs clear again, the pool turns to water, and the fisherman gives a power cell (brume-obs.gc)
-(def-actor darkpump :bounds (0 2.4 2 6))
+(def-actor darkpump :bounds (0 3 4 10))
 
 (define-extern quest-line (function string string int time-frame none))
 
@@ -2160,25 +2160,25 @@
            (+! (-> self hits) 1)
            (sound-play "death-darkeco" :pitch 0.6)
            (let ((v (new 'stack-no-clear 'vector)))
-             (darkpump-spot self v 0.0 1.6 1.0)
+             (darkpump-spot self v 0.0 2.6 1.6)
              (process-spawn part-tracker :init part-tracker-init group-dark-jak-shot-hit -1 #f #f #f v :to *entity-pool*))
            (if (>= (-> self hits) 3) (go darkpump-explode))))))
   :trans
     (behavior ()
       ;; the dark eco it pours from its pipes' ends into the pool, the vapour off its top, its hum
       (let ((v (new 'stack-no-clear 'vector)))
-        (launch-particles (-> *part-id-table* 3016) (darkpump-spot self v -0.81 -1.95 5.52))
-        (launch-particles (-> *part-id-table* 3016) (darkpump-spot self v 0.81 -1.95 5.52))
-        (launch-particles (-> *part-id-table* 3017) (darkpump-spot self v 0.0 4.9 0.0))
+        (launch-particles (-> *part-id-table* 3016) (darkpump-spot self v -1.08 -2.5 10.56))
+        (launch-particles (-> *part-id-table* 3016) (darkpump-spot self v 1.08 -2.5 10.56))
+        (launch-particles (-> *part-id-table* 3017) (darkpump-spot self v 0.0 6.5 0.0))
         (if (zero? (logand (the int (-> *display* integral-frame-counter)) 3))
-          (launch-particles (-> *part-id-table* 3002) (darkpump-spot self v 0.0 1.5 0.0))))
+          (launch-particles (-> *part-id-table* 3002) (darkpump-spot self v 0.0 2.0 0.0))))
       (if (nonzero? (-> self sound)) (update! (-> self sound)))
       ;; struck: a flash
       (let ((f (if (time-elapsed? (-> self hit-time) (seconds 0.15)) 1.0 2.2)))
         (set-vector! (-> self draw color-mult) f f f 1.0))
       ;; Daxter, the first time he sees it
       (when (and *target* (< *fisher-quest* 2.0)
-                 (< (vector-vector-distance (-> self root trans) (-> *target* control trans)) (meters 22)))
+                 (< (vector-vector-distance (-> self root trans) (-> *target* control trans)) (meters 25)))
         (set! *fisher-quest* 2.0)
         (quest-line "DAXTER" "voice/daxter-pump.mp3" #x4656 (seconds 5.6))))
   :code
@@ -2195,7 +2195,7 @@
       (sound-play "death-darkeco" :pitch -0.6)
       (let ((v (new 'stack-no-clear 'vector)))
         (dotimes (i 6)
-          (darkpump-spot self v (rand-vu-float-range -1.2 1.2) (rand-vu-float-range 0.5 3.8) (rand-vu-float-range -1.2 1.2))
+          (darkpump-spot self v (rand-vu-float-range -1.9 1.9) (rand-vu-float-range 0.8 6.0) (rand-vu-float-range -1.9 1.9))
           (process-spawn part-tracker :init part-tracker-init group-dark-jak-shot-hit -1 #f #f #f v :to *entity-pool*)))
       (logior! (-> self draw status) (draw-status hidden))
       (if (nonzero? (-> self sound)) (stop! (-> self sound)))
@@ -2212,7 +2212,7 @@
       (set! (-> prim collide-with) (collide-kind target))
       (set! (-> prim prim-core action) (collide-action solid))
       (set! (-> prim prim-core offense) (collide-offense indestructible))
-      (set-vector! (-> prim local-sphere) 0.0 (meters 2.0) 0.0 (meters 2.0))
+      (set-vector! (-> prim local-sphere) 0.0 (meters 2.7) 0.0 (meters 2.7))
       (set-root-prim! cs prim))
     (backup-collide-with-as cs)
     (set! (-> self root) cs))
