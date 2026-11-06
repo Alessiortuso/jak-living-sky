@@ -1011,7 +1011,7 @@ nav-enemy-default-event-handler
     ((>= *fisher-quest* 3.0)
      ;; thanks, and the power cell (again if left behind)
      (set-time! (-> self chat-time))
-     (quest-line "PESCATORE" "voice/fisher-thanks.mp3" #x4658 (seconds 8))
+     (quest-line2 "PESCATORE" "voice/fisher-thanks.mp3" (new 'static 'boxed-array :type int32 #x4658 1395 #x4663 948))
      (when (not (handle->process (-> *fisher-cell* 0)))
        (set! (-> *fisher-cell* 0)
              (ppointer->handle (birth-pickup-at-point (vector+! (new 'stack-no-clear 'vector) (-> self root trans)
@@ -1024,8 +1024,8 @@ nav-enemy-default-event-handler
     ((zero? *fisher-quest*)
      (set! *fisher-quest* 1.0)
      ;; (two recordings, each subtitled in two parts at its pause)
-     (quest-line2 "PESCATORE" "voice/fisher-ask.mp3" (new 'static 'boxed-array :type int32 #x4654 3090 #x4659 3600))
-     (quest-line2 "PESCATORE" "voice/fisher-ask2.mp3" (new 'static 'boxed-array :type int32 #x465a 1335 #x465c 3915 #x465b 3720)))
+     (quest-line2 "PESCATORE" "voice/fisher-ask.mp3" (new 'static 'boxed-array :type int32 #x4654 1890 #x4659 1254 #x465d 2061 #x465e 1485))
+     (quest-line2 "PESCATORE" "voice/fisher-ask2.mp3" (new 'static 'boxed-array :type int32 #x465a 1395 #x465c 1512 #x465f 1683 #x4660 708 #x465b 1230 #x4661 1098 #x4662 1317)))
     (else
      (quest-line "PESCATORE" "voice/fisher-reminder.mp3" #x4655 (seconds 4.9)))))))
   :code
