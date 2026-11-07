@@ -74,6 +74,8 @@ void pose_pick(const std::string& actor, const std::string& joint);
 // (edit) the pad's own cursor, moved by turning the controller itself (its gyroscope): -1..1 across and up the
 // screen; Start held puts it back in the middle (Start doesn't reach the game while editing)
 bool editing();
+// (edit) back one change (-1), or on again (1): the D-pad's left and right
+void undo_redo(int dir);
 void gyro(const float* rad_per_s, float dt);
 void start_button(bool down);
 // where it is (false: no gyroscope, it stays in the middle)

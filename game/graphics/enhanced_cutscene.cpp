@@ -124,6 +124,47 @@ struct ActorAt {
 std::map<std::string, ActorAt> g_actor_at;       // where the characters near the camera are
 std::map<std::string, ActorAt> g_actor_at_next;  // (filled with the list, swapped in with it)
 bool g_dirty = false;
+
+// the editor's history (D-pad left / right, the menu's Undo / Redo): the scene as it was after each change,
+// one change being what's done before a short stop (a stick held, a number dragged: one)
+Clock::time_point g_last_change;
+unsigned g_rev = 0;            // a change's count
+unsigned g_committed_rev = 0;  // (the last one in the history)
+Scene g_committed;             // the scene as the history last saw it
+std::vector<Scene> g_undo;
+std::vector<Scene> g_redo;
+constexpr size_t kHistory = 100;
+
+void changed() {
+  g_dirty = true;
+  g_rev++;
+  g_last_change = Clock::now();
+}
+
+// (a scene picked, made, or played: a history of its own)
+void history_reset() {
+  g_undo.clear();
+  g_redo.clear();
+  g_committed = g_scene;
+  g_committed_rev = g_rev;
+}
+
+// the change done (after a short stop, or when asked) into the history
+void history_commit(bool now) {
+  if (g_rev == g_committed_rev) {
+    return;
+  }
+  if (!now && Clock::now() - g_last_change < std::chrono::milliseconds(400)) {
+    return;
+  }
+  g_undo.push_back(g_committed);
+  if (g_undo.size() > kHistory) {
+    g_undo.erase(g_undo.begin());
+  }
+  g_redo.clear();
+  g_committed = g_scene;
+  g_committed_rev = g_rev;
+}
 std::vector<Puppet> g_puppets;  // (poll) the characters played now
 std::vector<int> g_puppet_status;  // (the game's answer for each: puppet_status)
 Clock::time_point g_edit_clock = Clock::now();  // (edit) loops play on from the cursor, live
@@ -494,6 +535,7 @@ bool play(const std::string& name) {
   g_scene_loaded = true;
   g_dirty = false;
   g_mode = kPlay;
+  history_reset();
   start_clock(0.f);
   return true;
 }
@@ -509,6 +551,7 @@ Frame poll() {
   Frame f;
   f.mode = g_mode;
   g_edit_now = g_mode == kEdit;
+  history_commit(false);
   if (g_actors_ready) {
     g_actors.swap(g_actors_next);
     g_actor_at.swap(g_actor_at_next);
@@ -613,6 +656,29 @@ bool pose_selected(std::string* actor, std::string* joint) {
   return true;
 }
 
+void undo_redo(int dir) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (!g_scene_loaded) {
+    return;
+  }
+  history_commit(true);
+  auto& from = dir < 0 ? g_undo : g_redo;
+  auto& to = dir < 0 ? g_redo : g_undo;
+  if (from.empty()) {
+    return;
+  }
+  to.push_back(g_scene);
+  const std::string name = g_scene.name;
+  g_scene = from.back();
+  g_scene.name = name;
+  from.pop_back();
+  g_dirty = true;
+  g_rev++;
+  g_committed = g_scene;
+  g_committed_rev = g_rev;
+  g_cursor = std::min(g_cursor, g_scene.length);
+}
+
 bool editing() {
   return g_edit_now.load();
 }
@@ -688,7 +754,7 @@ void pose_grab(const std::string& actor, const std::string& joint, const float* 
       key->rot[c] = rot[c];
       key->off[c] = off[c] / kMeter;
     }
-    g_dirty = true;
+    changed();
   }
 }
 
@@ -731,7 +797,7 @@ void grab(const std::string& actor, const float* pos, float yaw) {
       key->pos[c] = pos[c] / kMeter;
     }
     key->yaw = yaw;
-    g_dirty = true;
+    changed();
   }
 }
 
@@ -934,7 +1000,7 @@ void animations_menu() {
       }
       g_scene.anims.push_back(k);
       sort_scene(g_scene);
-      g_dirty = true;
+      changed();
     }
   }
   ImGui::TextDisabled("(each key: from its time on, the character plays it; \"its own\" gives it back its own)");
@@ -944,22 +1010,22 @@ void animations_menu() {
     ImGui::PushID(5000 + (int)i);
     ImGui::SetNextItemWidth(80);
     if (ImGui::DragFloat("##at", &k.t, 0.02f, 0.f, g_scene.length, "%.2f s")) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     ImGui::Text("%s", k.actor.c_str());
     ImGui::SameLine();
     if (anim_combo("##anim", k.actor, &k.anim)) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     if (ImGui::Checkbox("loop", &k.loop)) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     ImGui::SetNextItemWidth(60);
     if (ImGui::DragFloat("##speed", &k.speed, 0.01f, 0.1f, 4.f, "x%.2f")) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     if (ImGui::Button("Go")) {
@@ -987,7 +1053,7 @@ void animations_menu() {
   }
   if (gone >= 0) {
     g_scene.anims.erase(g_scene.anims.begin() + gone);
-    g_dirty = true;
+    changed();
   }
 }
 
@@ -1038,7 +1104,7 @@ void moves_menu() {
       }
       g_scene.moves.push_back(k);
       sort_scene(g_scene);
-      g_dirty = true;
+      changed();
     }
   }
   ImGui::TextDisabled("(each key: the character is there at its time; \"slide\" takes it on to its next key)");
@@ -1054,13 +1120,13 @@ void moves_menu() {
     ImGui::Separator();
     ImGui::SetNextItemWidth(80);
     if (ImGui::DragFloat("##mt", &k.t, 0.02f, 0.f, g_scene.length, "%.2f s")) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     ImGui::Text("%s", k.actor.c_str());
     ImGui::SameLine();
     if (ImGui::Checkbox("slide", &k.smooth)) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     if (ImGui::Button("Go")) {
@@ -1073,41 +1139,41 @@ void moves_menu() {
     ImGui::Indent(20.f);
     ImGui::SetNextItemWidth(240);
     if (ImGui::DragFloat3("x y z (m)", k.pos, 0.02f, 0.f, 0.f, "%.2f")) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     ImGui::SetNextItemWidth(80);
     if (ImGui::DragFloat("facing", &k.yaw, 0.5f, -360.f, 360.f, "%.0f deg")) {
-      g_dirty = true;
+      changed();
     }
     if (ImGui::Button("Where it is now")) {
       float y;
       if (actor_now(k.actor, k.pos, &y)) {
         k.yaw = y;
-        g_dirty = true;
+        changed();
       }
     }
     ImGui::SameLine();
     if (ImGui::Button("Where the camera aims") && g_cam_known) {
       std::memcpy(k.pos, g_cam_aim, sizeof(k.pos));
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     if (ImGui::Button("Face the camera") && g_cam_known) {
       k.yaw = yaw_towards(k.pos, g_cam_pos);
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     if (ImGui::Button("Face where the camera aims") && g_cam_known) {
       k.yaw = yaw_towards(k.pos, g_cam_aim);
-      g_dirty = true;
+      changed();
     }
     ImGui::Unindent(20.f);
     ImGui::PopID();
   }
   if (gone >= 0) {
     g_scene.moves.erase(g_scene.moves.begin() + gone);
-    g_dirty = true;
+    changed();
   }
 }
 
@@ -1179,13 +1245,13 @@ void poses_menu() {
     ImGui::Separator();
     ImGui::SetNextItemWidth(80);
     if (ImGui::DragFloat("##pt", &k.t, 0.02f, 0.f, g_scene.length, "%.2f s")) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     ImGui::Text("%s: %s", k.actor.c_str(), k.joint.c_str());
     ImGui::SameLine();
     if (ImGui::Checkbox("slide", &k.smooth)) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     if (ImGui::Button("Go")) {
@@ -1201,7 +1267,7 @@ void poses_menu() {
         k.rot[c] = 0.f;
         k.off[c] = 0.f;
       }
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     if (ImGui::Button("Delete")) {
@@ -1210,19 +1276,19 @@ void poses_menu() {
     ImGui::Indent(20.f);
     ImGui::SetNextItemWidth(220);
     if (ImGui::DragFloat3("turn (deg)", k.rot, 0.5f, -360.f, 360.f, "%.0f")) {
-      g_dirty = true;
+      changed();
     }
     ImGui::SameLine();
     ImGui::SetNextItemWidth(220);
     if (ImGui::DragFloat3("move (m)", k.off, 0.005f, -5.f, 5.f, "%.3f")) {
-      g_dirty = true;
+      changed();
     }
     ImGui::Unindent(20.f);
     ImGui::PopID();
   }
   if (gone >= 0) {
     g_scene.poses.erase(g_scene.poses.begin() + gone);
-    g_dirty = true;
+    changed();
   }
 }
 
@@ -1247,6 +1313,7 @@ void draw_menu() {
           g_scene_loaded = true;
           g_dirty = false;
           g_cursor = 0.f;
+          history_reset();
         }
       }
     }
@@ -1260,8 +1327,9 @@ void draw_menu() {
     g_scene = Scene();
     g_scene.name = g_new_name;
     g_scene_loaded = true;
-    g_dirty = true;
+    changed();
     g_cursor = 0.f;
+    history_reset();
   }
   if (!g_scene_loaded) {
     ImGui::TextDisabled("Pick a scene, or name a new one.");
@@ -1269,6 +1337,28 @@ void draw_menu() {
     return;
   }
   ImGui::SameLine();
+  {
+    // (the history: the D-pad's left and right do the same, in Edit)
+    history_commit(false);
+    ImGui::BeginDisabled(g_undo.empty() && g_rev == g_committed_rev);
+    if (ImGui::Button("Undo")) {
+      g_mutex.unlock();
+      undo_redo(-1);
+      g_mutex.lock();
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::BeginDisabled(g_redo.empty());
+    if (ImGui::Button("Redo")) {
+      g_mutex.unlock();
+      undo_redo(1);
+      g_mutex.lock();
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::TextDisabled("(%d / %d)", (int)g_undo.size(), (int)g_redo.size());
+    ImGui::SameLine();
+  }
   if (ImGui::Button(g_dirty ? "Save *" : "Save")) {
     sort_scene(g_scene);
     save(g_scene);
@@ -1303,15 +1393,15 @@ void draw_menu() {
   ImGui::SetNextItemWidth(120);
   if (ImGui::InputFloat("Length (s)", &g_scene.length, 0.5f, 5.f, "%.1f")) {
     g_scene.length = std::max(g_scene.length, 0.5f);
-    g_dirty = true;
+    changed();
   }
   ImGui::SameLine();
   if (ImGui::Checkbox("Black bars", &g_scene.letterbox)) {
-    g_dirty = true;
+    changed();
   }
   ImGui::SameLine();
   if (ImGui::Checkbox("Hold Jak", &g_scene.hold_jak)) {
-    g_dirty = true;
+    changed();
   }
   timeline();
   ImGui::SetNextItemWidth(-1);
@@ -1332,7 +1422,7 @@ void draw_menu() {
       std::memcpy(sh.look, g_cam_look, sizeof(sh.look));
       g_scene.shots.push_back(sh);
       sort_scene(g_scene);
-      g_dirty = true;
+      changed();
     }
     if (s_clip_full) {
       if (ImGui::Button("Paste the copied shot at the cursor")) {
@@ -1340,7 +1430,7 @@ void draw_menu() {
         sh.t = g_cursor;
         g_scene.shots.push_back(sh);
         sort_scene(g_scene);
-        g_dirty = true;
+        changed();
       }
     } else {
       ImGui::TextDisabled("(Copy a shot to paste it at the cursor, in this scene or another)");
@@ -1354,11 +1444,11 @@ void draw_menu() {
       ImGui::PushID((int)i);
       ImGui::SetNextItemWidth(80);
       if (ImGui::DragFloat("##t", &sh.t, 0.02f, 0.f, g_scene.length, "%.2f s")) {
-        g_dirty = true;
+        changed();
       }
       ImGui::SameLine();
       if (ImGui::Checkbox("move to next", &sh.smooth)) {
-        g_dirty = true;
+        changed();
       }
       ImGui::SameLine();
       if (ImGui::Button("Go")) {
@@ -1371,7 +1461,7 @@ void draw_menu() {
       if (ImGui::Button("Set from camera") && g_cam_known) {
         std::memcpy(sh.pos, g_cam_pos, sizeof(sh.pos));
         std::memcpy(sh.look, g_cam_look, sizeof(sh.look));
-        g_dirty = true;
+        changed();
       }
       ImGui::SameLine();
       if (ImGui::Button("Copy")) {
@@ -1384,7 +1474,7 @@ void draw_menu() {
         std::memcpy(sh.pos, s_clip.pos, sizeof(sh.pos));
         std::memcpy(sh.look, s_clip.look, sizeof(sh.look));
         sh.smooth = s_clip.smooth;
-        g_dirty = true;
+        changed();
       }
       ImGui::SameLine();
       if (ImGui::Button("Delete")) {
@@ -1394,7 +1484,7 @@ void draw_menu() {
     }
     if (gone >= 0) {
       g_scene.shots.erase(g_scene.shots.begin() + gone);
-      g_dirty = true;
+      changed();
     }
     ImGui::TreePop();
   }
@@ -1413,7 +1503,7 @@ void draw_menu() {
       l.speaker = "DAXTER";
       g_scene.lines.push_back(l);
       sort_scene(g_scene);
-      g_dirty = true;
+      changed();
     }
     int gone = -1;
     for (size_t i = 0; i < g_scene.lines.size(); i++) {
@@ -1422,7 +1512,7 @@ void draw_menu() {
       ImGui::Separator();
       ImGui::SetNextItemWidth(80);
       if (ImGui::DragFloat("##lt", &l.t, 0.02f, 0.f, g_scene.length, "%.2f s")) {
-        g_dirty = true;
+        changed();
       }
       ImGui::SameLine();
       ImGui::SetNextItemWidth(220);
@@ -1431,7 +1521,7 @@ void draw_menu() {
           if (ImGui::Selectable(f.c_str(), f == l.file)) {
             l.file = f;
             l.len = enhanced_mp3_length(f);
-            g_dirty = true;
+            changed();
           }
         }
         ImGui::EndCombo();
@@ -1442,7 +1532,7 @@ void draw_menu() {
       ImGui::SetNextItemWidth(110);
       if (ImGui::InputText("##spk", spk, sizeof(spk))) {
         l.speaker = spk;
-        g_dirty = true;
+        changed();
       }
       ImGui::SameLine();
       ImGui::Text("%.1f s", l.len);
@@ -1458,7 +1548,7 @@ void draw_menu() {
         ImGui::Indent(20.f);
         ImGui::SetNextItemWidth(80);
         if (ImGui::DragFloat("##st", &sub.t, 0.02f, 0.f, std::max(l.len, 0.1f), "+%.2f s")) {
-          g_dirty = true;
+          changed();
         }
         ImGui::SameLine();
         char buf[512];
@@ -1466,7 +1556,7 @@ void draw_menu() {
         ImGui::SetNextItemWidth(-90);
         if (ImGui::InputText("##text", buf, sizeof(buf))) {
           sub.text = buf;
-          g_dirty = true;
+          changed();
         }
         ImGui::SameLine();
         if (ImGui::Button("x")) {
@@ -1477,20 +1567,20 @@ void draw_menu() {
       }
       if (sub_gone >= 0) {
         l.subs.erase(l.subs.begin() + sub_gone);
-        g_dirty = true;
+        changed();
       }
       ImGui::Indent(20.f);
       if (ImGui::Button("Add a subtitle at the cursor")) {
         l.subs.push_back({std::max(0.f, g_cursor - l.t), ""});
         sort_scene(g_scene);
-        g_dirty = true;
+        changed();
       }
       ImGui::Unindent(20.f);
       ImGui::PopID();
     }
     if (gone >= 0) {
       g_scene.lines.erase(g_scene.lines.begin() + gone);
-      g_dirty = true;
+      changed();
     }
     ImGui::TreePop();
   }

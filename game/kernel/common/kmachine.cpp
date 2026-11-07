@@ -581,6 +581,11 @@ u64 pc_cutscene_cursor(u32 out) {
   return have ? s7.offset + true_symbol_offset(g_game_version) : s7.offset;
 }
 
+// (edit) back one change (-1) or on again (1)
+void pc_cutscene_undo(s32 dir) {
+  enhanced_cutscene::undo_redo(dir);
+}
+
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
 void pc_cutscene_actors_begin() {
   enhanced_cutscene::actors_begin();
@@ -2281,6 +2286,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-pose-grab", (void*)pc_cutscene_pose_grab);
   make_func_symbol_func("pc-cutscene-pose-pick", (void*)pc_cutscene_pose_pick);
   make_func_symbol_func("pc-cutscene-cursor", (void*)pc_cutscene_cursor);
+  make_func_symbol_func("pc-cutscene-undo", (void*)pc_cutscene_undo);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);
