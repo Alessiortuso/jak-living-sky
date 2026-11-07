@@ -1,0 +1,54 @@
+{
+  "length": 8.41,
+  "letterbox": true,
+  "hold_jak": true,
+  "shots": [
+    {
+      "t": 0,
+      "pos": [
+        -1709.013,
+        203.62,
+        334.802
+      ],
+      "look": [
+        -1709.26,
+        203.42,
+        339.48
+      ],
+      "smooth": false
+    },
+    {
+      "t": 4.85,
+      "pos": [
+        -1704.286,
+        203.76,
+        334.381
+      ],
+      "look": [
+        -1710.13,
+        202.76,
+        335.74
+      ],
+      "smooth": false
+    }
+  ],
+  "lines": [
+    {
+      "t": 0.2,
+      "file": "voice/fisher-thanks.mp3",
+      "speaker": "PESCATORE",
+      "volume": 200,
+      "len": 7.813,
+      "subs": [
+        {
+          "t": 0.0,
+          "text": "SÌ! L'ACQUA È TORNATA LIMPIDA, E I PESCI SONO TORNATI!"
+        },
+        {
+          "t": 4.65,
+          "text": "GRAZIE, RAGAZZO, QUESTA TE LA SEI MERITATA!"
+        }
+      ]
+    }
+  ]
+}

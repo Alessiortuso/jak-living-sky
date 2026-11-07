@@ -32,6 +32,7 @@
 #include "game/sound/common/enhanced_ambience.h"
 
 #include "third-party/imgui/imgui.h"
+#include "game/graphics/enhanced_cutscene.h"
 #include "third-party/stb_image/stb_image.h"
 
 EnhancedCamera g_enhanced_camera;
@@ -6175,6 +6176,8 @@ void EnhancedPost::draw_menu() {
     ImGui::TextDisabled("Pad: Select + R3 opens this menu.");
     ImGui::TextDisabled("The game's own buttons: its Options menu.");
   }
+  // Jak Living Sky: the scenes made in the game
+  enhanced_cutscene::draw_menu();
   if (ImGui::CollapsingHeader("Teleport", ImGuiTreeNodeFlags_DefaultOpen)) {
     int shown = 0;
     for (const auto& p : enhanced_places()) {

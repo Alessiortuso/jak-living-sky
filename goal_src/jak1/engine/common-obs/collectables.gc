@@ -2258,10 +2258,12 @@
   (none))
 
 (define-extern quest-now (function time-frame))
+(define-extern cutscene-update (function none))
 
 (defun soul-pile-update ()
-  ;; (the voice lines' clock kept running: quest-now)
+  ;; (the voice lines' clock kept running: quest-now; the scenes made in the game)
   (quest-now)
+  (cutscene-update)
   (darkpump-update)
   (brume-radio-update)
   (soul-dark-enemies-update)

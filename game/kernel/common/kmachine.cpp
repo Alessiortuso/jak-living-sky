@@ -4,7 +4,9 @@
 
 #include <iostream>
 #include <list>
+#include <atomic>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <chrono>
@@ -61,6 +63,7 @@ namespace MiniAudioLib {
 #include "game/external/discord.h"
 #include "game/graphics/display.h"
 #include "game/graphics/gfx.h"
+#include "game/graphics/enhanced_cutscene.h"
 #include "game/graphics/enhanced_state.h"
 #include "game/graphics/screenshot.h"
 #include "game/kernel/common/Ptr.h"
@@ -328,6 +331,123 @@ u64 playMP3_internal(u32 filePathu32, u32 volume, bool isMainMusic) {
 
   thread.detach();
   return bool_to_symbol(true);
+}
+
+// Jak Living Sky: the mp3s of the scenes made in the game (enhanced_cutscene): streamed, so they start at once
+// (the game's own player decodes a whole file first: a long one started late), from any point in them (a
+// preview starting halfway through a line), each stopped by its own flag
+namespace {
+std::mutex g_enh_mp3_mutex;
+std::map<std::string, std::vector<std::shared_ptr<std::atomic<bool>>>> g_enh_mp3_stop;
+
+std::string enhanced_audio_path(const std::string& file) {
+  return (file_util::get_jak_project_dir() / "custom_assets" / game_version_names[g_game_version] / "audio" /
+          file)
+      .string();
+}
+}  // namespace
+
+bool enhanced_play_mp3(const std::string& file, unsigned volume, float start_s) {
+  const std::string full = enhanced_audio_path(file);
+  if (file.empty() || !file_util::file_exists(full)) {
+    return false;
+  }
+  auto stop = std::make_shared<std::atomic<bool>>(false);
+  {
+    std::lock_guard<std::mutex> lock(g_enh_mp3_mutex);
+    g_enh_mp3_stop[file].push_back(stop);
+  }
+  std::thread([full, volume, start_s, stop]() {
+    MiniAudioLib::ma_sound sound;
+    if (MiniAudioLib::ma_sound_init_from_file(
+            &maEngine, full.c_str(),
+            MiniAudioLib::MA_SOUND_FLAG_STREAM | MiniAudioLib::MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL,
+            &sound) != MiniAudioLib::MA_SUCCESS) {
+      return;
+    }
+    MiniAudioLib::ma_sound_set_volume(&sound, ((float)volume) / 100.f);
+    if (start_s > 0.05f) {
+      MiniAudioLib::ma_uint32 rate = 0;
+      MiniAudioLib::ma_sound_get_data_format(&sound, NULL, NULL, &rate, NULL, 0);
+      if (rate) {
+        MiniAudioLib::ma_sound_seek_to_pcm_frame(&sound, (MiniAudioLib::ma_uint64)(start_s * rate));
+      }
+    }
+    MiniAudioLib::ma_sound_start(&sound);
+    while (!stop->load() && MiniAudioLib::ma_sound_is_playing(&sound)) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    MiniAudioLib::ma_sound_stop(&sound);
+    MiniAudioLib::ma_sound_uninit(&sound);
+  }).detach();
+  return true;
+}
+
+void enhanced_stop_mp3(const std::string& file) {
+  std::lock_guard<std::mutex> lock(g_enh_mp3_mutex);
+  auto it = g_enh_mp3_stop.find(file);
+  if (it != g_enh_mp3_stop.end()) {
+    for (auto& s : it->second) {
+      s->store(true);
+    }
+    g_enh_mp3_stop.erase(it);
+  }
+}
+
+float enhanced_mp3_length(const std::string& file) {
+  const std::string full = enhanced_audio_path(file);
+  if (file.empty() || !file_util::file_exists(full)) {
+    return 0.f;
+  }
+  MiniAudioLib::ma_sound sound;
+  if (MiniAudioLib::ma_sound_init_from_file(&maEngine, full.c_str(), MiniAudioLib::MA_SOUND_FLAG_STREAM, NULL,
+                                            NULL, &sound) != MiniAudioLib::MA_SUCCESS) {
+    return 0.f;
+  }
+  float len = 0.f;
+  MiniAudioLib::ma_sound_get_length_in_seconds(&sound, &len);
+  MiniAudioLib::ma_sound_uninit(&sound);
+  return len;
+}
+
+// the scenes, for the game: play one by name (#t if there is one)
+u64 pc_cutscene_play(u32 name) {
+  return bool_to_symbol(enhanced_cutscene::play(Ptr<String>(name).c()->data()));
+}
+
+void pc_cutscene_stop() {
+  enhanced_cutscene::stop();
+}
+
+// what's going on now: the mode back (0 none), into out (floats): the camera's place and the point it looks at
+// (game units), [6] 1 to put the free camera there (edit), [7] black bars, [8] Jak held, [9] a shot to look
+// through; the subtitle's speaker and text (in the game's own letters) into two strings of max_len chars
+u64 pc_cutscene_poll(u32 out, u32 speaker, u32 text, u32 max_len) {
+  const auto f = enhanced_cutscene::poll();
+  float* o = Ptr<float>(out).c();
+  for (int k = 0; k < 3; k++) {
+    o[k] = f.pos[k];
+    o[3 + k] = f.look[k];
+  }
+  o[6] = f.jump ? 1.f : 0.f;
+  o[7] = f.letterbox ? 1.f : 0.f;
+  o[8] = f.hold_jak ? 1.f : 0.f;
+  o[9] = f.has_cam ? 1.f : 0.f;
+  auto put = [&](u32 dest, const std::string& s) {
+    auto* data = Ptr<String>(dest).c()->data();
+    std::string g = s.empty() ? s : get_font_bank_from_game_version(g_game_version)->convert_utf8_to_game(s);
+    strncpy(data, g.c_str(), max_len - 1);
+    data[max_len - 1] = '\0';
+  };
+  put(speaker, f.speaker);
+  put(text, f.text);
+  return f.mode;
+}
+
+// the editor's free camera, from the game: its place, the point it looks at (game units, 6 floats)
+void pc_cutscene_report(u32 cam) {
+  const float* c = Ptr<float>(cam).c();
+  enhanced_cutscene::report_camera(c, c + 3);
 }
 
 u64 playMP3(u32 filePathu32, u32 volume) {
@@ -1998,6 +2118,10 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-enhanced-hint-once", (void*)pc_enhanced_hint_once);
   make_func_symbol_func("pc-enhanced-photo", (void*)pc_enhanced_photo);
   make_func_symbol_func("pc-enhanced-editor-cam", (void*)pc_enhanced_editor_cam);
+  make_func_symbol_func("pc-cutscene-play", (void*)pc_cutscene_play);
+  make_func_symbol_func("pc-cutscene-stop", (void*)pc_cutscene_stop);
+  make_func_symbol_func("pc-cutscene-poll", (void*)pc_cutscene_poll);
+  make_func_symbol_func("pc-cutscene-report", (void*)pc_cutscene_report);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);

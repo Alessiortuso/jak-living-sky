@@ -1002,6 +1002,7 @@ nav-enemy-default-event-handler
 (define *fcine-at* (new 'static 'vector))
 (define *fcine-dir* (new 'static 'vector))
 (define *fcine-on* #f)
+(define-extern cutscene-on? (function symbol))
 
 ;; the shot: where the camera is (*fcine-cam*), what it looks at (*fcine-at*). 0 the fisherman close, 1 the empty
 ;; village from above, 2 the warp gate in the sage's hut, 3 Jak and Daxter over the fisherman's shoulder, 4 towards
@@ -1110,6 +1111,7 @@ nav-enemy-default-event-handler
   (behavior ()
     (when (and *target*
                (not *fcine-on*)
+               (not (cutscene-on?))
                (>= 51920.0 (vector-vector-distance (-> self root trans) (-> *target* control trans))))
       (when (hud-hidden?)
         (let ((gp-0 (new 'stack 'font-context *font-default-matrix* 32 160 0.0
@@ -1130,9 +1132,11 @@ nav-enemy-default-event-handler
     ((>= *fisher-quest* 3.0)
      ;; thanks, and the power cell (again if left behind)
      (set-time! (-> self chat-time))
+     ;; (the scene made in the game, if there; else the one written here)
+     (if (not (pc-cutscene-play "fisher-thanks"))
      (fisher-cine self
                   (quest-line2 "PESCATORE" "voice/fisher-thanks.mp3" (new 'static 'boxed-array :type int32 #x4658 1395 #x4663 948))
-                  (new 'static 'boxed-array :type int32 1395 0 2343 5))
+                  (new 'static 'boxed-array :type int32 1395 0 2343 5)))
      (when (not (handle->process (-> *fisher-cell* 0)))
        (set! (-> *fisher-cell* 0)
              (ppointer->handle (birth-pickup-at-point (vector+! (new 'stack-no-clear 'vector) (-> self root trans)
@@ -1147,10 +1151,11 @@ nav-enemy-default-event-handler
      ;; (two recordings, each subtitled in two parts at its pause)
      ;; (the shots in time with what he says: who he is, the empty village, the warp gate in the sage's hut, Jak
      ;; and Daxter; then the caverns, the rivers, the poisoned fish, the lurkers, Jak and Daxter, the reward)
+     (if (not (pc-cutscene-play "fisher-intro"))
      (let ((t0 (quest-line2 "PESCATORE" "voice/fisher-ask.mp3" (new 'static 'boxed-array :type int32 #x4654 1890 #x4659 1254 #x465d 2061 #x465e 1485))))
        (quest-line2 "PESCATORE" "voice/fisher-ask2.mp3" (new 'static 'boxed-array :type int32 #x465a 1395 #x465c 1512 #x465f 1683 #x4660 708 #x465b 1230 #x4661 1098 #x4662 1317))
        (fisher-cine self t0 (new 'static 'boxed-array :type int32
-                                 1890 0 3144 1 5205 2 7099 3 8494 4 10006 0 11689 5 12397 0 13627 4 14725 3 16042 0))))
+                                 1890 0 3144 1 5205 2 7099 3 8494 4 10006 0 11689 5 12397 0 13627 4 14725 3 16042 0)))))
     (else
      (quest-line "PESCATORE" "voice/fisher-reminder.mp3" #x4655 (seconds 4.9)))))))
   :code

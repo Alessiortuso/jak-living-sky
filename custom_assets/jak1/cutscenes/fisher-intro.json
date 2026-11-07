@@ -1,0 +1,225 @@
+{
+  "length": 53.29,
+  "letterbox": true,
+  "hold_jak": true,
+  "shots": [
+    {
+      "t": 0,
+      "pos": [
+        -1709.013,
+        203.62,
+        334.802
+      ],
+      "look": [
+        -1709.26,
+        203.42,
+        339.48
+      ],
+      "smooth": false
+    },
+    {
+      "t": 6.5,
+      "pos": [
+        -1765.0,
+        238.0,
+        300.0
+      ],
+      "look": [
+        -1815.0,
+        205.0,
+        395.0
+      ],
+      "smooth": false
+    },
+    {
+      "t": 10.68,
+      "pos": [
+        -2022.0,
+        187.0,
+        212.0
+      ],
+      "look": [
+        -2032.6,
+        183.0,
+        203.5
+      ],
+      "smooth": false
+    },
+    {
+      "t": 17.55,
+      "pos": [
+        -1707.33,
+        204.02,
+        341.598
+      ],
+      "look": [
+        -1711.0,
+        202.1,
+        332.0
+      ],
+      "smooth": false
+    },
+    {
+      "t": 23.09,
+      "pos": [
+        -1714.312,
+        206.1,
+        330.867
+      ],
+      "look": [
+        -1220.0,
+        185.0,
+        500.0
+      ],
+      "smooth": false
+    },
+    {
+      "t": 27.73,
+      "pos": [
+        -1709.013,
+        203.62,
+        334.802
+      ],
+      "look": [
+        -1709.26,
+        203.42,
+        339.48
+      ],
+      "smooth": false
+    },
+    {
+      "t": 32.77,
+      "pos": [
+        -1704.286,
+        203.76,
+        334.381
+      ],
+      "look": [
+        -1710.13,
+        202.76,
+        335.74
+      ],
+      "smooth": false
+    },
+    {
+      "t": 38.39,
+      "pos": [
+        -1709.013,
+        203.62,
+        334.802
+      ],
+      "look": [
+        -1709.26,
+        203.42,
+        339.48
+      ],
+      "smooth": false
+    },
+    {
+      "t": 40.75,
+      "pos": [
+        -1714.312,
+        206.1,
+        330.867
+      ],
+      "look": [
+        -1220.0,
+        185.0,
+        500.0
+      ],
+      "smooth": false
+    },
+    {
+      "t": 44.84,
+      "pos": [
+        -1707.33,
+        204.02,
+        341.598
+      ],
+      "look": [
+        -1711.0,
+        202.1,
+        332.0
+      ],
+      "smooth": false
+    },
+    {
+      "t": 48.51,
+      "pos": [
+        -1709.013,
+        203.62,
+        334.802
+      ],
+      "look": [
+        -1709.26,
+        203.42,
+        339.48
+      ],
+      "smooth": false
+    }
+  ],
+  "lines": [
+    {
+      "t": 0.2,
+      "file": "voice/fisher-ask.mp3",
+      "speaker": "PESCATORE",
+      "volume": 200,
+      "len": 22.285,
+      "subs": [
+        {
+          "t": 0.0,
+          "text": "EHI, RAGAZZI! CI SIETE ANCHE VOI! HO CAPTATO UN SEGNALE DAL TELETRASPORTATORE E SONO VENUTO A VEDERE."
+        },
+        {
+          "t": 6.3,
+          "text": "HO TROVATO IL VILLAGGIO VUOTO: DOPO UN BLACKOUT LA GENTE È SCAPPATA."
+        },
+        {
+          "t": 10.48,
+          "text": "PROBABILMENTE CON QUEL POCO DI ENERGIA RIMASTA, QUALCUNO SI È PERMESSO DI ATTIVARE IL TELETRASPORTATORE NELLA CAPANNA DEL SAGGIO..."
+        },
+        {
+          "t": 17.35,
+          "text": "...SPERANDO CHE ARRIVASSE QUALCUNO A SISTEMARE LE COSE. E A QUANTO PARE, ECCOVI QUI!"
+        }
+      ]
+    },
+    {
+      "t": 23.09,
+      "file": "voice/fisher-ask2.mp3",
+      "speaker": "PESCATORE",
+      "volume": 200,
+      "len": 29.808,
+      "subs": [
+        {
+          "t": 0.0,
+          "text": "PER RIDARE L'ENERGIA AL VILLAGGIO BISOGNA SCENDERE NELLE CAVERNE ABBANDONATE."
+        },
+        {
+          "t": 4.65,
+          "text": "MA A ME PREOCCUPANO DI PIÙ I FIUMI: NASCONO PROPRIO DA QUELLE CAVERNE,"
+        },
+        {
+          "t": 9.69,
+          "text": "E DA QUALCHE GIORNO L'ACQUA È TORBIDA, VIOLA, E I MIEI PESCI SONO TUTTI INTOSSICATI..."
+        },
+        {
+          "t": 15.3,
+          "text": "È ECO OSCURO, NE SONO CERTO!"
+        },
+        {
+          "t": 17.66,
+          "text": "CI ANDREI IO A VEDERE, MA QUELLE CAVERNE PULLULANO DI LURKER!"
+        },
+        {
+          "t": 21.76,
+          "text": "GIÀ CHE SCENDI LAGGIÙ, SCOPRI DA DOVE ARRIVA QUELL'ECO OSCURO!"
+        },
+        {
+          "t": 25.42,
+          "text": "SE RIUSCIRETE NELL'IMPRESA VI RICOMPENSERÒ SICURAMENTE CON UNA BATTERIA..."
+        }
+      ]
+    }
+  ]
+}

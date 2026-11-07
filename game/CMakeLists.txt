@@ -66,6 +66,7 @@ set(RUNTIME_SOURCE
         graphics/opengl_renderer/loader/Loader.cpp
         graphics/opengl_renderer/loader/EnhancedRayTrace.cpp
         graphics/opengl_renderer/loader/EnhancedGrass.cpp
+        graphics/enhanced_cutscene.cpp
         graphics/opengl_renderer/EnhancedEditor.cpp
         graphics/opengl_renderer/EnhancedImport.cpp
         graphics/opengl_renderer/EnhancedTextures.cpp

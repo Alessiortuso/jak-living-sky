@@ -132,6 +132,180 @@
                            font #f 128 22)))
   (none))
 
+;; ---------------------------------------------------------------------------------------------------------
+;; Jak Living Sky: the scenes made in the game (the Enhanced menu's Cutscenes; game/graphics/enhanced_cutscene.cpp).
+;; Every frame: what's going on, from there. Playing: its camera, black bars, Jak held, the HUD away, its subtitles,
+;; triangle skips it. Editing: a free camera flown with the pad, told back to the editor (its shots are taken from
+;; it):
+;;   left stick: moves freely (forward where it looks, up and down with it), sideways
+;;   L1 held: the left stick moves it only across the view: left, right, up, down
+;;   R1 held: it holds on to the point it's looking at: the left stick takes it fast towards it or away, the right
+;;            stick takes it round it, looking at it
+;;   right stick: looks round. Square: slow, circle: fast
+(define-extern set-letterbox-frames (function time-frame none))
+
+(define *cs-out* (new 'static 'array float 12))
+(define *cs-speaker* (new 'global 'string 64 (the-as string #f)))
+(define *cs-text* (new 'global 'string 512 (the-as string #f)))
+(define *cs-mode* 0)
+(define *cs-held* #f)
+(define *cs-pos* (new 'static 'vector))
+(define *cs-look* (new 'static 'vector))
+(define *cs-pivot* (new 'static 'vector))
+(define *cs-yaw* 0.0)
+(define *cs-pitch* 0.0)
+
+(defun cutscene-on? ()
+  (nonzero? *cs-mode*))
+
+(defun cutscene-subtitle ((speaker string) (text string))
+  (when (and (-> *pc-settings* hinttitles?) (not *progress-process*))
+    (let ((font (new 'stack 'font-context *font-default-matrix* 0 0 0.0 (font-color default) (font-flags shadow kerning))))
+      (set! (-> font flags) (font-flags shadow kerning middle large))
+      (set! (-> font origin x) (* (- 1.0 (-> *SUBTITLE-bank* width)) 256))
+      (set! (-> font origin y) (* (-> *SUBTITLE-bank* hint-height) 224))
+      (set-width! font (the int (* (-> *SUBTITLE-bank* width) 512)))
+      (set-height! font (the int (* (-> *SUBTITLE-bank* lines) 11)))
+      (set-scale! font (* (-> *SUBTITLE-bank* scale) (enhanced-subtitle-size)))
+      (if (nonzero? (length speaker))
+        (print-game-subtitle (string-format "~3L~S:~0L ~S" speaker text) font #f 128 22)
+        (print-game-subtitle text font #f 128 22))))
+  (none))
+
+;; the free camera's angles from where it is and what it looks at
+(defun cutscene-aim-from-look ()
+  (let ((d (new 'stack-no-clear 'vector)))
+    (vector-! d *cs-look* *cs-pos*)
+    (set! *cs-yaw* (atan (-> d x) (-> d z)))
+    (set! *cs-pitch* (atan (-> d y) (sqrtf (+ (* (-> d x) (-> d x)) (* (-> d z) (-> d z)))))))
+  (none))
+
+;; its forward from its angles
+(defun cutscene-forward ((out vector))
+  (let ((cp (cos *cs-pitch*)))
+    (set-vector! out (* (sin *cs-yaw*) cp) (sin *cs-pitch*) (* (cos *cs-yaw*) cp) 1.0))
+  out)
+
+;; the first thing solid along a line from the camera (else as far as it reaches)
+(defun cutscene-aim-point ((out vector))
+  (let ((fwd (new 'stack-no-clear 'vector))
+        (tri (new 'stack-no-clear 'collide-tri-result)))
+    (cutscene-forward fwd)
+    (vector-float*! fwd fwd (meters 150))
+    (let ((u (fill-and-probe-using-line-sphere *collide-cache* *cs-pos* fwd (meters 0.2)
+                                               (collide-kind background cak-3 wall-object ground-object cak-14)
+                                               (the-as process #f) tri (new 'static 'pat-surface :nocamera #x1))))
+      (vector+float*! out *cs-pos* fwd (if (>= u 0.0) u 0.1))))
+  out)
+
+(defun cutscene-stick ((v int))
+  "a stick's axis, -1 to 1, a little dead in the middle"
+  (let ((f (/ (- (the float v) 128.0) 127.0)))
+    (if (< (fabs f) 0.15) 0.0 f)))
+
+(defun cutscene-free-camera ()
+  (let* ((pad (-> *cpad-list* cpads 0))
+         (lx (cutscene-stick (the int (-> pad leftx))))
+         (ly (- (cutscene-stick (the int (-> pad lefty)))))
+         (rx (cutscene-stick (the int (-> pad rightx))))
+         (ry (- (cutscene-stick (the int (-> pad righty)))))
+         (dt (seconds-per-frame))
+         (speed (* (meters 8) dt (cond
+                                   ((cpad-hold? 0 square) 0.25)
+                                   ((cpad-hold? 0 circle) 3.0)
+                                   (else 1.0))))
+         (fwd (new 'stack-no-clear 'vector))
+         (right (new 'stack-no-clear 'vector)))
+    (cutscene-forward fwd)
+    (set-vector! right (cos *cs-yaw*) 0.0 (- (sin *cs-yaw*)) 1.0)
+    (cond
+      ((cpad-hold? 0 r1)
+       ;; held on to the point aimed at (taken when R1 went down)
+       (if (cpad-pressed? 0 r1) (cutscene-aim-point *cs-pivot*))
+       (let ((to (new 'stack-no-clear 'vector)))
+         (vector-! to *cs-pivot* *cs-pos*)
+         (let ((dist (vector-length to)))
+           ;; towards it or away, fast (never through it)
+           (set! dist (fmax (meters 1) (- dist (* ly speed 4.0))))
+           ;; round it
+           (set! *cs-yaw* (- *cs-yaw* (* rx 12000.0 dt)))
+           (set! *cs-pitch* (fmax -15000.0 (fmin 15000.0 (+ *cs-pitch* (* ry 9000.0 dt)))))
+           (cutscene-forward fwd)
+           (vector+float*! *cs-pos* *cs-pivot* fwd (- dist)))))
+      (else
+       ;; looking round
+       (set! *cs-yaw* (- *cs-yaw* (* rx 12000.0 dt)))
+       (set! *cs-pitch* (fmax -15000.0 (fmin 15000.0 (+ *cs-pitch* (* ry 9000.0 dt)))))
+       (cutscene-forward fwd)
+       (cond
+         ((cpad-hold? 0 l1)
+          ;; across the view only: left, right, up, down
+          (vector+float*! *cs-pos* *cs-pos* right (* lx speed))
+          (+! (-> *cs-pos* y) (* ly speed)))
+         (else
+          ;; freely: forward where it looks, sideways
+          (vector+float*! *cs-pos* *cs-pos* fwd (* ly speed))
+          (vector+float*! *cs-pos* *cs-pos* right (* lx speed))))))
+    (vector+float*! *cs-look* *cs-pos* fwd (meters 10)))
+  (none))
+
+(defun cutscene-camera-apply ()
+  (let ((dir (new 'stack-no-clear 'vector)))
+    (vector-! dir *cs-look* *cs-pos*)
+    (vector-normalize! dir 1.0)
+    (dotimes (i (-> *camera* num-slaves))
+      (let ((cam (-> *camera* slave i 0)))
+        (set! (-> cam saved-pt quad) (-> *cs-pos* quad))
+        (set! (-> cam trans quad) (-> *cs-pos* quad))
+        (forward-down->inv-matrix (-> cam tracking inv-mat) dir (-> *camera* local-down)))))
+  (none))
+
+(defun cutscene-update ()
+  (when (and *target* *camera*)
+    (let ((mode (pc-cutscene-poll *cs-out* *cs-speaker* *cs-text* 512)))
+      (cond
+        ((zero? mode)
+         (when (nonzero? *cs-mode*)
+           (send-event *camera* 'change-state *camera-base-mode* 0)
+           (if *cs-held* (send-event *target* 'end-mode))
+           (set! *cs-held* #f)))
+        (else
+         (when (zero? *cs-mode*)
+           (send-event *camera* 'change-state cam-fixed 0)
+           ;; (where the game's camera was, to start from)
+           (set! (-> *cs-pos* quad) (-> (math-camera-pos) quad))
+           (vector+float*! *cs-look* *cs-pos* (-> *math-camera* inv-camera-rot vector 2) (meters 10))
+           (cutscene-aim-from-look))
+         (when (and (not *cs-held*) (or (= mode 2) (!= (-> *cs-out* 8) 0.0)))
+           (send-event *target* 'change-mode 'grab)
+           (set! *cs-held* #t))
+         (cond
+           ((= mode 2)
+            (when (!= (-> *cs-out* 6) 0.0)
+              (set-vector! *cs-pos* (-> *cs-out* 0) (-> *cs-out* 1) (-> *cs-out* 2) 1.0)
+              (set-vector! *cs-look* (-> *cs-out* 3) (-> *cs-out* 4) (-> *cs-out* 5) 1.0)
+              (cutscene-aim-from-look))
+            (cutscene-free-camera)
+            (set! (-> *cs-out* 0) (-> *cs-pos* x))
+            (set! (-> *cs-out* 1) (-> *cs-pos* y))
+            (set! (-> *cs-out* 2) (-> *cs-pos* z))
+            (set! (-> *cs-out* 3) (-> *cs-look* x))
+            (set! (-> *cs-out* 4) (-> *cs-look* y))
+            (set! (-> *cs-out* 5) (-> *cs-look* z))
+            (pc-cutscene-report *cs-out*))
+           ((!= (-> *cs-out* 9) 0.0)
+            (set-vector! *cs-pos* (-> *cs-out* 0) (-> *cs-out* 1) (-> *cs-out* 2) 1.0)
+            (set-vector! *cs-look* (-> *cs-out* 3) (-> *cs-out* 4) (-> *cs-out* 5) 1.0)))
+         (cutscene-camera-apply)
+         (if (!= (-> *cs-out* 7) 0.0) (set-letterbox-frames (seconds 0.1)))
+         (hide-hud)
+         (if (nonzero? (length *cs-text*)) (cutscene-subtitle *cs-speaker* *cs-text*))
+         (when (and (= mode 1) (cpad-pressed? 0 triangle))
+           (cpad-clear! 0 triangle)
+           (pc-cutscene-stop))))
+      (set! *cs-mode* mode)))
+  (none))
+
 ;; Jak Living Sky: lines said by Daxter, the fisherman..., one after the other (never over each other). Timed
 ;; by the computer's own clock (300 ticks a second, as time-frames): the game's clocks step by whole frames and
 ;; drift from it below 60 fps, the subtitles running ahead of the voice and the next line over the last. Until
