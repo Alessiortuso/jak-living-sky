@@ -377,6 +377,7 @@
 (define *cs-pup-spool* (new 'static 'array int32 6))
 (define *cs-pup-part* (new 'static 'array int32 6))
 (define *cs-pup-pstart* (new 'static 'array float 6))
+(define *cs-spool-said* (new 'static 'array int32 128))
 
 (defun cutscene-spool-index ((name string))
   (let ((found -1))
@@ -425,6 +426,12 @@
           (cond
             ((not a) (set! tries 99))
             (else
+             ;; (each part's length said once in the log: to time a scene to them)
+             (when (and (< (+ (* spool 16) part) 128) (zero? (-> *cs-spool-said* (+ (* spool 16) part))))
+               (set! (-> *cs-spool-said* (+ (* spool 16) part)) 1)
+               (format 0 "[cutscene] spool ~S part ~D: ~D frames, speed ~f (~f s)~%" name part
+                       (-> a data 0 length) (-> a speed)
+                       (/ (the float (+ -1 (-> a data 0 length))) (* 60.0 (if (< 0.0 (-> a speed)) (-> a speed) 1.0)))))
              (let* ((spd (if (< 0.0 (-> a speed)) (-> a speed) 1.0))
                     (last (the float (+ -1 (-> a data 0 length))))
                     (local (* (- ticks (-> *cs-pup-pstart* slot)) spd)))

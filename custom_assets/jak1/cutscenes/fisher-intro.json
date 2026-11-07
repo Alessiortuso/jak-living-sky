@@ -1,225 +1,296 @@
 {
-  "length": 53.29,
-  "letterbox": true,
-  "hold_jak": true,
-  "shots": [
-    {
-      "t": 0,
-      "pos": [
-        -1709.013,
-        203.62,
-        334.802
-      ],
-      "look": [
-        -1709.26,
-        203.42,
-        339.48
-      ],
-      "smooth": false
-    },
-    {
-      "t": 6.5,
-      "pos": [
-        -1765.0,
-        238.0,
-        300.0
-      ],
-      "look": [
-        -1815.0,
-        205.0,
-        395.0
-      ],
-      "smooth": false
-    },
-    {
-      "t": 10.68,
-      "pos": [
-        -2022.0,
-        187.0,
-        212.0
-      ],
-      "look": [
-        -2032.6,
-        183.0,
-        203.5
-      ],
-      "smooth": false
-    },
-    {
-      "t": 17.55,
-      "pos": [
-        -1707.33,
-        204.02,
-        341.598
-      ],
-      "look": [
-        -1711.0,
-        202.1,
-        332.0
-      ],
-      "smooth": false
-    },
-    {
-      "t": 23.09,
-      "pos": [
-        -1714.312,
-        206.1,
-        330.867
-      ],
-      "look": [
-        -1220.0,
-        185.0,
-        500.0
-      ],
-      "smooth": false
-    },
-    {
-      "t": 27.73,
-      "pos": [
-        -1709.013,
-        203.62,
-        334.802
-      ],
-      "look": [
-        -1709.26,
-        203.42,
-        339.48
-      ],
-      "smooth": false
-    },
-    {
-      "t": 32.77,
-      "pos": [
-        -1704.286,
-        203.76,
-        334.381
-      ],
-      "look": [
-        -1710.13,
-        202.76,
-        335.74
-      ],
-      "smooth": false
-    },
-    {
-      "t": 38.39,
-      "pos": [
-        -1709.013,
-        203.62,
-        334.802
-      ],
-      "look": [
-        -1709.26,
-        203.42,
-        339.48
-      ],
-      "smooth": false
-    },
-    {
-      "t": 40.75,
-      "pos": [
-        -1714.312,
-        206.1,
-        330.867
-      ],
-      "look": [
-        -1220.0,
-        185.0,
-        500.0
-      ],
-      "smooth": false
-    },
-    {
-      "t": 44.84,
-      "pos": [
-        -1707.33,
-        204.02,
-        341.598
-      ],
-      "look": [
-        -1711.0,
-        202.1,
-        332.0
-      ],
-      "smooth": false
-    },
-    {
-      "t": 48.51,
-      "pos": [
-        -1709.013,
-        203.62,
-        334.802
-      ],
-      "look": [
-        -1709.26,
-        203.42,
-        339.48
-      ],
-      "smooth": false
-    }
-  ],
-  "lines": [
+  "anims": [
     {
       "t": 0.2,
+      "actor": "v4-fisherman",
+      "anim": "fisher-introduction",
+      "loop": false,
+      "speed": 1.0
+    }
+  ],
+  "hold_jak": true,
+  "length": 53.290000915527344,
+  "letterbox": false,
+  "lines": [
+    {
       "file": "voice/fisher-ask.mp3",
+      "len": 22.28499984741211,
       "speaker": "PESCATORE",
-      "volume": 200,
-      "len": 22.285,
       "subs": [
         {
           "t": 0.0,
           "text": "EHI, RAGAZZI! CI SIETE ANCHE VOI! HO CAPTATO UN SEGNALE DAL TELETRASPORTATORE E SONO VENUTO A VEDERE."
         },
         {
-          "t": 6.3,
+          "t": 6.300000190734863,
           "text": "HO TROVATO IL VILLAGGIO VUOTO: DOPO UN BLACKOUT LA GENTE È SCAPPATA."
         },
         {
-          "t": 10.48,
+          "t": 10.479999542236328,
           "text": "PROBABILMENTE CON QUEL POCO DI ENERGIA RIMASTA, QUALCUNO SI È PERMESSO DI ATTIVARE IL TELETRASPORTATORE NELLA CAPANNA DEL SAGGIO..."
         },
         {
-          "t": 17.35,
+          "t": 17.350000381469727,
           "text": "...SPERANDO CHE ARRIVASSE QUALCUNO A SISTEMARE LE COSE. E A QUANTO PARE, ECCOVI QUI!"
         }
-      ]
+      ],
+      "t": 0.20000000298023224,
+      "volume": 200
     },
     {
-      "t": 23.09,
       "file": "voice/fisher-ask2.mp3",
+      "len": 29.808000564575195,
       "speaker": "PESCATORE",
-      "volume": 200,
-      "len": 29.808,
       "subs": [
         {
           "t": 0.0,
           "text": "PER RIDARE L'ENERGIA AL VILLAGGIO BISOGNA SCENDERE NELLE CAVERNE ABBANDONATE."
         },
         {
-          "t": 4.65,
+          "t": 4.650000095367432,
           "text": "MA A ME PREOCCUPANO DI PIÙ I FIUMI: NASCONO PROPRIO DA QUELLE CAVERNE,"
         },
         {
-          "t": 9.69,
+          "t": 9.6899995803833,
           "text": "E DA QUALCHE GIORNO L'ACQUA È TORBIDA, VIOLA, E I MIEI PESCI SONO TUTTI INTOSSICATI..."
         },
         {
-          "t": 15.3,
+          "t": 15.300000190734863,
           "text": "È ECO OSCURO, NE SONO CERTO!"
         },
         {
-          "t": 17.66,
+          "t": 17.65999984741211,
           "text": "CI ANDREI IO A VEDERE, MA QUELLE CAVERNE PULLULANO DI LURKER!"
         },
         {
-          "t": 21.76,
+          "t": 21.760000228881836,
           "text": "GIÀ CHE SCENDI LAGGIÙ, SCOPRI DA DOVE ARRIVA QUELL'ECO OSCURO!"
         },
         {
-          "t": 25.42,
+          "t": 25.420000076293945,
           "text": "SE RIUSCIRETE NELL'IMPRESA VI RICOMPENSERÒ SICURAMENTE CON UNA BATTERIA..."
         }
-      ]
+      ],
+      "t": 23.09000015258789,
+      "volume": 200
     }
-  ]
+  ],
+  "moves": [
+    {
+      "actor": "jak",
+      "pos": [
+        -1708.2178955078125,
+        200.77540588378906,
+        333.14544677734375
+      ],
+      "smooth": false,
+      "t": 0.0,
+      "yaw": 15.22203254699707
+    }
+  ],
+  "poses": [
+    {
+      "actor": "v4-fisherman",
+      "joint": "head",
+      "off": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rot": [
+        -24.342510223388672,
+        8.834632873535156,
+        -4.499973773956299
+      ],
+      "smooth": true,
+      "t": 0.0
+    },
+    {
+      "actor": "jak",
+      "joint": "neckB",
+      "off": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rot": [
+        -3.9566876888275146,
+        0.0,
+        0.0
+      ],
+      "smooth": true,
+      "t": 0.0
+    }
+  ],
+  "shots": [
+    {
+      "look": [
+        -1703.6951904296875,
+        202.55648803710938,
+        337.83184814453125
+      ],
+      "pos": [
+        -1712.7254638671875,
+        203.46603393554688,
+        333.63421630859375
+      ],
+      "smooth": false,
+      "t": 0.0
+    },
+    {
+      "look": [
+        -1815.0,
+        205.0,
+        395.0
+      ],
+      "pos": [
+        -1765.0,
+        238.0,
+        300.0
+      ],
+      "smooth": false,
+      "t": 6.5
+    },
+    {
+      "look": [
+        -2032.5999755859375,
+        183.0,
+        203.5
+      ],
+      "pos": [
+        -2022.0,
+        187.0,
+        212.0
+      ],
+      "smooth": false,
+      "t": 10.680000305175781
+    },
+    {
+      "look": [
+        -1703.6951904296875,
+        202.55648803710938,
+        337.83184814453125
+      ],
+      "pos": [
+        -1712.7254638671875,
+        203.46603393554688,
+        333.63421630859375
+      ],
+      "smooth": false,
+      "t": 17.549999237060547
+    },
+    {
+      "t": 20.4,
+      "pos": [
+        -1710.936,
+        203.02,
+        339.812
+      ],
+      "look": [
+        -1708.218,
+        202.275,
+        333.145
+      ],
+      "smooth": false
+    },
+    {
+      "look": [
+        -1653.1409912109375,
+        196.2775421142578,
+        298.029296875
+      ],
+      "pos": [
+        -1662.7900390625,
+        198.67198181152344,
+        299.1051940917969
+      ],
+      "smooth": true,
+      "t": 23.09000015258789
+    },
+    {
+      "look": [
+        -1582.992919921875,
+        185.2456817626953,
+        288.45147705078125
+      ],
+      "pos": [
+        -1592.8990478515625,
+        186.2401580810547,
+        289.3871765136719
+      ],
+      "smooth": false,
+      "t": 30.09000015258789
+    },
+    {
+      "look": [
+        -1703.6951904296875,
+        202.55648803710938,
+        337.83184814453125
+      ],
+      "pos": [
+        -1712.7254638671875,
+        203.46603393554688,
+        333.63421630859375
+      ],
+      "smooth": false,
+      "t": 32.77000045776367
+    },
+    {
+      "t": 38.39,
+      "pos": [
+        -1709.611,
+        203.07,
+        336.686
+      ],
+      "look": [
+        -1709.26,
+        203.32,
+        339.48
+      ],
+      "smooth": false
+    },
+    {
+      "look": [
+        -1703.6951904296875,
+        202.55648803710938,
+        337.83184814453125
+      ],
+      "pos": [
+        -1712.7254638671875,
+        203.46603393554688,
+        333.63421630859375
+      ],
+      "smooth": false,
+      "t": 40.75
+    },
+    {
+      "t": 44.85,
+      "pos": [
+        -1710.936,
+        203.02,
+        339.812
+      ],
+      "look": [
+        -1708.218,
+        202.275,
+        333.145
+      ],
+      "smooth": false
+    },
+    {
+      "t": 48.51,
+      "pos": [
+        -1709.611,
+        203.07,
+        336.686
+      ],
+      "look": [
+        -1709.26,
+        203.32,
+        339.48
+      ],
+      "smooth": false
+    }
+  ],
+  "faces": []
 }
