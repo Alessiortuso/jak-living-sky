@@ -508,6 +508,12 @@ void pc_cutscene_actor_at(u32 actor, u32 at) {
   enhanced_cutscene::actor_at(Ptr<String>(actor).c()->data(), a, a[3]);
 }
 
+// (edit) what R2 holds: its name, where it is (game units) and which way it faces (degrees), floats
+void pc_cutscene_grab(u32 actor, u32 at) {
+  const float* a = Ptr<float>(at).c();
+  enhanced_cutscene::grab(Ptr<String>(actor).c()->data(), a, a[3]);
+}
+
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
 void pc_cutscene_actors_begin() {
   enhanced_cutscene::actors_begin();
@@ -2201,6 +2207,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-puppet-status", (void*)pc_cutscene_puppet_status);
   make_func_symbol_func("pc-cutscene-place", (void*)pc_cutscene_place);
   make_func_symbol_func("pc-cutscene-actor-at", (void*)pc_cutscene_actor_at);
+  make_func_symbol_func("pc-cutscene-grab", (void*)pc_cutscene_grab);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);

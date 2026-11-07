@@ -91,6 +91,8 @@ float g_cam_look[3] = {};
 bool g_cam_known = false;
 float g_cam_aim[3] = {};      // (edit) the first solid thing along its view, metres
 std::vector<Place> g_places;  // (poll) the characters placed now
+std::string g_held;           // (edit) what R2 holds now, for the menu
+Clock::time_point g_held_at;
 struct ActorAt {
   float pos[3] = {};  // metres
   float yaw = 0.f;    // degrees
@@ -502,6 +504,40 @@ bool place(int i, Place* out) {
   return true;
 }
 
+void grab(const std::string& actor, const float* pos, float yaw) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (g_mode != kEdit || actor.empty()) {
+    return;
+  }
+  g_held = actor;
+  g_held_at = Clock::now();
+  MoveKey* key = nullptr;
+  for (auto& k : g_scene.moves) {
+    if (k.actor == actor && std::fabs(k.t - g_cursor) < 0.02f) {
+      key = &k;
+    }
+  }
+  if (!key) {
+    MoveKey k;
+    k.t = g_cursor;
+    k.actor = actor;
+    g_scene.moves.push_back(k);
+    sort_scene(g_scene);
+    for (auto& m : g_scene.moves) {
+      if (m.actor == actor && std::fabs(m.t - g_cursor) < 0.02f) {
+        key = &m;
+      }
+    }
+  }
+  if (key) {
+    for (int c = 0; c < 3; c++) {
+      key->pos[c] = pos[c] / kMeter;
+    }
+    key->yaw = yaw;
+    g_dirty = true;
+  }
+}
+
 void actor_at(const std::string& actor, const float* pos, float yaw) {
   std::lock_guard<std::mutex> lock(g_mutex);
   ActorAt a;
@@ -804,6 +840,11 @@ void moves_menu() {
     }
   }
   ImGui::TextDisabled("(each key: the character is there at its time; \"slide\" takes it on to its next key)");
+  ImGui::TextDisabled(
+      "Pad: R2 held takes what the camera aims at; left stick moves it (L1: up, down), right stick turns it");
+  if (!g_held.empty() && Clock::now() - g_held_at < std::chrono::milliseconds(300)) {
+    ImGui::TextColored(ImVec4(1.f, 0.85f, 0.3f, 1.f), "Holding %s (its place at %.2f s)", g_held.c_str(), g_cursor);
+  }
   int gone = -1;
   for (size_t i = 0; i < g_scene.moves.size(); i++) {
     auto& k = g_scene.moves[i];

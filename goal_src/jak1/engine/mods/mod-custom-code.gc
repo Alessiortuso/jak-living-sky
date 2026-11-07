@@ -203,7 +203,10 @@
   (let ((f (/ (- (the float v) 128.0) 127.0)))
     (if (< (fabs f) 0.15) 0.0 f)))
 
+(define-extern cutscene-grab-update (function symbol))
+
 (defun cutscene-free-camera ()
+  (if (not (cutscene-grab-update))
   (let* ((pad (-> *cpad-list* cpads 0))
          (lx (cutscene-stick (the int (-> pad leftx))))
          (ly (- (cutscene-stick (the int (-> pad lefty)))))
@@ -247,7 +250,7 @@
           ;; freely: forward where it looks, sideways
           (vector+float*! *cs-pos* *cs-pos* fwd (* ly speed))
           (vector+float*! *cs-pos* *cs-pos* right (* lx speed))))))
-    (vector+float*! *cs-look* *cs-pos* fwd (meters 10)))
+    (vector+float*! *cs-look* *cs-pos* fwd (meters 10))))
   (none))
 
 (defun cutscene-camera-apply ()
@@ -545,6 +548,16 @@
 (define *cs-pl-saved-quat* (new 'static 'inline-array vector 6))
 (define *cs-pl-count* 0)
 
+(defun cutscene-place-find ((name string))
+  "a character or thing by its name (no skeleton needed, as for an animation)"
+  (let ((proc (if (string= name "jak") *target* (process-by-name name *active-pool*))))
+    (if (and proc
+             (type-type? (-> proc type) process-drawable)
+             (nonzero? (-> (the-as process-drawable proc) root))
+             (nonzero? (-> (the-as process-drawable proc) draw)))
+      (the-as process-drawable proc)
+      (the-as process-drawable #f))))
+
 (defun cutscene-place-proc ((i int))
   (the-as process-drawable (handle->process (-> *cs-pl-proc* i))))
 
@@ -586,7 +599,7 @@
   (when on
     (let ((i 0))
       (while (and (< i 8) (pc-cutscene-place i *cs-place-name* *cs-place-out*))
-        (let ((pd (cutscene-puppet-find *cs-place-name*)))
+        (let ((pd (cutscene-place-find *cs-place-name*)))
           (when (and pd (nonzero? (-> pd root)))
             (let ((slot (cutscene-place-slot pd)))
               (when (>= slot 0)
@@ -610,6 +623,89 @@
              (set! (-> pd root quat vec quad) (-> *cs-pl-saved-quat* i quad))))
          (set! (-> *cs-pl-used* i) 0)))))
   (none))
+
+;; Jak Living Sky: the editor's hand, as in Dreams: R2 held takes the character or thing nearest where the
+;; free camera aims (5 m at most) and the camera stays still; the left stick moves it across the view (forward,
+;; back, left, right; L1 held: up and down), the right stick turns it. Where it is goes to the editor as that
+;; character's place at the cursor (a key there, made or moved)
+(define *cs-grab* (new 'static 'array handle 1))
+(define *cs-grab-on* #f)
+(define *cs-grab-pos* (new 'static 'vector))
+(define *cs-grab-yaw* 0.0)
+(define *cs-grab-best* 0.0)
+(define *cs-grab-aim* (new 'static 'vector))
+(define *cs-grab-out* (new 'static 'array float 4))
+
+(defun cutscene-name-of ((p process-drawable))
+  "the name the editor knows it by (#f: none)"
+  (cond
+    ((= p *target*) "jak")
+    ((and (-> p name) (= (-> (the-as basic (-> p name)) type) string)) (the-as string (-> p name)))
+    (else (the-as string #f))))
+
+(defun cutscene-grab-pick ()
+  "the character or thing nearest the point aimed at"
+  (cutscene-aim-point *cs-grab-aim*)
+  (set! *cs-grab-best* (meters 5))
+  (set! (-> *cs-grab* 0) (the-as handle #f))
+  (iterate-process-tree
+    *active-pool*
+    (lambda ((p process-drawable))
+      (when (and (type-type? (-> p type) process-drawable)
+                 (not (type-type? (-> p type) sidekick))
+                 (nonzero? (-> p root))
+                 (nonzero? (-> p draw))
+                 (cutscene-name-of p))
+        (let ((d (vector-vector-distance (-> p root trans) *cs-grab-aim*)))
+          (when (< d *cs-grab-best*)
+            (set! *cs-grab-best* d)
+            (set! (-> *cs-grab* 0) (process->handle p)))))
+      (none))
+    *null-kernel-context*)
+  (let ((pd (the-as process-drawable (handle->process (-> *cs-grab* 0)))))
+    (when pd
+      (set! (-> *cs-grab-pos* quad) (-> pd root trans quad))
+      (let ((fwd (vector-z-quaternion! (new 'stack-no-clear 'vector) (-> pd root quat))))
+        (set! *cs-grab-yaw* (/ (atan (-> fwd x) (-> fwd z)) 182.04445)))
+      (format 0 "[cutscene] took ~A~%" pd))
+    pd))
+
+(defun cutscene-grab-update ()
+  "R2 held: moving what it holds (#t: the camera is to stay still)"
+  (cond
+    ((not (cpad-hold? 0 r2))
+     (set! *cs-grab-on* #f)
+     #f)
+    (else
+     (if (cpad-pressed? 0 r2) (set! *cs-grab-on* (the-as symbol (cutscene-grab-pick))))
+     (let ((pd (the-as process-drawable (handle->process (-> *cs-grab* 0)))))
+       (when (and *cs-grab-on* pd)
+         (let* ((pad (-> *cpad-list* cpads 0))
+                (lx (cutscene-stick (the int (-> pad leftx))))
+                (ly (- (cutscene-stick (the int (-> pad lefty)))))
+                (rx (cutscene-stick (the int (-> pad rightx))))
+                (dt (seconds-per-frame))
+                (speed (* (meters 3) dt (cond
+                                          ((cpad-hold? 0 square) 0.25)
+                                          ((cpad-hold? 0 circle) 3.0)
+                                          (else 1.0))))
+                (fwd (new 'stack-no-clear 'vector))
+                (right (new 'stack-no-clear 'vector)))
+           ;; the view's forward and right, flat
+           (set-vector! fwd (sin *cs-yaw*) 0.0 (cos *cs-yaw*) 1.0)
+           (set-vector! right (- (cos *cs-yaw*)) 0.0 (sin *cs-yaw*) 1.0)
+           (vector+float*! *cs-grab-pos* *cs-grab-pos* right (* lx speed))
+           (if (cpad-hold? 0 l1)
+             (+! (-> *cs-grab-pos* y) (* ly speed))
+             (vector+float*! *cs-grab-pos* *cs-grab-pos* fwd (* ly speed)))
+           (set! *cs-grab-yaw* (- *cs-grab-yaw* (* rx 120.0 dt)))
+           (cutscene-place-put pd *cs-grab-pos* *cs-grab-yaw*)
+           (set! (-> *cs-grab-out* 0) (-> *cs-grab-pos* x))
+           (set! (-> *cs-grab-out* 1) (-> *cs-grab-pos* y))
+           (set! (-> *cs-grab-out* 2) (-> *cs-grab-pos* z))
+           (set! (-> *cs-grab-out* 3) *cs-grab-yaw*)
+           (pc-cutscene-grab (cutscene-name-of pd) *cs-grab-out*)))
+       #t))))
 
 (defun cutscene-update ()
   (when (and *target* *camera*)

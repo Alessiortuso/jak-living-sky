@@ -49,6 +49,9 @@ struct Place {
 bool place(int i, Place* out);
 // (the game's list) where a character near the camera is now, and which way it faces (game units, degrees)
 void actor_at(const std::string& actor, const float* pos, float yaw);
+// (edit) a character or thing held with R2 and moved with the pad: its place at the cursor (game units,
+// degrees): that key moved, or a new one
+void grab(const std::string& actor, const float* pos, float yaw);
 
 // the characters played as puppets now (after poll, same frame): by the game's name ("jak" for Jak), one of
 // its animations by name, how far into it (seconds, at its own speed), looping or held on its last frame
