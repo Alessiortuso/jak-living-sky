@@ -2450,6 +2450,10 @@ bool face_view(const std::string& actor, float* mouth, float* eyes, float* fwd) 
   for (const auto& jt : it->second) {
     std::string n = jt.name;
     std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+    // (a joint the game doesn't work out shows at the world's 0: Jak's eyes - the camera went underground)
+    if (jt.m[12] == 0.f && jt.m[13] == 0.f && jt.m[14] == 0.f) {
+      continue;
+    }
     if (n == "leye" || n == "reye" || n == "eyel" || n == "eyer") {
       for (int k = 0; k < 3; k++) e[k] += jt.m[12 + k] / kMeter;
       ne++;
@@ -2460,7 +2464,17 @@ bool face_view(const std::string& actor, float* mouth, float* eyes, float* fwd) 
     }
   }
   if (ne == 0) {
-    return false;
+    // (no eyes: a little above the head, looking the way it faces)
+    auto at = g_actor_at.find(actor);
+    if (at == g_actor_at.end()) {
+      return false;
+    }
+    const float yr = at->second.yaw / 57.29578f;
+    for (int k = 0; k < 3; k++) e[k] = head[k];
+    e[1] += 0.15f;
+    e[0] += std::sin(yr) * 0.1f;
+    e[2] += std::cos(yr) * 0.1f;
+    ne = 1;
   }
   for (int k = 0; k < 3; k++) e[k] /= (float)ne;
   if (!got_mouth) {
