@@ -550,7 +550,7 @@ const std::vector<float>& lips_of(const std::string& file);
 extern std::string g_cap_face_actor;
 extern int g_cap_face_shape;
 void capture_step(Frame& f);
-void capture_start();
+void capture_start(bool faces_only);
 bool capturing();
 std::string capture_status();
 
@@ -1632,8 +1632,14 @@ void draw_menu() {
   if (g_mode == kEdit) {
     if (capturing()) {
       ImGui::TextColored(ImVec4(1.f, 0.8f, 0.3f, 1.f), "%s (hands off the pad)", capture_status().c_str());
-    } else if (ImGui::Button("Capture for Claude (pictures, face shapes, skeletons)")) {
-      capture_start();
+    } else {
+      if (ImGui::Button("Capture for Claude (pictures, face shapes, skeletons)")) {
+        capture_start(false);
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Faces only")) {
+        capture_start(true);
+      }
     }
   }
 
@@ -2431,14 +2437,59 @@ bool head_of(const std::string& actor, float* pos) {
   return false;
 }
 
-void capture_start() {
+// a face, from its skeleton: where its mouth is, between its eyes, and the way it looks (flat), metres
+bool face_view(const std::string& actor, float* mouth, float* eyes, float* fwd) {
+  auto it = g_skel.find(actor);
+  float head[3];
+  if (it == g_skel.end() || !head_of(actor, head)) {
+    return false;
+  }
+  float e[3] = {}, m[3] = {};
+  int ne = 0;
+  bool got_mouth = false;
+  for (const auto& jt : it->second) {
+    std::string n = jt.name;
+    std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+    if (n == "leye" || n == "reye" || n == "eyel" || n == "eyer") {
+      for (int k = 0; k < 3; k++) e[k] += jt.m[12 + k] / kMeter;
+      ne++;
+    }
+    if (!got_mouth && (n == "jaw" || n == "mouth")) {
+      for (int k = 0; k < 3; k++) m[k] = jt.m[12 + k] / kMeter;
+      got_mouth = true;
+    }
+  }
+  if (ne == 0) {
+    return false;
+  }
+  for (int k = 0; k < 3; k++) e[k] /= (float)ne;
+  if (!got_mouth) {
+    for (int k = 0; k < 3; k++) m[k] = e[k];
+    m[1] -= 0.25f;
+  }
+  float d[3] = {e[0] - head[0], 0.f, e[2] - head[2]};
+  const float len = std::sqrt(d[0] * d[0] + d[2] * d[2]);
+  if (len < 1e-4f) {
+    return false;
+  }
+  for (int k = 0; k < 3; k++) {
+    fwd[k] = d[k] / len;
+    mouth[k] = m[k];
+    eyes[k] = e[k];
+  }
+  return true;
+}
+
+void capture_start(bool faces_only = false) {
   g_cap.clear();
   g_cap_i = 0;
   g_cap_wait = 0;
   g_skel.clear();
   g_cap_dir = cap_dir();
   std::error_code ec;
-  fs::remove_all(g_cap_dir, ec);
+  if (!faces_only) {
+    fs::remove_all(g_cap_dir, ec);
+  }
   fs::create_directories(g_cap_dir, ec);
   g_cap.push_back({2});
   // the scene: every second, and each shot just after it begins
@@ -2447,6 +2498,7 @@ void capture_start() {
   for (const auto& s : g_scene.shots) ts.push_back(std::min(g_scene.length - 0.05f, s.t + 0.3f));
   std::sort(ts.begin(), ts.end());
   ts.erase(std::unique(ts.begin(), ts.end(), [](float a, float b) { return std::fabs(a - b) < 0.2f; }), ts.end());
+  if (faces_only) ts.clear();
   for (float x : ts) {
     char name[64];
     std::snprintf(name, sizeof(name), "scene_%06.2f.png", x);
@@ -2520,14 +2572,13 @@ void capture_step(Frame& f) {
       g_cursor = 0.f;
       g_cap_face_actor = s.actor;
       g_cap_face_shape = s.shape;
-      float head[3];
-      auto it = g_actor_at.find(s.actor);
-      if (head_of(s.actor, head) && it != g_actor_at.end()) {
-        const float yr = it->second.yaw / 57.29578f;
-        const float fwd[3] = {std::sin(yr), 0.f, std::cos(yr)};
+      // (in front of its face, its mouth and eyes in the middle)
+      float mouth[3], eyes[3], fwd[3];
+      if (face_view(s.actor, mouth, eyes, fwd)) {
         for (int k = 0; k < 3; k++) {
-          g_jump_pos[k] = head[k] + fwd[k] * 1.1f + (k == 1 ? 0.05f : 0.f);
-          g_jump_look[k] = head[k];
+          const float mid = (mouth[k] + eyes[k]) * 0.5f;
+          g_jump_pos[k] = mid + fwd[k] * 1.5f + (k == 1 ? 0.1f : 0.f);
+          g_jump_look[k] = mid;
         }
         g_jump = true;
       }
