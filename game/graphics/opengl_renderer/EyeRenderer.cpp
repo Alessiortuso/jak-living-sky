@@ -217,15 +217,19 @@ EyeRenderer::EyeDraw read_eye_draw(DmaFollower& dma) {
 // picture of: drawn as the checkerboard), said once in the log, with what it should have been
 namespace {
 void eye_texture_report(SharedRenderState* render_state, u32 tbp, const char* what) {
-  static std::set<u32> s_said;
+  static std::set<u64> s_said;
   auto* tex = render_state->texture_pool->lookup_gpu_texture(tbp);
+  // (once for each address and what's there: a level changing what's there says it again)
+  const u64 key = ((u64)tbp << 32) | (tex ? ((u64)tex->tex_id.page << 16 | tex->tex_id.tex) : 0xffffffffull);
+  if (!s_said.insert(key).second) {
+    return;
+  }
   if (tex && !tex->is_placeholder) {
-    return;
-  }
-  if (!s_said.insert(tbp).second) {
-    return;
-  }
-  if (!tex) {
+    // what it is: a wrong one shows as wrong colours (the fisherman's eyes in Brume, all teal)
+    lg::info("[eyes] {} at tbp {}: {} (page {}, texture {})", what, tbp,
+             render_state->texture_pool->get_debug_texture_name(tex->tex_id), tex->tex_id.page,
+             tex->tex_id.tex);
+  } else if (!tex) {
     lg::warn("[eyes] {} at tbp {}: nothing uploaded there", what, tbp);
   } else {
     lg::warn("[eyes] {} at tbp {}: no picture for {} (page {}, texture {})", what, tbp,

@@ -1179,6 +1179,28 @@ nav-enemy-default-event-handler
       )
   :post ja-post)
 
+;; Jak Living Sky: a character's eye shaders pointed at its textures by hand. The game links them when the art
+;; loads, through the loading level's remap table: Jungle's turns the fisherman's into its own page (531), but
+;; Brume has Sandover's, which doesn't know them, and they were left at address 0 (another texture: his eyes
+;; came out all teal, no lids). Only a shader whose texture's page isn't loaded is changed (-1: left alone)
+(defun eye-tpage-loaded? ((id texture-id))
+  (let ((pg (-> id page)))
+    (and (nonzero? pg)
+         (< pg (-> *texture-page-dir* length))
+         (-> *texture-page-dir* entries pg page))))
+
+(defun eye-shaders-point! ((pd process-drawable) (page int) (iris int) (pupil int) (lid int))
+  (when (and (nonzero? (-> pd draw)) (-> pd draw mgeo) (nonzero? (-> pd draw mgeo header eye-ctrl)))
+    (let ((ctrl (-> pd draw mgeo header eye-ctrl)))
+      (dotimes (i 3)
+        (let ((idx (case i ((0) iris) ((1) pupil) (else lid)))
+              (sh (-> ctrl shader i)))
+          (when (and (>= idx 0) (not (eye-tpage-loaded? (-> sh texture-id))))
+            (set! (-> sh texture-id) (the-as texture-id (logior (shl page 20) (shl idx 8))))
+            (logior! (-> sh link-test) (link-test-flags needs-log-in))
+            (adgif-shader-login-no-remap sh))))))
+  (none))
+
 (defmethod init-from-entity! ((this fisherman-v4) (arg0 entity-actor) )
   (stack-size-set! (-> this main-thread) 512)
   (logior! (-> this mask) (process-mask enemy))
@@ -1214,6 +1236,8 @@ nav-enemy-default-event-handler
   ;; Jak Living Sky: his eyes animated (process-taskable does it for the vanilla fisherman: without it they
   ;; stayed black)
   (logior! (-> this skel status) (janim-status eye))
+  ;; (his eyes' textures: Jungle's pris page, in BRU.DGO; iris fman-eye-centered-16x16, lid fman-eyelid)
+  (eye-shaders-point! this 531 111 -1 112)
   (logclear! (-> this mask) (process-mask actor-pause))
   (init-defaults! this *muse-nav-enemy-info*)
   (go fisherman-v4-idle)
