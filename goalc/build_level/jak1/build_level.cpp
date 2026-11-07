@@ -334,6 +334,9 @@ bool run_build_level(const std::string& input_file,
             });
         if (it != wanted_texs.end()) {
           processed_textures[level_tex.debug_tpage_name].push_back(level_tex.debug_name);
+          // Jak Living Sky: asked for, so also given to the texture pool (a model's own copy isn't: an
+          // eye's textures, looked up there by the eye renderer, stayed placeholders)
+          level_tex.load_to_pool = true;
         }
       }
 
