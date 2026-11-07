@@ -274,6 +274,25 @@
 (define *cs-pup-saved* (new 'static 'array uint32 6))
 (define *cs-pup-frame* (new 'static 'array float 6))
 (define *cs-pup-count* 0)
+;; (the log: each one's last state said, and whether its animation was put on it yet)
+(define *cs-pup-said* (new 'static 'array int32 8))
+(define *cs-pup-applied* (new 'static 'array int32 6))
+(define *cs-pup-hook-calls* 0)
+
+(define-extern cutscene-puppet-find (function string process-drawable))
+
+(defun cutscene-puppet-say ((i int) (st int))
+  (when (and (< i 8) (!= (-> *cs-pup-said* i) (+ st 1)))
+    (set! (-> *cs-pup-said* i) (+ st 1))
+    (format 0 "[cutscene] puppet ~D ~S ~S: ~S~%" i *cs-pup-name* *cs-pup-anim*
+            (case st ((0) "character not found") ((1) "animation not found") ((2) "found") (else "let go")))
+    (let ((pd (cutscene-puppet-find *cs-pup-name*)))
+      (when pd
+        (format 0 "[cutscene]   it is ~A, state ~A, post ~A; hook ~A~%" pd
+                (if (-> pd state) (-> pd state name) 'none)
+                (if (-> pd state) (-> pd state post) 'none)
+                *ja-post-hook*))))
+  (none))
 
 (defun cutscene-puppet-proc ((i int))
   "the slot's character (only for a slot in use)"
@@ -293,11 +312,12 @@
           (set! (-> *cs-pup-saved* i) (the-as uint (-> pd skel root-channel 0 frame-group))))))
     found))
 
-(defun cutscene-puppet-hook ((pd process-drawable))
-  (when (nonzero? *cs-pup-count*)
-    (dotimes (i 6)
-      (when (and (nonzero? (-> *cs-pup-used* i)) (nonzero? (-> *cs-pup-seen* i)) (= (cutscene-puppet-proc i) pd))
-        (let ((sk (-> pd skel)))
+(defun cutscene-puppet-apply ((i int) (pd process-drawable))
+  "the slot's animation and frame on its character's first channel, alone"
+  (when (zero? (-> *cs-pup-applied* i))
+    (set! (-> *cs-pup-applied* i) 1)
+    (format 0 "[cutscene] animation put on ~A (frame ~f)~%" pd (-> *cs-pup-frame* i)))
+  (let ((sk (-> pd skel)))
           (set! (-> sk active-channels) 1)
           (set! (-> sk root-channel) (-> sk channel))
           (set! (-> sk blend-index) -1)
@@ -310,7 +330,17 @@
             (set! (-> ch frame-num) (-> *cs-pup-frame* i))
             (set! (-> ch param 0) (-> *cs-pup-frame* i))
             (set! (-> ch num-func) num-func-identity)
-            (set! (-> ch eval-time) (the-as uint (current-time))))))))
+            (set! (-> ch eval-time) (the-as uint (current-time)))))
+  (none))
+
+(defun cutscene-puppet-hook ((pd process-drawable))
+  (when (< *cs-pup-hook-calls* 2)
+    (+! *cs-pup-hook-calls* 1)
+    (format 0 "[cutscene] ja-post hook called for ~A (~D puppets)~%" pd *cs-pup-count*))
+  (when (nonzero? *cs-pup-count*)
+    (dotimes (i 6)
+      (when (and (nonzero? (-> *cs-pup-used* i)) (nonzero? (-> *cs-pup-seen* i)) (= (cutscene-puppet-proc i) pd))
+        (cutscene-puppet-apply i pd))))
   (none))
 
 (set! *ja-post-hook* cutscene-puppet-hook)
@@ -325,16 +355,108 @@
       (the-as process-drawable proc)
       (the-as process-drawable #f))))
 
+;; Jak Living Sky: the game's own cutscene animations (streamed from the disc a part at a time, the way the game
+;; plays them: the part playing and the next one in the two spool buffers), for the scenes' characters: the
+;; fisherman's, and Jak's in them (each part has both). By name, with how many parts
+(define *cs-spools* (new 'static 'boxed-array :type string
+                         "fisher-introduction" "fisher-resolution" "fisher-accept" "fisher-reject" "fisher-reminder-1"))
+(define *cs-spool-parts* (new 'static 'boxed-array :type int32 9 4 6 2 1))
+;; each slot's: its spool (+1, 0 none), the part playing, when that part began (ticks of 1/60 s from its key)
+(define *cs-pup-spool* (new 'static 'array int32 6))
+(define *cs-pup-part* (new 'static 'array int32 6))
+(define *cs-pup-pstart* (new 'static 'array float 6))
+
+(defun cutscene-spool-index ((name string))
+  (let ((found -1))
+    (dotimes (i (-> *cs-spools* length))
+      (if (and (< found 0) (string= name (-> *cs-spools* i))) (set! found i)))
+    found))
+
+(defun cutscene-spool-art ((name string) (part int) (pd process-drawable))
+  "the character's animation in that part, if the part is in a spool buffer"
+  (let ((found (the-as art-joint-anim #f)))
+    (dotimes (b 2)
+      (let ((buf (-> *art-control* buffer b)))
+        (when (and (= (-> buf status) 'active)
+                   (name= (-> buf load-file) name)
+                   (= (-> buf load-file-part) part)
+                   (-> buf art-group))
+          (let ((ag (-> buf art-group)))
+            (dotimes (i (-> ag length))
+              (let ((a (-> ag data i)))
+                (when (and (not found)
+                           a
+                           (nonzero? a)
+                           (type-type? (-> a type) art-joint-anim)
+                           (name= (-> (the-as art-joint-anim a) master-art-group-name) (-> pd draw art-group name)))
+                  (set! found (the-as art-joint-anim a)))))))))
+    found))
+
+(defun cutscene-spool-frame ((slot int) (spool int) (pd process-drawable) (ticks float))
+  "the part's animation for that time (its frame in *cs-pup-frame*), on to the next part as time goes; #f while
+   the part is still loading"
+  (when (or (!= (-> *cs-pup-spool* slot) (+ spool 1)) (< ticks (-> *cs-pup-pstart* slot)))
+    ;; (a new one, or back before the part playing: from the first part again)
+    (set! (-> *cs-pup-spool* slot) (+ spool 1))
+    (set! (-> *cs-pup-part* slot) 0)
+    (set! (-> *cs-pup-pstart* slot) 0.0))
+  (let ((name (-> *cs-spools* spool))
+        (parts (-> *cs-spool-parts* spool))
+        (result (the-as art-joint-anim #f))
+        (tries 0))
+    (while (< tries 12)
+      (+! tries 1)
+      (let ((part (-> *cs-pup-part* slot)))
+        (spool-push *art-control* name part pd -20.0)
+        (if (< (+ part 1) parts) (spool-push *art-control* name (+ part 1) pd -10.0))
+        (let ((a (cutscene-spool-art name part pd)))
+          (cond
+            ((not a) (set! tries 99))
+            (else
+             (let* ((spd (if (< 0.0 (-> a speed)) (-> a speed) 1.0))
+                    (last (the float (+ -1 (-> a data 0 length))))
+                    (local (* (- ticks (-> *cs-pup-pstart* slot)) spd)))
+               (cond
+                 ((and (< last local) (< (+ part 1) parts) (cutscene-spool-art name (+ part 1) pd))
+                  ;; past this part, and the next is in: on to it
+                  (+! (-> *cs-pup-pstart* slot) (/ last spd))
+                  (+! (-> *cs-pup-part* slot) 1))
+                 (else
+                  (set! (-> *cs-pup-frame* slot) (fmax 0.0 (fmin local last)))
+                  (set! result a)
+                  (set! tries 99)))))))))
+    result))
+
 (defun cutscene-puppets-update ((on symbol))
+  ;; (the hook put in from here: set when this file loaded, process-drawable.gc, loaded after, put it back to #f)
+  (set! *ja-post-hook* cutscene-puppet-hook)
   (dotimes (i 6) (set! (-> *cs-pup-seen* i) 0))
   (when on
     (let ((i 0))
       (while (and (< i 8) (pc-cutscene-puppet i *cs-pup-name* *cs-pup-anim* *cs-pup-out*))
         (let ((pd (cutscene-puppet-find *cs-pup-name*)))
           (pc-cutscene-puppet-status i 0)
-          (when pd
+          (if (not pd) (cutscene-puppet-say i 0))
+          (when (and pd (>= (cutscene-spool-index *cs-pup-anim*) 0))
+            ;; one of the game's cutscenes: its part for this time (meanwhile, its own animation)
+            (pc-cutscene-puppet-status i 2)
+            (cutscene-puppet-say i 2)
+            (let ((slot (cutscene-puppet-slot pd)))
+              (when (>= slot 0)
+                (let ((a (cutscene-spool-frame slot (cutscene-spool-index *cs-pup-anim*) pd
+                                               (* (-> *cs-pup-out* 0) 60.0))))
+                  (cond
+                    (a (set! (-> *cs-pup-art* slot) (the-as uint a)))
+                    (else
+                     (set! (-> *cs-pup-art* slot) (-> *cs-pup-saved* slot))
+                     (set! (-> *cs-pup-frame* slot) 0.0))))
+                (when (nonzero? (-> *cs-pup-art* slot))
+                  (set! (-> *cs-pup-seen* slot) 1)
+                  (cutscene-puppet-apply slot pd)))))
+          (when (and pd (< (cutscene-spool-index *cs-pup-anim*) 0))
             (let ((art (the-as art-joint-anim (lookup-art (-> pd draw art-group) *cs-pup-anim* art-joint-anim))))
               (pc-cutscene-puppet-status i (if art 2 1))
+              (cutscene-puppet-say i (if art 2 1))
               (when art
                 (let ((slot (cutscene-puppet-slot pd)))
                   (when (>= slot 0)
@@ -347,7 +469,8 @@
                               ((<= last 0.0) 0.0)
                               ((!= (-> *cs-pup-out* 1) 0.0) (- f (* (the float (the int (/ f last))) last)))
                               (else (fmin f last)))))
-                    (set! (-> *cs-pup-seen* slot) 1)))))))
+                    (set! (-> *cs-pup-seen* slot) 1)
+                    (cutscene-puppet-apply slot pd)))))))
         (+! i 1))))
   ;; the ones let go: their own animation back
   (set! *cs-pup-count* 0)
@@ -357,13 +480,19 @@
         ((nonzero? (-> *cs-pup-seen* i)) (+! *cs-pup-count* 1))
         (else
          (let ((pd (cutscene-puppet-proc i)))
-           (when (and pd (nonzero? (-> pd skel)) (!= pd *target*))
+           (when (and pd (nonzero? (-> pd skel)) (nonzero? (-> *cs-pup-saved* i)))
              (let ((ch (-> pd skel root-channel 0)))
                (set! (-> ch frame-group) (the-as art-joint-anim (-> *cs-pup-saved* i)))
                (set! (-> ch frame-num) 0.0)
                (set! (-> ch param 0) 0.0)
                (set! (-> ch num-func) num-func-identity))))
-         (set! (-> *cs-pup-used* i) 0)))))
+         (set! (-> *cs-pup-used* i) 0)
+         (set! (-> *cs-pup-applied* i) 0)
+         (set! (-> *cs-pup-spool* i) 0)
+         (format 0 "[cutscene] puppet slot ~D let go~%" i)))))
+  ;; (none asked any more: said again next time)
+  (when (not on)
+    (dotimes (i 8) (set! (-> *cs-pup-said* i) 0)))
   (none))
 
 ;; the characters near the free camera, and their animations, for the editor's list
@@ -381,6 +510,9 @@
         (let ((ag (-> p draw art-group))
               (nm (if (= p *target*) "jak" (the-as string (-> p name)))))
           (when (and ag (nonzero? ag) nm (= (-> nm type) string))
+            (when (or (= p *target*) (name= (-> ag name) "fisher"))
+              (dotimes (i (-> *cs-spools* length))
+                (pc-cutscene-actor nm (-> *cs-spools* i))))
             (dotimes (i (-> ag length))
               (let ((a (-> ag data i)))
                 (if (and a (nonzero? a) (type-type? (-> a type) art-joint-anim)) (pc-cutscene-actor nm (-> a name))))))))
