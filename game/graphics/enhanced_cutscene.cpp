@@ -80,6 +80,8 @@ float g_cam_look[3] = {};
 bool g_cam_known = false;
 bool g_dirty = false;
 std::vector<Puppet> g_puppets;  // (poll) the characters played now
+std::vector<int> g_puppet_status;  // (the game's answer for each: puppet_status)
+Clock::time_point g_edit_clock = Clock::now();  // (edit) loops play on from the cursor, live
 // the characters near the camera, and their animations (the game's list, edit)
 std::vector<std::pair<std::string, std::vector<std::string>>> g_actors;
 bool g_scan_wanted = false;
@@ -259,7 +261,7 @@ void subtitle_at(const Scene& s, float t, std::string* speaker, std::string* tex
 }
 
 // each character's animation at time t: its last key by then
-void puppets_at(const Scene& s, float t) {
+void puppets_at(const Scene& s, float t, float live = 0.f) {
   g_puppets.clear();
   std::vector<const AnimKey*> cur;
   for (const auto& k : s.anims) {
@@ -279,7 +281,7 @@ void puppets_at(const Scene& s, float t) {
   }
   for (const auto* k : cur) {
     if (!k->anim.empty()) {
-      g_puppets.push_back({k->actor, k->anim, (t - k->t) * k->speed, k->loop});
+      g_puppets.push_back({k->actor, k->anim, (t - k->t + (k->loop ? live : 0.f)) * k->speed, k->loop});
     }
   }
 }
@@ -304,7 +306,10 @@ void start_clock(float from) {
 bool play(const std::string& name) {
   std::lock_guard<std::mutex> lock(g_mutex);
   Scene s;
-  if (!load(name, &s)) {
+  if (g_scene_loaded && g_dirty && g_scene.name == name) {
+    // (being edited, not saved yet: as it is in the editor)
+    s = g_scene;
+  } else if (!load(name, &s)) {
     return false;
   }
   if (g_mode != kNone) {
@@ -345,7 +350,7 @@ Frame poll() {
       }
     }
     subtitle_at(g_scene, g_cursor, &f.speaker, &f.text);
-    puppets_at(g_scene, g_cursor);
+    puppets_at(g_scene, g_cursor, std::chrono::duration<float>(Clock::now() - g_edit_clock).count());
     // the characters near the camera, every so often while the animations are being set
     if (g_scan_wanted && Clock::now() - g_last_scan > std::chrono::milliseconds(1500)) {
       g_last_scan = Clock::now();
@@ -390,6 +395,17 @@ Frame poll() {
   subtitle_at(g_scene, t, &f.speaker, &f.text);
   puppets_at(g_scene, t);
   return f;
+}
+
+void puppet_status(int i, int status) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (i < 0 || i >= 16) {
+    return;
+  }
+  if ((int)g_puppet_status.size() <= i) {
+    g_puppet_status.resize(i + 1, -1);
+  }
+  g_puppet_status[i] = status;
 }
 
 bool puppet(int i, Puppet* out) {
@@ -587,6 +603,20 @@ void animations_menu() {
     ImGui::SameLine();
     if (ImGui::Button("Go")) {
       g_cursor = k.t;
+    }
+    // (what the game made of it, if it's the one playing now)
+    for (size_t p = 0; p < g_puppets.size(); p++) {
+      if (g_puppets[p].actor == k.actor && g_puppets[p].anim == k.anim && !k.anim.empty() && k.t <= g_cursor + 0.001f) {
+        const int st = p < g_puppet_status.size() ? g_puppet_status[p] : -1;
+        ImGui::SameLine();
+        if (st == 2) {
+          ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.4f, 1.f), "playing");
+        } else if (st == 1) {
+          ImGui::TextColored(ImVec4(1.f, 0.5f, 0.3f, 1.f), "animation not found");
+        } else if (st == 0) {
+          ImGui::TextColored(ImVec4(1.f, 0.5f, 0.3f, 1.f), "character not found");
+        }
+      }
     }
     ImGui::SameLine();
     if (ImGui::Button("Delete")) {

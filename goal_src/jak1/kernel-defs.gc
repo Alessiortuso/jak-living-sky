@@ -649,6 +649,7 @@
 (define-extern pc-cutscene-puppet (function int string string (pointer float) symbol))
 (define-extern pc-cutscene-actors-begin (function none))
 (define-extern pc-cutscene-actor (function string string none))
+(define-extern pc-cutscene-puppet-status (function int int none))
 (define-extern pc-enhanced-menu-state (function int))
 (define-extern pc-enhanced-photo (function int int))
 (define-extern pc-enhanced-switch-game (function int int))

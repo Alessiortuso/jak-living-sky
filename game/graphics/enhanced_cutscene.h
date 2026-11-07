@@ -47,6 +47,8 @@ struct Puppet {
   bool loop = true;
 };
 bool puppet(int i, Puppet* out);
+// what the game made of the i-th: 0 its character not found, 1 its animation not found, 2 played
+void puppet_status(int i, int status);
 // the characters near the camera and their animations, from the game (when asked by poll's scan)
 void actors_begin();
 void actor_anim(const std::string& actor, const std::string& anim);

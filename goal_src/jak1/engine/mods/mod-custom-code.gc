@@ -331,8 +331,10 @@
     (let ((i 0))
       (while (and (< i 8) (pc-cutscene-puppet i *cs-pup-name* *cs-pup-anim* *cs-pup-out*))
         (let ((pd (cutscene-puppet-find *cs-pup-name*)))
+          (pc-cutscene-puppet-status i 0)
           (when pd
             (let ((art (the-as art-joint-anim (lookup-art (-> pd draw art-group) *cs-pup-anim* art-joint-anim))))
+              (pc-cutscene-puppet-status i (if art 2 1))
               (when art
                 (let ((slot (cutscene-puppet-slot pd)))
                   (when (>= slot 0)

@@ -476,6 +476,11 @@ u64 pc_cutscene_puppet(u32 i, u32 actor, u32 anim, u32 out) {
   return s7.offset + true_symbol_offset(g_game_version);
 }
 
+// what the game made of the i-th character played (0 not found, 1 animation not found, 2 played)
+void pc_cutscene_puppet_status(u32 i, u32 status) {
+  enhanced_cutscene::puppet_status((int)i, (int)status);
+}
+
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
 void pc_cutscene_actors_begin() {
   enhanced_cutscene::actors_begin();
@@ -2166,6 +2171,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-puppet", (void*)pc_cutscene_puppet);
   make_func_symbol_func("pc-cutscene-actors-begin", (void*)pc_cutscene_actors_begin);
   make_func_symbol_func("pc-cutscene-actor", (void*)pc_cutscene_actor);
+  make_func_symbol_func("pc-cutscene-puppet-status", (void*)pc_cutscene_puppet_status);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);
