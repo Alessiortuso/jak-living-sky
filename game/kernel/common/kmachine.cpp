@@ -574,6 +574,13 @@ void pc_cutscene_pose_pick(u32 actor, u32 joint) {
   enhanced_cutscene::pose_pick(Ptr<String>(actor).c()->data(), Ptr<String>(joint).c()->data());
 }
 
+// (edit) the gyroscope cursor: -1..1 across and up into out (2 floats); #f no gyroscope (it stays in the middle)
+u64 pc_cutscene_cursor(u32 out) {
+  float* o = Ptr<float>(out).c();
+  const bool have = enhanced_cutscene::cursor(o, o + 1);
+  return have ? s7.offset + true_symbol_offset(g_game_version) : s7.offset;
+}
+
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
 void pc_cutscene_actors_begin() {
   enhanced_cutscene::actors_begin();
@@ -2273,6 +2280,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-pose-selected", (void*)pc_cutscene_pose_selected);
   make_func_symbol_func("pc-cutscene-pose-grab", (void*)pc_cutscene_pose_grab);
   make_func_symbol_func("pc-cutscene-pose-pick", (void*)pc_cutscene_pose_pick);
+  make_func_symbol_func("pc-cutscene-cursor", (void*)pc_cutscene_cursor);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);

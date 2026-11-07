@@ -647,11 +647,47 @@
     ((and (-> p name) (= (-> (the-as basic (-> p name)) type) string)) (the-as string (-> p name)))
     (else (the-as string #f))))
 
-(defun cutscene-grab-pick ()
-  "the character or thing nearest the point aimed at"
-  (cutscene-aim-point *cs-grab-aim*)
-  (set! *cs-grab-best* (meters 5))
-  (set! (-> *cs-grab* 0) (the-as handle #f))
+;; the pad's cursor (moved by turning the controller: its gyroscope; Start held, back in the middle), and what
+;; it's over: the body part, or the thing, nearest the line from the camera through it
+(define *cs-cur* (new 'static 'array float 2))
+(define *cs-pk-best* 0.0)
+(define *cs-pk-proc* (new 'static 'array handle 1))
+(define *cs-pk-j* 0)
+(define *cs-pk-dir* (new 'static 'vector))
+
+(defun cutscene-cursor-dir ((out vector))
+  "the line from the camera through the cursor"
+  (pc-cutscene-cursor *cs-cur*)
+  (let ((right (new 'stack-no-clear 'vector))
+        (up (new 'stack-no-clear 'vector)))
+    (cutscene-forward out)
+    (set-vector! right (- (cos *cs-yaw*)) 0.0 (sin *cs-yaw*) 1.0)
+    (vector-cross! up right out)
+    (vector-normalize! up 1.0)
+    (vector+float*! out out right (* (-> *cs-cur* 0) (-> *math-camera* x-ratio)))
+    (vector+float*! out out up (* (-> *cs-cur* 1) (-> *math-camera* y-ratio)))
+    (vector-normalize! out 1.0))
+  out)
+
+(defun cutscene-ray-try ((p process-drawable) (pos vector) (j int))
+  (let ((v (vector-! (new 'stack-no-clear 'vector) pos *cs-pos*)))
+    (let ((along (vector-dot v *cs-pk-dir*)))
+      (when (< (meters 0.3) along)
+        ;; how far off the line, for how far away: an angle
+        (vector+float*! v v *cs-pk-dir* (- along))
+        (let ((a (/ (vector-length v) along)))
+          (when (< a *cs-pk-best*)
+            (set! *cs-pk-best* a)
+            (set! (-> *cs-pk-proc* 0) (process->handle p))
+            (set! *cs-pk-j* j))))))
+  (none))
+
+(defun cutscene-ray-pick ()
+  "the character or thing under the cursor (and which body part, -1 its middle): #f none"
+  (cutscene-cursor-dir *cs-pk-dir*)
+  (set! *cs-pk-best* 0.12)
+  (set! (-> *cs-pk-proc* 0) (the-as handle #f))
+  (set! *cs-pk-j* -1)
   (iterate-process-tree
     *active-pool*
     (lambda ((p process-drawable))
@@ -659,14 +695,21 @@
                  (not (type-type? (-> p type) sidekick))
                  (nonzero? (-> p root))
                  (nonzero? (-> p draw))
-                 (cutscene-name-of p))
-        (let ((d (vector-vector-distance (-> p root trans) *cs-grab-aim*)))
-          (when (< d *cs-grab-best*)
-            (set! *cs-grab-best* d)
-            (set! (-> *cs-grab* 0) (process->handle p)))))
+                 (cutscene-name-of p)
+                 (< (vector-vector-distance (-> p root trans) *cs-pos*) (meters 60)))
+        (cond
+          ((and (nonzero? (-> p skel)) (nonzero? (-> p node-list)) (-> p node-list))
+           (countdown (j (-> p node-list length))
+             (if (>= j 3) (cutscene-ray-try p (-> p node-list data j bone transform vector 3) j))))
+          (else (cutscene-ray-try p (-> p root trans) -1))))
       (none))
     *null-kernel-context*)
-  (let ((pd (the-as process-drawable (handle->process (-> *cs-grab* 0)))))
+  (the-as process-drawable (handle->process (-> *cs-pk-proc* 0))))
+
+(defun cutscene-grab-pick ()
+  "the character or thing under the cursor"
+  (let ((pd (cutscene-ray-pick)))
+    (set! (-> *cs-grab* 0) (if pd (process->handle pd) (the-as handle #f)))
     (when pd
       (set! (-> *cs-grab-pos* quad) (-> pd root trans quad))
       (let ((fwd (vector-z-quaternion! (new 'stack-no-clear 'vector) (-> pd root quat))))
@@ -845,45 +888,10 @@
 
 ;; X: the body part nearest the middle of the view picked (the nearest to the line the camera looks along, a
 ;; few degrees round it at most, any character near); X on nothing: none (R2 takes the whole character again)
-(define *cs-pk-best* 0.0)
-(define *cs-pk-proc* (new 'static 'array handle 1))
-(define *cs-pk-j* 0)
-(define *cs-pk-dir* (new 'static 'vector))
-
 (defun cutscene-joint-pick ()
-  (cutscene-forward *cs-pk-dir*)
-  (set! *cs-pk-best* 0.1)
-  (set! (-> *cs-pk-proc* 0) (the-as handle #f))
-  (iterate-process-tree
-    *active-pool*
-    (lambda ((p process-drawable))
-      (when (and (type-type? (-> p type) process-drawable)
-                 (not (type-type? (-> p type) sidekick))
-                 (nonzero? (-> p root))
-                 (nonzero? (-> p draw))
-                 (nonzero? (-> p skel))
-                 (nonzero? (-> p node-list))
-                 (-> p node-list)
-                 (cutscene-name-of p)
-                 (< (vector-vector-distance (-> p root trans) *cs-pos*) (meters 40)))
-        (let ((v (new 'stack-no-clear 'vector)))
-          (countdown (j (-> p node-list length))
-            (when (>= j 3)
-              (vector-! v (-> p node-list data j bone transform vector 3) *cs-pos*)
-              (let ((along (vector-dot v *cs-pk-dir*)))
-                (when (< (meters 0.3) along)
-                  ;; how far off the line, for how far away: an angle, near enough
-                  (vector+float*! v v *cs-pk-dir* (- along))
-                  (let ((a (/ (vector-length v) along)))
-                    (when (< a *cs-pk-best*)
-                      (set! *cs-pk-best* a)
-                      (set! (-> *cs-pk-proc* 0) (process->handle p))
-                      (set! *cs-pk-j* j)))))))))
-      (none))
-    *null-kernel-context*)
-  (let ((pd (the-as process-drawable (handle->process (-> *cs-pk-proc* 0)))))
+  (let ((pd (cutscene-ray-pick)))
     (cond
-      (pd
+      ((and pd (>= *cs-pk-j* 3))
        (let ((jt (-> pd node-list data *cs-pk-j* joint)))
          (format 0 "[cutscene] picked ~A ~S~%" pd (-> jt name))
          (pc-cutscene-pose-pick (cutscene-name-of pd) (-> jt name))))
@@ -895,7 +903,11 @@
 (define *cs-label-up* (new 'global 'string 160 (the-as string #f)))
 
 (defun cutscene-edit-marks ()
-  (let ((font (new 'stack 'font-context *font-default-matrix* 0 101 0.0 (font-color default) (font-flags shadow kerning))))
+  (pc-cutscene-cursor *cs-cur*)
+  (let ((font (new 'stack 'font-context *font-default-matrix*
+                   (the int (* 256.0 (-> *cs-cur* 0)))
+                   (the int (- 101.0 (* 112.0 (-> *cs-cur* 1))))
+                   0.0 (font-color default) (font-flags shadow kerning))))
     (set! (-> font flags) (font-flags shadow kerning middle large))
     (set-width! font 512)
     (set-height! font 20)
@@ -913,17 +925,17 @@
 
 (defun cutscene-grab-update ()
   "R2 held: moving what it holds (#t: the camera is to stay still)"
-  (when (and (cpad-pressed? 0 x) (not (cpad-hold? 0 r2)) (not (cpad-hold? 0 l2)))
+  (when (and (cpad-pressed? 0 x) (cpad-hold? 0 l1) (not (cpad-hold? 0 r2)) (not (cpad-hold? 0 l2)))
     (cpad-clear! 0 x)
     (cutscene-joint-pick))
   (cutscene-edit-marks)
   (cond
     ((cutscene-pose-pad) #t)
-    ((not (cpad-hold? 0 r2))
+    ((not (or (cpad-hold? 0 r2) (cpad-hold? 0 l2)))
      (set! *cs-grab-on* #f)
      #f)
     (else
-     (if (cpad-pressed? 0 r2) (set! *cs-grab-on* (the-as symbol (cutscene-grab-pick))))
+     (if (or (cpad-pressed? 0 r2) (cpad-pressed? 0 l2)) (set! *cs-grab-on* (the-as symbol (cutscene-grab-pick))))
      (let ((pd (the-as process-drawable (handle->process (-> *cs-grab* 0)))))
        (when (and *cs-grab-on* pd)
          (let* ((pad (-> *cpad-list* cpads 0))
@@ -940,11 +952,16 @@
            ;; the view's forward and right, flat
            (set-vector! fwd (sin *cs-yaw*) 0.0 (cos *cs-yaw*) 1.0)
            (set-vector! right (- (cos *cs-yaw*)) 0.0 (sin *cs-yaw*) 1.0)
-           (vector+float*! *cs-grab-pos* *cs-grab-pos* right (* lx speed))
-           (if (cpad-hold? 0 l1)
-             (+! (-> *cs-grab-pos* y) (* ly speed))
-             (vector+float*! *cs-grab-pos* *cs-grab-pos* fwd (* ly speed)))
-           (set! *cs-grab-yaw* (- *cs-grab-yaw* (* rx 120.0 dt)))
+           (cond
+             ((cpad-hold? 0 r2)
+              (vector+float*! *cs-grab-pos* *cs-grab-pos* right (* lx speed))
+              (if (cpad-hold? 0 l1)
+                (+! (-> *cs-grab-pos* y) (* ly speed))
+                (vector+float*! *cs-grab-pos* *cs-grab-pos* fwd (* ly speed)))
+              (set! *cs-grab-yaw* (- *cs-grab-yaw* (* rx 120.0 dt))))
+             (else
+              ;; L2: turned where it stands
+              (set! *cs-grab-yaw* (- *cs-grab-yaw* (* (+ lx rx) 120.0 dt)))))
            (cutscene-place-put pd *cs-grab-pos* *cs-grab-yaw*)
            (set! (-> *cs-grab-out* 0) (-> *cs-grab-pos* x))
            (set! (-> *cs-grab-out* 1) (-> *cs-grab-pos* y))

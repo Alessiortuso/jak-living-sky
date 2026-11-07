@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <atomic>
 #include <map>
 #include <mutex>
 #include <vector>
@@ -109,6 +110,11 @@ std::map<std::string, std::vector<std::string>> g_actor_joints_next;  // (with t
 std::string g_sel_actor;      // (edit) the body part picked for the pad
 std::string g_sel_joint;
 std::string g_pick_actor;     // (a pick from the pad, for the menu's character)
+std::atomic<bool> g_edit_now{false};  // (editing: read by the input thread)
+float g_cur_x = 0.f;          // the gyro cursor, -1..1
+float g_cur_y = 0.f;
+bool g_have_gyro = false;
+bool g_start_held = false;
 std::string g_held;           // (edit) what R2 holds now, for the menu
 Clock::time_point g_held_at;
 struct ActorAt {
@@ -502,6 +508,7 @@ Frame poll() {
   std::lock_guard<std::mutex> lock(g_mutex);
   Frame f;
   f.mode = g_mode;
+  g_edit_now = g_mode == kEdit;
   if (g_actors_ready) {
     g_actors.swap(g_actors_next);
     g_actor_at.swap(g_actor_at_next);
@@ -604,6 +611,43 @@ bool pose_selected(std::string* actor, std::string* joint) {
   *actor = g_sel_actor;
   *joint = g_sel_joint;
   return true;
+}
+
+bool editing() {
+  return g_edit_now.load();
+}
+
+void gyro(const float* rad_per_s, float dt) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  g_have_gyro = true;
+  if (g_mode != kEdit || dt <= 0.f || dt > 0.1f) {
+    return;
+  }
+  if (g_start_held) {
+    g_cur_x = 0.f;
+    g_cur_y = 0.f;
+    return;
+  }
+  // (about 20 degrees of turn from the middle to the side)
+  constexpr float kGain = 1.f / 0.35f;
+  g_cur_x = std::clamp(g_cur_x - rad_per_s[1] * dt * kGain, -1.f, 1.f);
+  g_cur_y = std::clamp(g_cur_y + rad_per_s[0] * dt * kGain, -1.f, 1.f);
+}
+
+void start_button(bool down) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  g_start_held = down;
+  if (down) {
+    g_cur_x = 0.f;
+    g_cur_y = 0.f;
+  }
+}
+
+bool cursor(float* x, float* y) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  *x = g_cur_x;
+  *y = g_cur_y;
+  return g_have_gyro;
 }
 
 void pose_pick(const std::string& actor, const std::string& joint) {
@@ -1123,7 +1167,9 @@ void poses_menu() {
     }
     g_sel_actor = g_sel_joint.empty() ? std::string() : actor;
   }
-  ImGui::TextDisabled("Pad: X picks the body part in the middle of the view (the cross), X on nothing: none.");
+  ImGui::TextDisabled("Pad: L1 + X picks the body part under the cross (turn the controller to move the cross,");
+  ImGui::TextDisabled("Start held puts it back in the middle); L1 + X on nothing: none.");
+  ImGui::TextDisabled(g_have_gyro ? "(gyroscope: yes)" : "(no gyroscope seen yet: the cross stays in the middle)");
   ImGui::TextDisabled("Pad, a body part picked: R2 held moves it (left stick; L1: up, down), L2 held turns it");
   ImGui::TextDisabled("in place (left stick, right stick); without one, R2 takes the whole character.");
   int gone = -1;

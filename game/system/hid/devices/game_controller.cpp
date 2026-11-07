@@ -1,3 +1,4 @@
+#include "game/graphics/enhanced_cutscene.h"
 #include "game_controller.h"
 
 #include <algorithm>
@@ -77,6 +78,13 @@ GameController::GameController(int sdl_device_id,
     m_is_dualsense = SDL_GetGamepadType(m_device_handle) == SDL_GAMEPAD_TYPE_PS5;
     clear_trigger_effect(dualsense_effects::TriggerEffectOption::BOTH);
   }
+  // Jak Living Sky: its gyroscope, if it has one (the cutscene editor's cursor)
+  if (SDL_GamepadHasSensor(m_device_handle, SDL_SENSOR_GYRO)) {
+    const bool on = SDL_SetGamepadSensorEnabled(m_device_handle, SDL_SENSOR_GYRO, true);
+    lg::info("[cutscene] gamepad '{}' has a gyroscope ({})", m_device_name, on ? "on" : "couldn't turn on");
+  } else {
+    lg::info("[cutscene] gamepad '{}' has no gyroscope", m_device_name);
+  }
 
   if (m_settings->controller_binds.find(m_guid) == m_settings->controller_binds.end()) {
     m_settings->controller_binds[m_guid] = DEFAULT_CONTROLLER_BINDS;
@@ -133,6 +141,23 @@ void GameController::process_event(const SDL_Event& sdl_event,
   // and triggers read as let go, presses don't reach it (releases do: nothing stays held)
   SDL_Event event = sdl_event;
   const bool menu_has_pad = g_enhanced_menu.any_open();
+  // Jak Living Sky: the controller's turning moves the cutscene editor's cursor
+  if (event.type == SDL_EVENT_GAMEPAD_SENSOR_UPDATE && event.gsensor.which == m_sdl_instance_id &&
+      event.gsensor.sensor == SDL_SENSOR_GYRO) {
+    const u64 now = event.gsensor.sensor_timestamp;
+    const float dt = m_last_gyro_ns ? (float)(now - m_last_gyro_ns) * 1e-9f : 0.f;
+    m_last_gyro_ns = now;
+    enhanced_cutscene::gyro(event.gsensor.data, dt);
+    return;
+  }
+  // (and Start, while editing, puts it back in the middle instead of pausing the game)
+  if ((event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN || event.type == SDL_EVENT_GAMEPAD_BUTTON_UP) &&
+      event.gbutton.which == m_sdl_instance_id && event.gbutton.button == SDL_GAMEPAD_BUTTON_START &&
+      (enhanced_cutscene::editing() || m_start_to_editor)) {
+    m_start_to_editor = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
+    enhanced_cutscene::start_button(m_start_to_editor);
+    return;
+  }
   if (menu_has_pad && event.type == SDL_EVENT_GAMEPAD_AXIS_MOTION) {
     event.gaxis.value = 0;
   }

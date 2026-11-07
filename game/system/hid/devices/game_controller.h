@@ -35,6 +35,8 @@ class GameController : public InputDevice {
   bool has_rumble() { return m_has_rumble; }
   void set_led(const u8 red, const u8 green, const u8 blue);
   std::string get_guid() { return m_guid; }
+  u64 m_last_gyro_ns = 0;          // Jak Living Sky: the gyroscope's last reading
+  bool m_start_to_editor = false;  // (Start held, taken by the cutscene editor)
   bool is_dualsense() { return m_is_dualsense; }
   bool has_trigger_rumble() { return m_has_trigger_rumble; }
   bool has_trigger_effect_support() { return has_trigger_rumble() || is_dualsense(); }

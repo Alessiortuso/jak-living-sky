@@ -71,6 +71,14 @@ void pose_grab(const std::string& actor, const std::string& joint, const float* 
 // (edit) a body part picked with the pad (X on it): the one the pad works on, shown in the menu (empty: none)
 void pose_pick(const std::string& actor, const std::string& joint);
 
+// (edit) the pad's own cursor, moved by turning the controller itself (its gyroscope): -1..1 across and up the
+// screen; Start held puts it back in the middle (Start doesn't reach the game while editing)
+bool editing();
+void gyro(const float* rad_per_s, float dt);
+void start_button(bool down);
+// where it is (false: no gyroscope, it stays in the middle)
+bool cursor(float* x, float* y);
+
 // the characters played as puppets now (after poll, same frame): by the game's name ("jak" for Jak), one of
 // its animations by name, how far into it (seconds, at its own speed), looping or held on its last frame
 struct Puppet {
