@@ -74,6 +74,14 @@ struct PoseKey {
   bool smooth = true;
 };
 
+// at t a character's face shapes are set by hand (-1..1 each); smooth: on to its next key
+struct FaceKey {
+  float t = 0.f;
+  std::string actor;
+  float w[16] = {};
+  bool smooth = true;
+};
+
 struct Scene {
   std::string name;
   float length = 10.f;
@@ -84,6 +92,7 @@ struct Scene {
   std::vector<AnimKey> anims;
   std::vector<MoveKey> moves;
   std::vector<PoseKey> poses;
+  std::vector<FaceKey> faces;
 };
 
 using Clock = std::chrono::steady_clock;
@@ -105,6 +114,9 @@ bool g_cam_known = false;
 float g_cam_aim[3] = {};      // (edit) the first solid thing along its view, metres
 std::vector<Place> g_places;  // (poll) the characters placed now
 std::vector<Pose> g_poses;    // (poll) the body parts turned or moved now
+std::vector<Face> g_faces;    // (poll) the faces set by hand now
+std::map<std::string, int> g_actor_face;       // how many face shapes each character near has
+std::map<std::string, int> g_actor_face_next;  // (with the list)
 std::map<std::string, std::vector<std::string>> g_actor_joints;       // each character's body parts
 std::map<std::string, std::vector<std::string>> g_actor_joints_next;  // (with the list)
 std::string g_sel_actor;      // (edit) the body part picked for the pad
@@ -217,6 +229,7 @@ void sort_scene(Scene& s) {
   std::stable_sort(s.anims.begin(), s.anims.end(), [](const AnimKey& a, const AnimKey& b) { return a.t < b.t; });
   std::stable_sort(s.moves.begin(), s.moves.end(), [](const MoveKey& a, const MoveKey& b) { return a.t < b.t; });
   std::stable_sort(s.poses.begin(), s.poses.end(), [](const PoseKey& a, const PoseKey& b) { return a.t < b.t; });
+  std::stable_sort(s.faces.begin(), s.faces.end(), [](const FaceKey& a, const FaceKey& b) { return a.t < b.t; });
 }
 
 bool load(const std::string& name, Scene* out) {
@@ -288,6 +301,17 @@ bool load(const std::string& name, Scene* out) {
       k.smooth = jp.value("smooth", true);
       s.poses.push_back(k);
     }
+    for (const auto& jf : j.value("faces", nlohmann::json::array())) {
+      FaceKey k;
+      k.t = jf.value("t", 0.f);
+      k.actor = jf.value("actor", std::string());
+      const auto w = jf.value("w", nlohmann::json::array());
+      for (size_t c = 0; c < w.size() && c < 16; c++) {
+        k.w[c] = w[c].get<float>();
+      }
+      k.smooth = jf.value("smooth", true);
+      s.faces.push_back(k);
+    }
     sort_scene(s);
     *out = s;
     return true;
@@ -317,6 +341,14 @@ void save(const Scene& s) {
       jl["subs"].push_back({{"t", sub.t}, {"text", sub.text}});
     }
     j["lines"].push_back(jl);
+  }
+  j["faces"] = nlohmann::json::array();
+  for (const auto& k : s.faces) {
+    nlohmann::json w = nlohmann::json::array();
+    for (float x : k.w) {
+      w.push_back(x);
+    }
+    j["faces"].push_back({{"t", k.t}, {"actor", k.actor}, {"w", w}, {"smooth", k.smooth}});
   }
   j["poses"] = nlohmann::json::array();
   for (const auto& k : s.poses) {
@@ -502,6 +534,44 @@ void poses_at(const Scene& s, float t) {
   }
 }
 
+// each character's face at time t: its last key by then (on towards its next, if it slides)
+void faces_at(const Scene& s, float t) {
+  g_faces.clear();
+  std::vector<std::string> done;
+  for (const auto& k : s.faces) {
+    if (k.actor.empty() || std::find(done.begin(), done.end(), k.actor) != done.end()) {
+      continue;
+    }
+    done.push_back(k.actor);
+    const FaceKey* a = nullptr;
+    const FaceKey* b = nullptr;
+    for (const auto& m : s.faces) {
+      if (m.actor != k.actor) {
+        continue;
+      }
+      if (m.t <= t) {
+        a = &m;
+      } else if (!b) {
+        b = &m;
+      }
+    }
+    if (!a) {
+      continue;
+    }
+    float u = 0.f;
+    if (a->smooth && b && b->t > a->t) {
+      u = std::clamp((t - a->t) / (b->t - a->t), 0.f, 1.f);
+      u = u * u * (3.f - 2.f * u);
+    }
+    Face f;
+    f.actor = a->actor;
+    for (int c = 0; c < 16; c++) {
+      f.w[c] = a->w[c] + (u > 0.f ? (b->w[c] - a->w[c]) * u : 0.f);
+    }
+    g_faces.push_back(f);
+  }
+}
+
 void stop_voices() {
   for (size_t i = 0; i < g_scene.lines.size() && i < g_started.size(); i++) {
     if (g_started[i]) {
@@ -556,12 +626,14 @@ Frame poll() {
     g_actors.swap(g_actors_next);
     g_actor_at.swap(g_actor_at_next);
     g_actor_joints.swap(g_actor_joints_next);
+    g_actor_face.swap(g_actor_face_next);
     g_actors_ready = false;
   }
   if (g_mode == kNone) {
     g_puppets.clear();
     g_places.clear();
     g_poses.clear();
+    g_faces.clear();
     return f;
   }
   f.letterbox = g_scene.letterbox;
@@ -580,6 +652,7 @@ Frame poll() {
     puppets_at(g_scene, g_cursor, std::chrono::duration<float>(Clock::now() - g_edit_clock).count());
     places_at(g_scene, g_cursor);
     poses_at(g_scene, g_cursor);
+    faces_at(g_scene, g_cursor);
     // the characters near the camera, every so often while the animations are being set
     if (g_scan_wanted && Clock::now() - g_last_scan > std::chrono::milliseconds(1500)) {
       g_last_scan = Clock::now();
@@ -600,12 +673,14 @@ Frame poll() {
       puppets_at(g_scene, g_cursor);
       places_at(g_scene, g_cursor);
       poses_at(g_scene, g_cursor);
+      faces_at(g_scene, g_cursor);
     } else {
       g_mode = kNone;
       f.mode = kNone;
       g_puppets.clear();
       g_places.clear();
       g_poses.clear();
+      g_faces.clear();
     }
     return f;
   }
@@ -629,7 +704,22 @@ Frame poll() {
   puppets_at(g_scene, t);
   places_at(g_scene, t);
   poses_at(g_scene, t);
+  faces_at(g_scene, t);
   return f;
+}
+
+bool face(int i, Face* out) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (i < 0 || i >= (int)g_faces.size()) {
+    return false;
+  }
+  *out = g_faces[i];
+  return true;
+}
+
+void actor_face(const std::string& actor, int count) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  g_actor_face_next[actor] = count;
 }
 
 bool pose(int i, Pose* out) {
@@ -836,6 +926,7 @@ void actors_begin() {
   g_actors_next.clear();
   g_actor_at_next.clear();
   g_actor_joints_next.clear();
+  g_actor_face_next.clear();
   g_actors_ready = true;
 }
 
@@ -1292,6 +1383,93 @@ void poses_menu() {
   }
 }
 
+void faces_menu() {
+  static int s_actor = 0;
+  if (g_mode == kEdit) {
+    g_scan_wanted = true;
+  }
+  std::vector<std::string> with;
+  for (const auto& a : g_actors) {
+    if (g_actor_face.count(a.first)) {
+      with.push_back(a.first);
+    }
+  }
+  if (with.empty()) {
+    ImGui::TextDisabled(g_mode == kEdit ? "(no character with face shapes near the camera)"
+                                        : "(Edit first: the characters near the camera are listed)");
+  } else {
+    s_actor = std::clamp(s_actor, 0, (int)with.size() - 1);
+    ImGui::SetNextItemWidth(220);
+    if (ImGui::BeginCombo("Character##face", with[s_actor].c_str())) {
+      for (int i = 0; i < (int)with.size(); i++) {
+        if (ImGui::Selectable(with[i].c_str(), i == s_actor)) {
+          s_actor = i;
+        }
+      }
+      ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add a face at the cursor")) {
+      FaceKey k;
+      k.t = g_cursor;
+      k.actor = with[s_actor];
+      // (from the face it has then, if any)
+      for (const auto& f : g_faces) {
+        if (f.actor == k.actor) {
+          std::memcpy(k.w, f.w, sizeof(k.w));
+        }
+      }
+      g_scene.faces.push_back(k);
+      sort_scene(g_scene);
+      changed();
+    }
+  }
+  ImGui::TextDisabled("(each shape: 0 as it is, 1 all the way; one of them opens the mouth - try them)");
+  int gone = -1;
+  for (size_t i = 0; i < g_scene.faces.size(); i++) {
+    auto& k = g_scene.faces[i];
+    ImGui::PushID(11000 + (int)i);
+    ImGui::Separator();
+    ImGui::SetNextItemWidth(80);
+    if (ImGui::DragFloat("##ft", &k.t, 0.02f, 0.f, g_scene.length, "%.2f s")) {
+      changed();
+    }
+    ImGui::SameLine();
+    ImGui::Text("%s", k.actor.c_str());
+    ImGui::SameLine();
+    if (ImGui::Checkbox("slide", &k.smooth)) {
+      changed();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Go")) {
+      g_cursor = k.t;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Delete")) {
+      gone = (int)i;
+    }
+    const int n = g_actor_face.count(k.actor) ? std::min(16, g_actor_face[k.actor]) : 16;
+    ImGui::Indent(20.f);
+    for (int s = 0; s < n; s++) {
+      char label[32];
+      std::snprintf(label, sizeof(label), "shape %d", s + 1);
+      ImGui::SetNextItemWidth(200);
+      if (ImGui::SliderFloat(label, &k.w[s], -1.f, 1.f, "%.2f")) {
+        changed();
+      }
+      if (s % 2 == 0 && s + 1 < n) {
+        ImGui::SameLine();
+      }
+    }
+    ImGui::Unindent(20.f);
+    ImGui::PopID();
+  }
+  if (gone >= 0) {
+    g_scene.faces.erase(g_scene.faces.begin() + gone);
+    changed();
+  }
+}
+
 }  // namespace
 
 void draw_menu() {
@@ -1594,6 +1772,12 @@ void draw_menu() {
   // where the characters are, and which way they face
   if (ImGui::TreeNodeEx("Places", ImGuiTreeNodeFlags_DefaultOpen)) {
     moves_menu();
+    ImGui::TreePop();
+  }
+
+  // their faces: the mouth opened by hand, ...
+  if (ImGui::TreeNodeEx("Face", ImGuiTreeNodeFlags_DefaultOpen)) {
+    faces_menu();
     ImGui::TreePop();
   }
 

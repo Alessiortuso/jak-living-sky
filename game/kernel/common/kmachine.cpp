@@ -586,6 +586,31 @@ void pc_cutscene_undo(s32 dir) {
   enhanced_cutscene::undo_redo(dir);
 }
 
+// a character's face set by hand now: the i-th one's name into a string, its shapes' weights into out (16
+// floats); #f past the last
+u64 pc_cutscene_face(u32 i, u32 actor, u32 out) {
+  enhanced_cutscene::Face f;
+  if (!enhanced_cutscene::face((int)i, &f)) {
+    return s7.offset;
+  }
+  auto* str = Ptr<String>(actor).c();
+  if (str->len > 0) {
+    const size_t n = std::min<size_t>(f.actor.size(), str->len - 1);
+    memcpy(str->data(), f.actor.data(), n);
+    str->data()[n] = '\0';
+  }
+  float* o = Ptr<float>(out).c();
+  for (int k = 0; k < 16; k++) {
+    o[k] = f.w[k];
+  }
+  return s7.offset + true_symbol_offset(g_game_version);
+}
+
+// how many face shapes a character near the camera has, for the editor
+void pc_cutscene_actor_face(u32 actor, s32 count) {
+  enhanced_cutscene::actor_face(Ptr<String>(actor).c()->data(), count);
+}
+
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
 void pc_cutscene_actors_begin() {
   enhanced_cutscene::actors_begin();
@@ -2287,6 +2312,8 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-pose-pick", (void*)pc_cutscene_pose_pick);
   make_func_symbol_func("pc-cutscene-cursor", (void*)pc_cutscene_cursor);
   make_func_symbol_func("pc-cutscene-undo", (void*)pc_cutscene_undo);
+  make_func_symbol_func("pc-cutscene-face", (void*)pc_cutscene_face);
+  make_func_symbol_func("pc-cutscene-actor-face", (void*)pc_cutscene_actor_face);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);

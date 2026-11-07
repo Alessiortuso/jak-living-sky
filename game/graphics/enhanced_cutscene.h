@@ -76,6 +76,15 @@ void pose_pick(const std::string& actor, const std::string& joint);
 bool editing();
 // (edit) back one change (-1), or on again (1): the D-pad's left and right
 void undo_redo(int dir);
+
+// a character's face shapes set by hand now (-1..1 each, up to 16), after poll
+struct Face {
+  std::string actor;
+  float w[16] = {};
+};
+bool face(int i, Face* out);
+// (the game's list) how many face shapes a character near the camera has
+void actor_face(const std::string& actor, int count);
 void gyro(const float* rad_per_s, float dt);
 void start_button(bool down);
 // where it is (false: no gyroscope, it stays in the middle)
