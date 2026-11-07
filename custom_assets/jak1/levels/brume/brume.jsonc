@@ -78,7 +78,9 @@
     // Zoomer HUD textures
     // ["zoomerhud"],
     // Sandover sky textures
-    ["village1-vis-alpha"]
+    ["village1-vis-alpha"],
+    // Jak Living Sky: the fisherman's eyes (Jungle's pris page, in BRU.DGO too: eye.gc)
+    ["jungle-vis-pris", "fman-eye", "fman-eye-centered-16x16", "fman-eyelid"]
   ],
 
   // Which vanilla level's texture remap table to use.

@@ -525,6 +525,19 @@
     (set! (-> arg0 base) (the-as pointer v0-3))
     (the-as pointer v0-3)))
 
+;; Jak Living Sky: a character brought into a level that isn't his own (the fisherman in Brume) has his eyes'
+;; textures on his old level's pris page, loaded in the new level as an extra one: that page then goes up just
+;; for his eyes (and the level's own back after them). The extra pages, and the only ones: Jungle's pris (531).
+(defun eye-foreign-page ((lev-idx int))
+  (let ((lev (-> *level* level lev-idx))
+        (found (the-as texture-page #f)))
+    (when (and lev (= (-> lev status) 'active))
+      (let ((own (-> lev texture-page 1)))
+        (dotimes (i (-> lev loaded-texture-page-count))
+          (let ((pg (-> lev loaded-texture-page i)))
+            (if (and pg (nonzero? pg) (= (-> pg id) 531) (!= pg own)) (set! found pg))))))
+    found))
+
 (defun update-eyes ()
   ;; Setup GS for level 0 eyes
   (let* ((s5-0 (-> *display* frames (-> *display* on-screen) frame global-buf))
@@ -704,6 +717,9 @@
           (cond
             ((>= (the-as uint 1) (-> s5-3 level))
              ;; level eyes
+             (let ((foreign (eye-foreign-page (the int (-> s5-3 level))))
+                   (eye-bucket (the-as bucket-id (if (zero? (-> s5-3 level)) (bucket-id pris-tex0) (bucket-id pris-tex1)))))
+             (if foreign (upload-vram-pages *texture-pool* (-> *texture-pool* segment-common) foreign -1 eye-bucket))
              (let* ((s3-0 (-> *display* frames (-> *display* on-screen) frame global-buf))
                     (s4-0 (-> s3-0 base)))
                (render-eyes s3-0 s5-3 gp-3)
@@ -716,7 +732,12 @@
                  (dma-bucket-insert-tag (-> *display* frames (-> *display* on-screen) frame bucket-group)
                                         (the-as bucket-id (if (zero? (-> s5-3 level)) (bucket-id pris-tex0) (bucket-id pris-tex1)))
                                         s4-0
-                                        (the-as (pointer dma-tag) a3-6)))))
+                                        (the-as (pointer dma-tag) a3-6))))
+             ;; the level's own page back, for what's drawn after
+             (when foreign
+               (let ((own (-> *level* level (-> s5-3 level) texture-page 1)))
+                 (if (and own (nonzero? own))
+                   (upload-vram-pages *texture-pool* (-> *texture-pool* segment-common) own -1 eye-bucket))))))
             (else
              (let* ((s3-1 (-> *display* frames (-> *display* on-screen) frame global-buf))
                     (s4-1 (-> s3-1 base)))

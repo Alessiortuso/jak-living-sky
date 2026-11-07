@@ -29,6 +29,7 @@
   "tpage-399.go"
   "tpage-401.go"
   "tpage-1470.go" ;; moved tpages to more appropriate location
+  "tpage-531.go" ;; Jak Living Sky: Jungle's pris, for the fisherman's eyes (eye.gc)
   "sunkencam-ag.go"
   "village2cam-ag.go"
   "junglecam-ag.go"
