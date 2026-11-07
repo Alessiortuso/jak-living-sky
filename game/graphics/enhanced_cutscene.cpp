@@ -1168,7 +1168,7 @@ void poses_menu() {
     g_sel_actor = g_sel_joint.empty() ? std::string() : actor;
   }
   ImGui::TextDisabled("Pad: L1 + X picks the body part under the cross (turn the controller to move the cross,");
-  ImGui::TextDisabled("Start held puts it back in the middle); L1 + X on nothing: none.");
+  ImGui::TextDisabled("Start held puts it back in the middle); L1 + circle: none picked any more.");
   ImGui::TextDisabled(g_have_gyro ? "(gyroscope: yes)" : "(no gyroscope seen yet: the cross stays in the middle)");
   ImGui::TextDisabled("Pad, a body part picked: R2 held moves it (left stick; L1: up, down), L2 held turns it");
   ImGui::TextDisabled("in place (left stick, right stick); without one, R2 takes the whole character.");

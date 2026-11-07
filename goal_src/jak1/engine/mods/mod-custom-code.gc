@@ -895,7 +895,8 @@
        (let ((jt (-> pd node-list data *cs-pk-j* joint)))
          (format 0 "[cutscene] picked ~A ~S~%" pd (-> jt name))
          (pc-cutscene-pose-pick (cutscene-name-of pd) (-> jt name))))
-      (else (pc-cutscene-pose-pick "" ""))))
+      ;; (on nothing: the part picked stays picked; L1 + circle lets it go)
+      (else #f)))
   (none))
 
 ;; (edit) a cross in the middle of the view, what X picks, the picked part's name
@@ -928,6 +929,10 @@
   (when (and (cpad-pressed? 0 x) (cpad-hold? 0 l1) (not (cpad-hold? 0 r2)) (not (cpad-hold? 0 l2)))
     (cpad-clear! 0 x)
     (cutscene-joint-pick))
+  ;; L1 + circle: no body part picked any more (R2 and L2 take the whole character again)
+  (when (and (cpad-pressed? 0 circle) (cpad-hold? 0 l1) (not (cpad-hold? 0 r2)) (not (cpad-hold? 0 l2)))
+    (cpad-clear! 0 circle)
+    (pc-cutscene-pose-pick "" ""))
   (cutscene-edit-marks)
   (cond
     ((cutscene-pose-pad) #t)
