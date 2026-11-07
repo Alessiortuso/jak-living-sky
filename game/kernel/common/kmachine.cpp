@@ -514,6 +514,61 @@ void pc_cutscene_grab(u32 actor, u32 at) {
   enhanced_cutscene::grab(Ptr<String>(actor).c()->data(), a, a[3]);
 }
 
+// a body part turned and moved now: the i-th one's character and part into two strings, its turn (degrees)
+// and move (game units) into out (6 floats); #f past the last
+u64 pc_cutscene_pose(u32 i, u32 actor, u32 joint, u32 out) {
+  enhanced_cutscene::Pose p;
+  if (!enhanced_cutscene::pose((int)i, &p)) {
+    return s7.offset;
+  }
+  auto put = [](u32 dest, const std::string& s) {
+    auto* str = Ptr<String>(dest).c();
+    if (str->len == 0) {
+      return;
+    }
+    const size_t n = std::min<size_t>(s.size(), str->len - 1);
+    memcpy(str->data(), s.data(), n);
+    str->data()[n] = '\0';
+  };
+  put(actor, p.actor);
+  put(joint, p.joint);
+  float* o = Ptr<float>(out).c();
+  for (int k = 0; k < 3; k++) {
+    o[k] = p.rot[k];
+    o[3 + k] = p.off[k];
+  }
+  return s7.offset + true_symbol_offset(g_game_version);
+}
+
+// a body part of a character near the camera, for the editor's list
+void pc_cutscene_actor_joint(u32 actor, u32 joint) {
+  enhanced_cutscene::actor_joint(Ptr<String>(actor).c()->data(), Ptr<String>(joint).c()->data());
+}
+
+// (edit) the body part picked for the pad: its character and part into two strings; #f none
+u64 pc_cutscene_pose_selected(u32 actor, u32 joint) {
+  std::string a, j;
+  if (!enhanced_cutscene::pose_selected(&a, &j)) {
+    return s7.offset;
+  }
+  for (auto [dest, s] : {std::pair<u32, std::string*>{actor, &a}, {joint, &j}}) {
+    auto* str = Ptr<String>(dest).c();
+    if (str->len == 0) {
+      continue;
+    }
+    const size_t n = std::min<size_t>(s->size(), str->len - 1);
+    memcpy(str->data(), s->data(), n);
+    str->data()[n] = '\0';
+  }
+  return s7.offset + true_symbol_offset(g_game_version);
+}
+
+// (edit) a body part turned and moved with the pad: degrees, game units (6 floats)
+void pc_cutscene_pose_grab(u32 actor, u32 joint, u32 v) {
+  const float* f = Ptr<float>(v).c();
+  enhanced_cutscene::pose_grab(Ptr<String>(actor).c()->data(), Ptr<String>(joint).c()->data(), f, f + 3);
+}
+
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
 void pc_cutscene_actors_begin() {
   enhanced_cutscene::actors_begin();
@@ -2208,6 +2263,10 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-place", (void*)pc_cutscene_place);
   make_func_symbol_func("pc-cutscene-actor-at", (void*)pc_cutscene_actor_at);
   make_func_symbol_func("pc-cutscene-grab", (void*)pc_cutscene_grab);
+  make_func_symbol_func("pc-cutscene-pose", (void*)pc_cutscene_pose);
+  make_func_symbol_func("pc-cutscene-actor-joint", (void*)pc_cutscene_actor_joint);
+  make_func_symbol_func("pc-cutscene-pose-selected", (void*)pc_cutscene_pose_selected);
+  make_func_symbol_func("pc-cutscene-pose-grab", (void*)pc_cutscene_pose_grab);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);

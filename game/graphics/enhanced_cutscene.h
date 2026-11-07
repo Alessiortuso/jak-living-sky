@@ -53,6 +53,22 @@ void actor_at(const std::string& actor, const float* pos, float yaw);
 // degrees): that key moved, or a new one
 void grab(const std::string& actor, const float* pos, float yaw);
 
+// a body part of a character turned (degrees round its own x y z) and moved (game units, in its parent's
+// space) on top of its animation, now (after poll, same frame)
+struct Pose {
+  std::string actor;
+  std::string joint;
+  float rot[3] = {};
+  float off[3] = {};
+};
+bool pose(int i, Pose* out);
+// (the game's list) a body part of a character near the camera
+void actor_joint(const std::string& actor, const std::string& joint);
+// (edit) the body part picked in the menu, for the pad (false: none, R2 takes the whole character)
+bool pose_selected(std::string* actor, std::string* joint);
+// (edit) a body part turned or moved with the pad: its key at the cursor (made or changed)
+void pose_grab(const std::string& actor, const std::string& joint, const float* rot, const float* off);
+
 // the characters played as puppets now (after poll, same frame): by the game's name ("jak" for Jak), one of
 // its animations by name, how far into it (seconds, at its own speed), looping or held on its last frame
 struct Puppet {

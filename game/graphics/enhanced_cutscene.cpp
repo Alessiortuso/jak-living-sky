@@ -62,6 +62,17 @@ struct MoveKey {
   bool smooth = false;
 };
 
+// at t a body part is turned (degrees round its own x y z) and moved (metres, in its parent's space) on top
+// of its animation; smooth: on to its next key
+struct PoseKey {
+  float t = 0.f;
+  std::string actor;
+  std::string joint;
+  float rot[3] = {};
+  float off[3] = {};
+  bool smooth = true;
+};
+
 struct Scene {
   std::string name;
   float length = 10.f;
@@ -71,6 +82,7 @@ struct Scene {
   std::vector<Line> lines;
   std::vector<AnimKey> anims;
   std::vector<MoveKey> moves;
+  std::vector<PoseKey> poses;
 };
 
 using Clock = std::chrono::steady_clock;
@@ -91,6 +103,11 @@ float g_cam_look[3] = {};
 bool g_cam_known = false;
 float g_cam_aim[3] = {};      // (edit) the first solid thing along its view, metres
 std::vector<Place> g_places;  // (poll) the characters placed now
+std::vector<Pose> g_poses;    // (poll) the body parts turned or moved now
+std::map<std::string, std::vector<std::string>> g_actor_joints;       // each character's body parts
+std::map<std::string, std::vector<std::string>> g_actor_joints_next;  // (with the list)
+std::string g_sel_actor;      // (edit) the body part picked for the pad
+std::string g_sel_joint;
 std::string g_held;           // (edit) what R2 holds now, for the menu
 Clock::time_point g_held_at;
 struct ActorAt {
@@ -151,6 +168,7 @@ void sort_scene(Scene& s) {
   }
   std::stable_sort(s.anims.begin(), s.anims.end(), [](const AnimKey& a, const AnimKey& b) { return a.t < b.t; });
   std::stable_sort(s.moves.begin(), s.moves.end(), [](const MoveKey& a, const MoveKey& b) { return a.t < b.t; });
+  std::stable_sort(s.poses.begin(), s.poses.end(), [](const PoseKey& a, const PoseKey& b) { return a.t < b.t; });
 }
 
 bool load(const std::string& name, Scene* out) {
@@ -210,6 +228,18 @@ bool load(const std::string& name, Scene* out) {
       k.smooth = jm.value("smooth", false);
       s.moves.push_back(k);
     }
+    for (const auto& jp : j.value("poses", nlohmann::json::array())) {
+      PoseKey k;
+      k.t = jp.value("t", 0.f);
+      k.actor = jp.value("actor", std::string());
+      k.joint = jp.value("joint", std::string());
+      for (int c = 0; c < 3; c++) {
+        k.rot[c] = jp["rot"][c].get<float>();
+        k.off[c] = jp["off"][c].get<float>();
+      }
+      k.smooth = jp.value("smooth", true);
+      s.poses.push_back(k);
+    }
     sort_scene(s);
     *out = s;
     return true;
@@ -239,6 +269,15 @@ void save(const Scene& s) {
       jl["subs"].push_back({{"t", sub.t}, {"text", sub.text}});
     }
     j["lines"].push_back(jl);
+  }
+  j["poses"] = nlohmann::json::array();
+  for (const auto& k : s.poses) {
+    j["poses"].push_back({{"t", k.t},
+                          {"actor", k.actor},
+                          {"joint", k.joint},
+                          {"rot", {k.rot[0], k.rot[1], k.rot[2]}},
+                          {"off", {k.off[0], k.off[1], k.off[2]}},
+                          {"smooth", k.smooth}});
   }
   j["moves"] = nlohmann::json::array();
   for (const auto& k : s.moves) {
@@ -374,6 +413,47 @@ void places_at(const Scene& s, float t) {
   }
 }
 
+// each body part's turn and move at time t: its last key by then (on towards its next, if it slides)
+void poses_at(const Scene& s, float t) {
+  g_poses.clear();
+  std::vector<std::string> done;
+  for (const auto& k : s.poses) {
+    const std::string id = k.actor + "\n" + k.joint;
+    if (k.actor.empty() || k.joint.empty() || std::find(done.begin(), done.end(), id) != done.end()) {
+      continue;
+    }
+    done.push_back(id);
+    const PoseKey* a = nullptr;
+    const PoseKey* b = nullptr;
+    for (const auto& m : s.poses) {
+      if (m.actor != k.actor || m.joint != k.joint) {
+        continue;
+      }
+      if (m.t <= t) {
+        a = &m;
+      } else if (!b) {
+        b = &m;
+      }
+    }
+    if (!a) {
+      continue;
+    }
+    float u = 0.f;
+    if (a->smooth && b && b->t > a->t) {
+      u = std::clamp((t - a->t) / (b->t - a->t), 0.f, 1.f);
+      u = u * u * (3.f - 2.f * u);
+    }
+    Pose p;
+    p.actor = a->actor;
+    p.joint = a->joint;
+    for (int c = 0; c < 3; c++) {
+      p.rot[c] = a->rot[c] + (u > 0.f ? (b->rot[c] - a->rot[c]) * u : 0.f);
+      p.off[c] = (a->off[c] + (u > 0.f ? (b->off[c] - a->off[c]) * u : 0.f)) * kMeter;
+    }
+    g_poses.push_back(p);
+  }
+}
+
 void stop_voices() {
   for (size_t i = 0; i < g_scene.lines.size() && i < g_started.size(); i++) {
     if (g_started[i]) {
@@ -424,11 +504,13 @@ Frame poll() {
   if (g_actors_ready) {
     g_actors.swap(g_actors_next);
     g_actor_at.swap(g_actor_at_next);
+    g_actor_joints.swap(g_actor_joints_next);
     g_actors_ready = false;
   }
   if (g_mode == kNone) {
     g_puppets.clear();
     g_places.clear();
+    g_poses.clear();
     return f;
   }
   f.letterbox = g_scene.letterbox;
@@ -446,6 +528,7 @@ Frame poll() {
     subtitle_at(g_scene, g_cursor, &f.speaker, &f.text);
     puppets_at(g_scene, g_cursor, std::chrono::duration<float>(Clock::now() - g_edit_clock).count());
     places_at(g_scene, g_cursor);
+    poses_at(g_scene, g_cursor);
     // the characters near the camera, every so often while the animations are being set
     if (g_scan_wanted && Clock::now() - g_last_scan > std::chrono::milliseconds(1500)) {
       g_last_scan = Clock::now();
@@ -465,11 +548,13 @@ Frame poll() {
       f.mode = kEdit;
       puppets_at(g_scene, g_cursor);
       places_at(g_scene, g_cursor);
+      poses_at(g_scene, g_cursor);
     } else {
       g_mode = kNone;
       f.mode = kNone;
       g_puppets.clear();
       g_places.clear();
+      g_poses.clear();
     }
     return f;
   }
@@ -492,7 +577,67 @@ Frame poll() {
   subtitle_at(g_scene, t, &f.speaker, &f.text);
   puppets_at(g_scene, t);
   places_at(g_scene, t);
+  poses_at(g_scene, t);
   return f;
+}
+
+bool pose(int i, Pose* out) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (i < 0 || i >= (int)g_poses.size()) {
+    return false;
+  }
+  *out = g_poses[i];
+  return true;
+}
+
+void actor_joint(const std::string& actor, const std::string& joint) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  g_actor_joints_next[actor].push_back(joint);
+}
+
+bool pose_selected(std::string* actor, std::string* joint) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (g_mode != kEdit || g_sel_actor.empty() || g_sel_joint.empty()) {
+    return false;
+  }
+  *actor = g_sel_actor;
+  *joint = g_sel_joint;
+  return true;
+}
+
+void pose_grab(const std::string& actor, const std::string& joint, const float* rot, const float* off) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (g_mode != kEdit || actor.empty() || joint.empty()) {
+    return;
+  }
+  g_held = actor + ": " + joint;
+  g_held_at = Clock::now();
+  PoseKey* key = nullptr;
+  for (auto& k : g_scene.poses) {
+    if (k.actor == actor && k.joint == joint && std::fabs(k.t - g_cursor) < 0.02f) {
+      key = &k;
+    }
+  }
+  if (!key) {
+    PoseKey k;
+    k.t = g_cursor;
+    k.actor = actor;
+    k.joint = joint;
+    g_scene.poses.push_back(k);
+    sort_scene(g_scene);
+    for (auto& m : g_scene.poses) {
+      if (m.actor == actor && m.joint == joint && std::fabs(m.t - g_cursor) < 0.02f) {
+        key = &m;
+      }
+    }
+  }
+  if (key) {
+    for (int c = 0; c < 3; c++) {
+      key->rot[c] = rot[c];
+      key->off[c] = off[c] / kMeter;
+    }
+    g_dirty = true;
+  }
 }
 
 bool place(int i, Place* out) {
@@ -572,6 +717,7 @@ void actors_begin() {
   std::lock_guard<std::mutex> lock(g_mutex);
   g_actors_next.clear();
   g_actor_at_next.clear();
+  g_actor_joints_next.clear();
   g_actors_ready = true;
 }
 
@@ -640,6 +786,10 @@ void timeline() {
       const float x = x_of(l.t + sub.t);
       dl->AddLine(ImVec2(x, p0.y + 24.f), ImVec2(x, p0.y + 42.f), IM_COL32(255, 230, 160, 255), 1.5f);
     }
+  }
+  for (const auto& k : g_scene.poses) {
+    const float x = x_of(k.t);
+    dl->AddCircleFilled(ImVec2(x, p0.y + 52.f), 2.5f, IM_COL32(200, 120, 255, 255));
   }
   for (const auto& k : g_scene.moves) {
     const float x = x_of(k.t);
@@ -905,6 +1055,109 @@ void moves_menu() {
   }
   if (gone >= 0) {
     g_scene.moves.erase(g_scene.moves.begin() + gone);
+    g_dirty = true;
+  }
+}
+
+void poses_menu() {
+  static int s_actor = 0;
+  static char filter[64] = "";
+  if (g_mode == kEdit) {
+    g_scan_wanted = true;
+  }
+  if (g_actors.empty()) {
+    ImGui::TextDisabled(g_mode == kEdit ? "(no characters near the camera: fly closer)"
+                                        : "(Edit first: the characters near the camera are listed)");
+  } else {
+    s_actor = std::clamp(s_actor, 0, (int)g_actors.size() - 1);
+    const std::string& actor = g_actors[s_actor].first;
+    ImGui::SetNextItemWidth(220);
+    if (ImGui::BeginCombo("Character##pose", actor.c_str())) {
+      for (int i = 0; i < (int)g_actors.size(); i++) {
+        if (ImGui::Selectable(g_actors[i].first.c_str(), i == s_actor)) {
+          s_actor = i;
+          g_sel_joint.clear();
+        }
+      }
+      ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(220);
+    if (ImGui::BeginCombo("Body part", g_sel_joint.empty() ? "(none: R2 takes the whole character)"
+                                                             : g_sel_joint.c_str(),
+                          ImGuiComboFlags_HeightLarge)) {
+      ImGui::SetNextItemWidth(-1);
+      ImGui::InputTextWithHint("##jfilter", "filter", filter, sizeof(filter));
+      if (ImGui::Selectable("(none: R2 takes the whole character)", g_sel_joint.empty())) {
+        g_sel_joint.clear();
+      }
+      auto it = g_actor_joints.find(actor);
+      if (it != g_actor_joints.end()) {
+        for (const auto& j : it->second) {
+          if (filter[0] && j.find(filter) == std::string::npos) {
+            continue;
+          }
+          if (ImGui::Selectable(j.c_str(), j == g_sel_joint)) {
+            g_sel_joint = j;
+          }
+        }
+      }
+      ImGui::EndCombo();
+    }
+    g_sel_actor = g_sel_joint.empty() ? std::string() : actor;
+  }
+  ImGui::TextDisabled("Pad, a body part picked: R2 held moves it (left stick; L1: up, down), L2 held turns it");
+  ImGui::TextDisabled("in place (left stick, right stick); without one, R2 takes the whole character.");
+  int gone = -1;
+  for (size_t i = 0; i < g_scene.poses.size(); i++) {
+    auto& k = g_scene.poses[i];
+    ImGui::PushID(9000 + (int)i);
+    ImGui::Separator();
+    ImGui::SetNextItemWidth(80);
+    if (ImGui::DragFloat("##pt", &k.t, 0.02f, 0.f, g_scene.length, "%.2f s")) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    ImGui::Text("%s: %s", k.actor.c_str(), k.joint.c_str());
+    ImGui::SameLine();
+    if (ImGui::Checkbox("slide", &k.smooth)) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Go")) {
+      g_cursor = k.t;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Pick")) {
+      g_sel_joint = k.joint;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reset")) {
+      for (int c = 0; c < 3; c++) {
+        k.rot[c] = 0.f;
+        k.off[c] = 0.f;
+      }
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Delete")) {
+      gone = (int)i;
+    }
+    ImGui::Indent(20.f);
+    ImGui::SetNextItemWidth(220);
+    if (ImGui::DragFloat3("turn (deg)", k.rot, 0.5f, -360.f, 360.f, "%.0f")) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(220);
+    if (ImGui::DragFloat3("move (m)", k.off, 0.005f, -5.f, 5.f, "%.3f")) {
+      g_dirty = true;
+    }
+    ImGui::Unindent(20.f);
+    ImGui::PopID();
+  }
+  if (gone >= 0) {
+    g_scene.poses.erase(g_scene.poses.begin() + gone);
     g_dirty = true;
   }
 }
@@ -1187,6 +1440,12 @@ void draw_menu() {
   // where the characters are, and which way they face
   if (ImGui::TreeNodeEx("Places", ImGuiTreeNodeFlags_DefaultOpen)) {
     moves_menu();
+    ImGui::TreePop();
+  }
+
+  // their body parts, turned and moved on top of their animations
+  if (ImGui::TreeNodeEx("Body parts", ImGuiTreeNodeFlags_DefaultOpen)) {
+    poses_menu();
     ImGui::TreePop();
   }
   ImGui::PopID();
