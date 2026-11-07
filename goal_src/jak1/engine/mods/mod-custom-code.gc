@@ -217,7 +217,8 @@
          (fwd (new 'stack-no-clear 'vector))
          (right (new 'stack-no-clear 'vector)))
     (cutscene-forward fwd)
-    (set-vector! right (cos *cs-yaw*) 0.0 (- (sin *cs-yaw*)) 1.0)
+    ;; the view's right (the game's x grows to the left of a camera looking down +z)
+    (set-vector! right (- (cos *cs-yaw*)) 0.0 (sin *cs-yaw*) 1.0)
     (cond
       ((cpad-hold? 0 r1)
        ;; held on to the point aimed at (taken when R1 went down)

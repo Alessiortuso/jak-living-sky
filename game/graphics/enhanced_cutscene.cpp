@@ -482,7 +482,9 @@ void draw_menu() {
     ImGui::Text("%.2f s", g_cursor);
   }
 
-  // shots
+  // shots (a copied one stays on the clipboard across scenes, to be pasted at any point of any of them)
+  static Shot s_clip;
+  static bool s_clip_full = false;
   if (ImGui::TreeNodeEx("Shots", ImGuiTreeNodeFlags_DefaultOpen)) {
     if (ImGui::Button("Add a shot at the cursor (what the camera sees)") && g_cam_known) {
       Shot sh;
@@ -492,6 +494,17 @@ void draw_menu() {
       g_scene.shots.push_back(sh);
       sort_scene(g_scene);
       g_dirty = true;
+    }
+    if (s_clip_full) {
+      if (ImGui::Button("Paste the copied shot at the cursor")) {
+        Shot sh = s_clip;
+        sh.t = g_cursor;
+        g_scene.shots.push_back(sh);
+        sort_scene(g_scene);
+        g_dirty = true;
+      }
+    } else {
+      ImGui::TextDisabled("(Copy a shot to paste it at the cursor, in this scene or another)");
     }
     if (!g_cam_known) {
       ImGui::TextDisabled("(Edit first: the shots are taken from the free camera)");
@@ -519,6 +532,19 @@ void draw_menu() {
       if (ImGui::Button("Set from camera") && g_cam_known) {
         std::memcpy(sh.pos, g_cam_pos, sizeof(sh.pos));
         std::memcpy(sh.look, g_cam_look, sizeof(sh.look));
+        g_dirty = true;
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Copy")) {
+        s_clip = sh;
+        s_clip_full = true;
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Paste") && s_clip_full) {
+        // the copied framing onto this shot (its time stays)
+        std::memcpy(sh.pos, s_clip.pos, sizeof(sh.pos));
+        std::memcpy(sh.look, s_clip.look, sizeof(sh.look));
+        sh.smooth = s_clip.smooth;
         g_dirty = true;
       }
       ImGui::SameLine();

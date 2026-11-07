@@ -434,10 +434,17 @@ u64 pc_cutscene_poll(u32 out, u32 speaker, u32 text, u32 max_len) {
   o[8] = f.hold_jak ? 1.f : 0.f;
   o[9] = f.has_cam ? 1.f : 0.f;
   auto put = [&](u32 dest, const std::string& s) {
-    auto* data = Ptr<String>(dest).c()->data();
+    // each string's own room (the speaker's is smaller: padding it to max_len ran over the text's header)
+    auto* str = Ptr<String>(dest).c();
+    const u32 room = std::min<u32>(max_len, str->len);
+    if (room == 0) {
+      return;
+    }
+    auto* data = str->data();
     std::string g = s.empty() ? s : get_font_bank_from_game_version(g_game_version)->convert_utf8_to_game(s);
-    strncpy(data, g.c_str(), max_len - 1);
-    data[max_len - 1] = '\0';
+    const size_t n = std::min<size_t>(g.size(), room - 1);
+    memcpy(data, g.data(), n);
+    data[n] = '\0';
   };
   put(speaker, f.speaker);
   put(text, f.text);
