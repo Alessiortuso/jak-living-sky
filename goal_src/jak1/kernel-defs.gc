@@ -657,6 +657,7 @@
 (define-extern pc-cutscene-actor-joint (function string string none))
 (define-extern pc-cutscene-pose-selected (function string string symbol))
 (define-extern pc-cutscene-pose-grab (function string string (pointer float) none))
+(define-extern pc-cutscene-pose-pick (function string string none))
 (define-extern pc-enhanced-menu-state (function int))
 (define-extern pc-enhanced-photo (function int int))
 (define-extern pc-enhanced-switch-game (function int int))

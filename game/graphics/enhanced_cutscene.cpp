@@ -108,6 +108,7 @@ std::map<std::string, std::vector<std::string>> g_actor_joints;       // each ch
 std::map<std::string, std::vector<std::string>> g_actor_joints_next;  // (with the list)
 std::string g_sel_actor;      // (edit) the body part picked for the pad
 std::string g_sel_joint;
+std::string g_pick_actor;     // (a pick from the pad, for the menu's character)
 std::string g_held;           // (edit) what R2 holds now, for the menu
 Clock::time_point g_held_at;
 struct ActorAt {
@@ -605,6 +606,13 @@ bool pose_selected(std::string* actor, std::string* joint) {
   return true;
 }
 
+void pose_pick(const std::string& actor, const std::string& joint) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  g_sel_actor = actor;
+  g_sel_joint = joint;
+  g_pick_actor = actor;
+}
+
 void pose_grab(const std::string& actor, const std::string& joint, const float* rot, const float* off) {
   std::lock_guard<std::mutex> lock(g_mutex);
   if (g_mode != kEdit || actor.empty() || joint.empty()) {
@@ -1069,6 +1077,15 @@ void poses_menu() {
     ImGui::TextDisabled(g_mode == kEdit ? "(no characters near the camera: fly closer)"
                                         : "(Edit first: the characters near the camera are listed)");
   } else {
+    // (picked with the pad: its character here)
+    if (!g_pick_actor.empty()) {
+      for (int i = 0; i < (int)g_actors.size(); i++) {
+        if (g_actors[i].first == g_pick_actor) {
+          s_actor = i;
+        }
+      }
+      g_pick_actor.clear();
+    }
     s_actor = std::clamp(s_actor, 0, (int)g_actors.size() - 1);
     const std::string& actor = g_actors[s_actor].first;
     ImGui::SetNextItemWidth(220);
@@ -1106,6 +1123,7 @@ void poses_menu() {
     }
     g_sel_actor = g_sel_joint.empty() ? std::string() : actor;
   }
+  ImGui::TextDisabled("Pad: X picks the body part in the middle of the view (the cross), X on nothing: none.");
   ImGui::TextDisabled("Pad, a body part picked: R2 held moves it (left stick; L1: up, down), L2 held turns it");
   ImGui::TextDisabled("in place (left stick, right stick); without one, R2 takes the whole character.");
   int gone = -1;

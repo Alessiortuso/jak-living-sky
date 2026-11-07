@@ -569,6 +569,11 @@ void pc_cutscene_pose_grab(u32 actor, u32 joint, u32 v) {
   enhanced_cutscene::pose_grab(Ptr<String>(actor).c()->data(), Ptr<String>(joint).c()->data(), f, f + 3);
 }
 
+// (edit) a body part picked with the pad (empty strings: none)
+void pc_cutscene_pose_pick(u32 actor, u32 joint) {
+  enhanced_cutscene::pose_pick(Ptr<String>(actor).c()->data(), Ptr<String>(joint).c()->data());
+}
+
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
 void pc_cutscene_actors_begin() {
   enhanced_cutscene::actors_begin();
@@ -2267,6 +2272,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-actor-joint", (void*)pc_cutscene_actor_joint);
   make_func_symbol_func("pc-cutscene-pose-selected", (void*)pc_cutscene_pose_selected);
   make_func_symbol_func("pc-cutscene-pose-grab", (void*)pc_cutscene_pose_grab);
+  make_func_symbol_func("pc-cutscene-pose-pick", (void*)pc_cutscene_pose_pick);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);

@@ -68,6 +68,8 @@ void actor_joint(const std::string& actor, const std::string& joint);
 bool pose_selected(std::string* actor, std::string* joint);
 // (edit) a body part turned or moved with the pad: its key at the cursor (made or changed)
 void pose_grab(const std::string& actor, const std::string& joint, const float* rot, const float* off);
+// (edit) a body part picked with the pad (X on it): the one the pad works on, shown in the menu (empty: none)
+void pose_pick(const std::string& actor, const std::string& joint);
 
 // the characters played as puppets now (after poll, same frame): by the game's name ("jak" for Jak), one of
 // its animations by name, how far into it (seconds, at its own speed), looping or held on its last frame
