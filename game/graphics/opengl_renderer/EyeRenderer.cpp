@@ -1,7 +1,9 @@
 #include "EyeRenderer.h"
 
 #include <algorithm>
+#include <set>
 
+#include "common/log/log.h"
 #include "common/util/FileUtil.h"
 
 #include "game/graphics/opengl_renderer/AdgifHandler.h"
@@ -211,6 +213,28 @@ EyeRenderer::EyeDraw read_eye_draw(DmaFollower& dma) {
   return {sprite, scissor};
 }
 
+// Jak Living Sky: an eye's texture missing (nothing uploaded where it looks, or a texture the pool has no
+// picture of: drawn as the checkerboard), said once in the log, with what it should have been
+namespace {
+void eye_texture_report(SharedRenderState* render_state, u32 tbp, const char* what) {
+  static std::set<u32> s_said;
+  auto* tex = render_state->texture_pool->lookup_gpu_texture(tbp);
+  if (tex && !tex->is_placeholder) {
+    return;
+  }
+  if (!s_said.insert(tbp).second) {
+    return;
+  }
+  if (!tex) {
+    lg::warn("[eyes] {} at tbp {}: nothing uploaded there", what, tbp);
+  } else {
+    lg::warn("[eyes] {} at tbp {}: no picture for {} (page {}, texture {})", what, tbp,
+             render_state->texture_pool->get_debug_texture_name(tex->tex_id), tex->tex_id.page,
+             tex->tex_id.tex);
+  }
+}
+}  // namespace
+
 std::vector<EyeRenderer::SingleEyeDraws> EyeRenderer::get_draws(DmaFollower& dma,
                                                                 SharedRenderState* render_state) {
   std::vector<SingleEyeDraws> draws;
@@ -231,6 +255,7 @@ std::vector<EyeRenderer::SingleEyeDraws> EyeRenderer::get_draws(DmaFollower& dma
     ASSERT(adgif0_dma.vif0() == 0);
     ASSERT(adgif0_dma.vifcode1().kind == VifCode::Kind::DIRECT);
     AdgifHelper adgif0(adgif0_dma.data + 16);
+    eye_texture_report(render_state, adgif0.tex0().tbp0(), "iris");
     auto tex0 = render_state->texture_pool->lookup_gpu_texture(adgif0.tex0().tbp0());
 
     u32 pair_idx = -1;
@@ -294,6 +319,7 @@ std::vector<EyeRenderer::SingleEyeDraws> EyeRenderer::get_draws(DmaFollower& dma
     ASSERT(adgif1_dma.vif0() == 0);
     ASSERT(adgif1_dma.vifcode1().kind == VifCode::Kind::DIRECT);
     AdgifHelper adgif1(adgif1_dma.data + 16);
+    eye_texture_report(render_state, adgif1.tex0().tbp0(), "pupil");
     auto tex1 = render_state->texture_pool->lookup_gpu_texture(adgif1.tex0().tbp0());
 
     if (tex1 && tex1->get_data_ptr()) {
@@ -328,6 +354,7 @@ std::vector<EyeRenderer::SingleEyeDraws> EyeRenderer::get_draws(DmaFollower& dma
     ASSERT(adgif2_dma.vif0() == 0);
     ASSERT(adgif2_dma.vifcode1().kind == VifCode::Kind::DIRECT);
     AdgifHelper adgif2(adgif2_dma.data + 16);
+    eye_texture_report(render_state, adgif2.tex0().tbp0(), "lid");
     auto tex2 = render_state->texture_pool->lookup_gpu_texture(adgif2.tex0().tbp0());
 
     {
