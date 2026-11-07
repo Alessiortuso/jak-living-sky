@@ -830,6 +830,10 @@ ConvertedMercEffect convert_merc_effect(const MercEffect& input_effect,
 
   if (ctrl_header.eye_ctrl) {
     result.eye_slot = ctrl_header.eye_ctrl->eye_slot;
+    // Jak Living Sky: which slot each model's eyes use (two in one level overwrite each other's)
+    if (effect_idx == 0) {
+      lg::info("merc eyes: {} uses eye slot {}", debug_name, (int)ctrl_header.eye_ctrl->eye_slot);
+    }
   }
   if (input_effect.extra_info.shader) {
     result.has_envmap = true;
