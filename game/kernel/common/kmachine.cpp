@@ -394,6 +394,39 @@ void enhanced_stop_mp3(const std::string& file) {
   }
 }
 
+// how loud a file is, fps times a second (RMS of each slice, mono): the scenes' lips follow it
+std::vector<float> enhanced_mp3_envelope(const std::string& file, float fps) {
+  std::vector<float> out;
+  const std::string full = enhanced_audio_path(file);
+  if (file.empty() || !file_util::file_exists(full) || fps <= 0.f) {
+    return out;
+  }
+  MiniAudioLib::ma_decoder_config cfg = MiniAudioLib::ma_decoder_config_init(MiniAudioLib::ma_format_f32, 1, 22050);
+  MiniAudioLib::ma_decoder dec;
+  if (MiniAudioLib::ma_decoder_init_file(full.c_str(), &cfg, &dec) != MiniAudioLib::MA_SUCCESS) {
+    return out;
+  }
+  const size_t win = std::max<size_t>(1, (size_t)(22050.f / fps));
+  std::vector<float> buf(win);
+  while (true) {
+    MiniAudioLib::ma_uint64 got = 0;
+    MiniAudioLib::ma_decoder_read_pcm_frames(&dec, buf.data(), win, &got);
+    if (got == 0) {
+      break;
+    }
+    double acc = 0.0;
+    for (size_t i = 0; i < got; i++) {
+      acc += (double)buf[i] * buf[i];
+    }
+    out.push_back((float)std::sqrt(acc / (double)got));
+    if (got < win) {
+      break;
+    }
+  }
+  MiniAudioLib::ma_decoder_uninit(&dec);
+  return out;
+}
+
 float enhanced_mp3_length(const std::string& file) {
   const std::string full = enhanced_audio_path(file);
   if (file.empty() || !file_util::file_exists(full)) {
@@ -434,6 +467,7 @@ u64 pc_cutscene_poll(u32 out, u32 speaker, u32 text, u32 max_len) {
   o[8] = f.hold_jak ? 1.f : 0.f;
   o[9] = f.has_cam ? 1.f : 0.f;
   o[10] = f.scan ? 1.f : 0.f;
+  o[11] = f.dump ? 1.f : 0.f;
   auto put = [&](u32 dest, const std::string& s) {
     // each string's own room (the speaker's is smaller: padding it to max_len ran over the text's header)
     auto* str = Ptr<String>(dest).c();
@@ -617,6 +651,12 @@ u64 pc_cutscene_timeline_pad(u32 pressed, u32 held, u32 sticks) {
   return enhanced_cutscene::timeline_pad(pressed, held, s[0], s[1], s[2])
              ? s7.offset + true_symbol_offset(g_game_version)
              : s7.offset;
+}
+
+// (a capture) a character's joint: index, parent (-1), name, world matrix (16 floats)
+void pc_cutscene_joint_dump(u32 actor, s32 j, s32 parent, u32 name, u32 m) {
+  enhanced_cutscene::joint_dump(Ptr<String>(actor).c()->data(), j, parent, Ptr<String>(name).c()->data(),
+                                Ptr<float>(m).c());
 }
 
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
@@ -2322,6 +2362,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-undo", (void*)pc_cutscene_undo);
   make_func_symbol_func("pc-cutscene-face", (void*)pc_cutscene_face);
   make_func_symbol_func("pc-cutscene-timeline-pad", (void*)pc_cutscene_timeline_pad);
+  make_func_symbol_func("pc-cutscene-joint-dump", (void*)pc_cutscene_joint_dump);
   make_func_symbol_func("pc-cutscene-actor-face", (void*)pc_cutscene_actor_face);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);

@@ -24,6 +24,7 @@
 #include "game/graphics/gfx.h"
 #include "game/graphics/opengl_renderer/OpenGLRenderer.h"
 #include "game/graphics/opengl_renderer/debug_gui.h"
+#include "game/graphics/enhanced_cutscene.h"
 #include "game/graphics/screenshot.h"
 #include "game/graphics/texture/TexturePool.h"
 #include "game/graphics/enhanced_state.h"
@@ -634,6 +635,12 @@ void render_game_frame(int game_width,
       options.save_screenshot = true;
       options.quick_screenshot = true;
       options.screenshot_path = file_util::make_screenshot_filepath(g_game_version);
+    }
+    // Jak Living Sky: the cutscene editor's captures
+    if (const auto cap = enhanced_cutscene::capture_path(); !cap.empty()) {
+      options.save_screenshot = true;
+      options.quick_screenshot = false;
+      options.screenshot_path = cap;
     }
     // note : it's important we call get_screenshot_flag first because it modifies state
     if (g_gfx_data->debug_gui.get_screenshot_flag() || g_want_screenshot) {

@@ -38,6 +38,7 @@ struct Sub {
 
 struct Line {
   float t = 0.f;
+  std::string actor;  // who says it: their mouth follows its loudness (empty: nobody's)
   std::string file;  // under custom_assets/<game>/audio, e.g. voice/fisher-ask.mp3
   std::string speaker;
   int volume = 200;
@@ -93,6 +94,8 @@ struct Scene {
   std::vector<MoveKey> moves;
   std::vector<PoseKey> poses;
   std::vector<FaceKey> faces;
+  // each speaker's face shape that opens the mouth (-1 none), how far loud speech opens it
+  std::map<std::string, std::pair<int, float>> mouths;
 };
 
 using Clock = std::chrono::steady_clock;
@@ -260,6 +263,7 @@ bool load(const std::string& name, Scene* out) {
       l.t = jl.value("t", 0.f);
       l.file = jl.value("file", std::string());
       l.speaker = jl.value("speaker", std::string());
+      l.actor = jl.value("actor", std::string());
       l.volume = jl.value("volume", 200);
       l.len = jl.value("len", 0.f);
       for (const auto& jsub : jl.value("subs", nlohmann::json::array())) {
@@ -302,6 +306,9 @@ bool load(const std::string& name, Scene* out) {
       k.smooth = jp.value("smooth", true);
       s.poses.push_back(k);
     }
+    for (const auto& [a, jm] : j.value("mouths", nlohmann::json::object()).items()) {
+      s.mouths[a] = {jm.value("shape", -1), jm.value("gain", 1.f)};
+    }
     for (const auto& jf : j.value("faces", nlohmann::json::array())) {
       FaceKey k;
       k.t = jf.value("t", 0.f);
@@ -336,12 +343,16 @@ void save(const Scene& s) {
   }
   j["lines"] = nlohmann::json::array();
   for (const auto& l : s.lines) {
-    nlohmann::json jl = {{"t", l.t}, {"file", l.file}, {"speaker", l.speaker}, {"volume", l.volume},
+    nlohmann::json jl = {{"t", l.t}, {"file", l.file}, {"speaker", l.speaker}, {"actor", l.actor}, {"volume", l.volume},
                          {"len", l.len}, {"subs", nlohmann::json::array()}};
     for (const auto& sub : l.subs) {
       jl["subs"].push_back({{"t", sub.t}, {"text", sub.text}});
     }
     j["lines"].push_back(jl);
+  }
+  j["mouths"] = nlohmann::json::object();
+  for (const auto& [a, m] : s.mouths) {
+    j["mouths"][a] = {{"shape", m.first}, {"gain", m.second}};
   }
   j["faces"] = nlohmann::json::array();
   for (const auto& k : s.faces) {
@@ -535,6 +546,14 @@ void poses_at(const Scene& s, float t) {
   }
 }
 
+const std::vector<float>& lips_of(const std::string& file);
+extern std::string g_cap_face_actor;
+extern int g_cap_face_shape;
+void capture_step(Frame& f);
+void capture_start();
+bool capturing();
+std::string capture_status();
+
 // each character's face at time t: its last key by then (on towards its next, if it slides)
 void faces_at(const Scene& s, float t) {
   g_faces.clear();
@@ -570,6 +589,30 @@ void faces_at(const Scene& s, float t) {
       f.w[c] = a->w[c] + (u > 0.f ? (b->w[c] - a->w[c]) * u : 0.f);
     }
     g_faces.push_back(f);
+  }
+  auto face_of = [&](const std::string& actor) -> Face& {
+    for (auto& f : g_faces) {
+      if (f.actor == actor) return f;
+    }
+    Face f;
+    f.actor = actor;
+    g_faces.push_back(f);
+    return g_faces.back();
+  };
+  // the speakers' lips
+  for (const auto& l : s.lines) {
+    if (l.actor.empty() || t < l.t || t >= l.t + l.len) continue;
+    auto m = s.mouths.find(l.actor);
+    if (m == s.mouths.end() || m->second.first < 0 || m->second.first >= 16) continue;
+    const auto& env = lips_of(l.file);
+    const size_t i = (size_t)((t - l.t) * 60.f);
+    if (i < env.size()) face_of(l.actor).w[m->second.first] += env[i] * m->second.second;
+  }
+  // (a capture's face sheet: that one shape alone)
+  if (!g_cap_face_actor.empty()) {
+    Face& f = face_of(g_cap_face_actor);
+    for (float& w : f.w) w = 0.f;
+    if (g_cap_face_shape >= 0 && g_cap_face_shape < 16) f.w[g_cap_face_shape] = 1.f;
   }
 }
 
@@ -650,6 +693,7 @@ Frame poll() {
       }
     }
     subtitle_at(g_scene, g_cursor, &f.speaker, &f.text);
+    capture_step(f);
     puppets_at(g_scene, g_cursor, std::chrono::duration<float>(Clock::now() - g_edit_clock).count());
     places_at(g_scene, g_cursor);
     poses_at(g_scene, g_cursor);
@@ -1443,6 +1487,29 @@ void faces_menu() {
     }
   }
   ImGui::TextDisabled("(each shape: 0 as it is, 1 all the way; one of them opens the mouth - try them)");
+  // each speaker's mouth: the shape its lines open, how far
+  for (const auto& l : g_scene.lines) {
+    if (l.actor.empty()) continue;
+    auto& m = g_scene.mouths[l.actor];
+    if (m.second == 0.f && m.first == 0) m = {-1, 1.f};
+  }
+  for (auto& [a, m] : g_scene.mouths) {
+    ImGui::PushID(a.c_str());
+    ImGui::Text("%s's lips:", a.c_str());
+    ImGui::SameLine();
+    int shape = m.first + 1;
+    ImGui::SetNextItemWidth(90);
+    if (ImGui::InputInt("mouth shape (0 none)", &shape)) {
+      m.first = std::clamp(shape, 0, 16) - 1;
+      changed();
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(120);
+    if (ImGui::SliderFloat("how open", &m.second, 0.f, 2.f, "%.2f")) {
+      changed();
+    }
+    ImGui::PopID();
+  }
   int gone = -1;
   for (size_t i = 0; i < g_scene.faces.size(); i++) {
     auto& k = g_scene.faces[i];
@@ -1559,6 +1626,15 @@ void draw_menu() {
     sort_scene(g_scene);
     save(g_scene);
     g_dirty = false;
+  }
+
+  // captures for Claude (pictures of the scene, the face shapes, the skeletons)
+  if (g_mode == kEdit) {
+    if (capturing()) {
+      ImGui::TextColored(ImVec4(1.f, 0.8f, 0.3f, 1.f), "%s (hands off the pad)", capture_status().c_str());
+    } else if (ImGui::Button("Capture for Claude (pictures, face shapes, skeletons)")) {
+      capture_start();
+    }
   }
 
   // edit / preview / stop
@@ -1729,6 +1805,21 @@ void draw_menu() {
       if (ImGui::InputText("##spk", spk, sizeof(spk))) {
         l.speaker = spk;
         changed();
+      }
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(140);
+      if (ImGui::BeginCombo("##lips", l.actor.empty() ? "(lips: nobody)" : l.actor.c_str())) {
+        if (ImGui::Selectable("(lips: nobody)", l.actor.empty())) {
+          l.actor.clear();
+          changed();
+        }
+        for (const auto& a : g_actors) {
+          if (ImGui::Selectable(a.first.c_str(), a.first == l.actor)) {
+            l.actor = a.first;
+            changed();
+          }
+        }
+        ImGui::EndCombo();
       }
       ImGui::SameLine();
       ImGui::Text("%.1f s", l.len);
@@ -2256,5 +2347,244 @@ void draw_overlay() {
     }
   }
 }
+
+
+// ---------------------------------------------------------------------------------------------------------
+// lips: each voice's loudness, the speaker's mouth opened with it
+
+namespace {
+
+constexpr float kLipFps = 60.f;
+std::map<std::string, std::vector<float>> g_env;  // each mp3's mouth, 0..1, kLipFps a second
+
+const std::vector<float>& lips_of(const std::string& file) {
+  auto it = g_env.find(file);
+  if (it != g_env.end()) {
+    return it->second;
+  }
+  auto rms = enhanced_mp3_envelope(file, kLipFps);
+  std::vector<float> out(rms.size());
+  if (!rms.empty()) {
+    // loud as its loud parts (not its peaks), a little quiet under it read as shut, smoothed: quick to open,
+    // slower to close, as a mouth does
+    auto sorted = rms;
+    std::sort(sorted.begin(), sorted.end());
+    const float ref = std::max(1e-4f, sorted[(size_t)(sorted.size() * 0.9)]);
+    float s = 0.f;
+    for (size_t i = 0; i < rms.size(); i++) {
+      const float v = std::clamp((rms[i] / ref - 0.12f) / 0.88f, 0.f, 1.f);
+      s += (v - s) * (v > s ? 0.55f : 0.22f);
+      out[i] = s;
+    }
+  }
+  return g_env.emplace(file, std::move(out)).first->second;
+}
+
+}  // namespace
+
+// ---------------------------------------------------------------------------------------------------------
+// captures
+
+namespace {
+
+struct CapStep {
+  int kind = 0;  // 0 the scene at t, 1 a face shape (-1: none), 2 the skeletons
+  float t = 0.f;
+  std::string actor;
+  int shape = -1;
+  std::string file;
+};
+std::vector<CapStep> g_cap;
+size_t g_cap_i = 0;
+int g_cap_wait = 0;
+fs::path g_cap_dir;
+std::string g_cap_request;     // (the render thread takes it)
+std::string g_cap_face_actor;  // (a face shape shown alone, for the sheet)
+int g_cap_face_shape = -1;
+bool g_cap_dump_now = false;
+struct Joint {
+  int j = 0;
+  int parent = -1;
+  std::string name;
+  float m[16] = {};
+};
+std::map<std::string, std::vector<Joint>> g_skel;
+
+fs::path cap_dir() {
+  return dir() / "captures" / g_scene.name;
+}
+
+// a face's head, metres (its skeleton's "head" joint), and which way it faces
+bool head_of(const std::string& actor, float* pos) {
+  auto it = g_skel.find(actor);
+  if (it == g_skel.end()) {
+    return false;
+  }
+  for (const auto& jt : it->second) {
+    std::string n = jt.name;
+    std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+    if (n == "head" || n == "headb" || n == "neckb") {
+      for (int k = 0; k < 3; k++) pos[k] = jt.m[12 + k] / kMeter;
+      return true;
+    }
+  }
+  return false;
+}
+
+void capture_start() {
+  g_cap.clear();
+  g_cap_i = 0;
+  g_cap_wait = 0;
+  g_skel.clear();
+  g_cap_dir = cap_dir();
+  std::error_code ec;
+  fs::remove_all(g_cap_dir, ec);
+  fs::create_directories(g_cap_dir, ec);
+  g_cap.push_back({2});
+  // the scene: every second, and each shot just after it begins
+  std::vector<float> ts;
+  for (float x = 0.f; x < g_scene.length; x += 1.f) ts.push_back(x);
+  for (const auto& s : g_scene.shots) ts.push_back(std::min(g_scene.length - 0.05f, s.t + 0.3f));
+  std::sort(ts.begin(), ts.end());
+  ts.erase(std::unique(ts.begin(), ts.end(), [](float a, float b) { return std::fabs(a - b) < 0.2f; }), ts.end());
+  for (float x : ts) {
+    char name[64];
+    std::snprintf(name, sizeof(name), "scene_%06.2f.png", x);
+    g_cap.push_back({0, x, "", -1, name});
+  }
+  // each speaker's face shapes, one at a time (and none)
+  std::vector<std::string> faces;
+  for (const auto& l : g_scene.lines) {
+    if (!l.actor.empty() && std::find(faces.begin(), faces.end(), l.actor) == faces.end()) faces.push_back(l.actor);
+  }
+  for (const auto& [a, n] : g_actor_face) {
+    if (std::find(faces.begin(), faces.end(), a) == faces.end()) faces.push_back(a);
+  }
+  for (const auto& a : faces) {
+    const int n = g_actor_face.count(a) ? std::min(16, g_actor_face[a]) : 0;
+    for (int k = -1; k < n; k++) {
+      char name[128];
+      std::snprintf(name, sizeof(name), "face_%s_%02d.png", a.c_str(), k + 1);
+      g_cap.push_back({1, 0.f, a, k, name});
+    }
+  }
+  tl_note("capturing: hands off the pad");
+}
+
+void capture_write_skeletons() {
+  for (const auto& [actor, joints] : g_skel) {
+    nlohmann::json j = nlohmann::json::array();
+    for (const auto& jt : joints) {
+      nlohmann::json m = nlohmann::json::array();
+      for (float x : jt.m) m.push_back(x);
+      j.push_back({{"index", jt.j}, {"parent", jt.parent}, {"name", jt.name}, {"world", m}});
+    }
+    file_util::write_text_file(g_cap_dir / ("skeleton_" + actor + ".json"), j.dump(1));
+  }
+}
+
+void capture_write_index() {
+  nlohmann::json j;
+  j["scene"] = g_scene.name;
+  j["length"] = g_scene.length;
+  j["note"] = "scene_T.png: the scene at T seconds, through its shot; face_ACTOR_NN.png: that face shape at 1 "
+              "(00: none), the scene's time 0; skeleton_ACTOR.json: joints, world matrices in game units "
+              "(4096 a metre), rows: x, y, z axes then the place";
+  nlohmann::json faces = nlohmann::json::object();
+  for (const auto& [a, n] : g_actor_face) faces[a] = n;
+  j["face_shapes"] = faces;
+  nlohmann::json at = nlohmann::json::object();
+  for (const auto& [a, v] : g_actor_at) at[a] = {{"pos", {v.pos[0], v.pos[1], v.pos[2]}}, {"yaw", v.yaw}};
+  j["characters"] = at;
+  file_util::write_text_file(g_cap_dir / "index.json", j.dump(2));
+}
+
+// once a frame (poll, editing): the capture's next step
+void capture_step(Frame& f) {
+  if (g_cap_i >= g_cap.size()) {
+    return;
+  }
+  const CapStep& s = g_cap[g_cap_i];
+  if (g_cap_wait == 0) {
+    g_cap_face_actor.clear();
+    g_cap_face_shape = -1;
+    if (s.kind == 0) {
+      g_cursor = s.t;
+      float pos[3], look[3];
+      if (camera_at(g_scene, s.t, pos, look)) {
+        std::memcpy(g_jump_pos, pos, sizeof(pos));
+        std::memcpy(g_jump_look, look, sizeof(look));
+        g_jump = true;
+      }
+    } else if (s.kind == 1) {
+      g_cursor = 0.f;
+      g_cap_face_actor = s.actor;
+      g_cap_face_shape = s.shape;
+      float head[3];
+      auto it = g_actor_at.find(s.actor);
+      if (head_of(s.actor, head) && it != g_actor_at.end()) {
+        const float yr = it->second.yaw / 57.29578f;
+        const float fwd[3] = {std::sin(yr), 0.f, std::cos(yr)};
+        for (int k = 0; k < 3; k++) {
+          g_jump_pos[k] = head[k] + fwd[k] * 1.1f + (k == 1 ? 0.05f : 0.f);
+          g_jump_look[k] = head[k];
+        }
+        g_jump = true;
+      }
+    } else {
+      g_cap_dump_now = true;
+      f.dump = true;
+    }
+  }
+  g_cap_wait++;
+  const int settle = s.kind == 0 ? 40 : s.kind == 1 ? 10 : 3;
+  if (g_cap_wait == settle) {
+    if (s.kind == 2) {
+      capture_write_skeletons();
+    } else {
+      g_cap_request = (g_cap_dir / s.file).string();
+    }
+  }
+  if (g_cap_wait >= settle + 4) {
+    g_cap_wait = 0;
+    g_cap_i++;
+    if (g_cap_i >= g_cap.size()) {
+      g_cap_face_actor.clear();
+      capture_write_index();
+      tl_note("captures done: " + g_cap_dir.string());
+      lg::info("[cutscene] captures done: {}", g_cap_dir.string());
+    }
+  }
+}
+
+}  // namespace
+
+std::string capture_path() {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  std::string p;
+  p.swap(g_cap_request);
+  return p;
+}
+
+void joint_dump(const std::string& actor, int j, int parent, const std::string& name, const float* m) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  Joint jt;
+  jt.j = j;
+  jt.parent = parent;
+  jt.name = name;
+  std::memcpy(jt.m, m, sizeof(jt.m));
+  g_skel[actor].push_back(jt);
+}
+
+namespace {
+bool capturing() {
+  return g_cap_i < g_cap.size();
+}
+std::string capture_status() {
+  char buf[96];
+  std::snprintf(buf, sizeof(buf), "capturing %d / %d", (int)g_cap_i + 1, (int)g_cap.size());
+  return buf;
+}
+}  // namespace
 
 }  // namespace enhanced_cutscene

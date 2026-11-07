@@ -1076,6 +1076,32 @@
     (set! (-> *cs-sticks* 2) (cutscene-stick (the int (-> pad rightx))))
     (pc-cutscene-timeline-pad (the int (-> pad button0-rel 0)) (the int (-> pad button0-abs 0)) *cs-sticks*)))
 
+;; (a capture) each character near the camera's skeleton: its joints, their parents, where they are
+(defun cutscene-dump-skeletons ()
+  (iterate-process-tree
+    *active-pool*
+    (lambda ((p process-drawable))
+      (when (and (type-type? (-> p type) process-drawable)
+                 (not (type-type? (-> p type) sidekick))
+                 (nonzero? (-> p skel))
+                 (nonzero? (-> p node-list))
+                 (-> p node-list)
+                 (cutscene-name-of p)
+                 (< (vector-vector-distance (-> p root trans) *cs-pos*) (meters 40)))
+        (let ((nl (-> p node-list)))
+          (dotimes (j (-> nl length))
+            (let* ((csp (-> nl data j))
+                   (jt (-> csp joint))
+                   (parent -1))
+              (dotimes (k (-> nl length))
+                (if (= (-> nl data k) (-> csp parent)) (set! parent k)))
+              (when (and (-> csp bone) (nonzero? (-> csp bone)) jt (nonzero? jt))
+                (pc-cutscene-joint-dump (cutscene-name-of p) j parent (-> jt name)
+                                        (the-as (pointer float) (-> csp bone transform))))))))
+      (none))
+    *null-kernel-context*)
+  (none))
+
 (defun cutscene-update ()
   (when (and *target* *camera*)
     (let ((mode (pc-cutscene-poll *cs-out* *cs-speaker* *cs-text* 512)))
@@ -1084,6 +1110,7 @@
       (cutscene-poses-update (nonzero? mode))
       (cutscene-faces-update (nonzero? mode))
       (if (and (= mode 2) (!= (-> *cs-out* 10) 0.0)) (cutscene-scan-actors))
+      (if (and (= mode 2) (!= (-> *cs-out* 11) 0.0)) (cutscene-dump-skeletons))
       (cond
         ((zero? mode)
          (when (nonzero? *cs-mode*)

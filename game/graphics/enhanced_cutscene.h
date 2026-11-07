@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "common/common_types.h"
 
@@ -31,7 +32,8 @@ struct Frame {
   bool jump = false;   // (edit: the game's free camera to be put here, once)
   bool letterbox = true;
   bool hold_jak = true;
-  bool scan = false;    // (edit: the game to list the characters near the camera, actors_begin / actor_anim)
+  bool scan = false;
+  bool dump = false;    // (edit: the game to send the skeletons of the characters near, joint_dump)    // (edit: the game to list the characters near the camera, actors_begin / actor_anim)
   std::string speaker;  // utf-8
   std::string text;     // utf-8
 };
@@ -115,9 +117,18 @@ void draw_overlay();
 // positive); true while the timeline has it (the camera and the characters are left alone)
 bool timeline_pad(u32 pressed, u32 held, float lx, float ly, float rx);
 
+// captures for the one making the scenes (Claude): pictures of the scene, a sheet of each face shape, the
+// characters' skeletons, under custom_assets/<game>/cutscenes/captures/<scene>
+// (the render thread, once a frame: a picture wanted now, where: empty none)
+std::string capture_path();
+// (the game, when the scan's dump is asked) a character's joint: its index, its parent's (-1), its name, its
+// place in the world (16 floats, game units)
+void joint_dump(const std::string& actor, int j, int parent, const std::string& name, const float* m);
+
 }  // namespace enhanced_cutscene
 
 // (in kmachine.cpp: the game's mp3 player) start a file under custom_assets/<game>/audio, from start_s in
 bool enhanced_play_mp3(const std::string& file, unsigned volume, float start_s);
 void enhanced_stop_mp3(const std::string& file);
 float enhanced_mp3_length(const std::string& file);
+std::vector<float> enhanced_mp3_envelope(const std::string& file, float fps);

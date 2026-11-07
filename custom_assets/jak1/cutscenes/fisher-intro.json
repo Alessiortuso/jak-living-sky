@@ -35,7 +35,8 @@
         }
       ],
       "t": 0.20000000298023224,
-      "volume": 200
+      "volume": 200,
+      "actor": "v4-fisherman"
     },
     {
       "file": "voice/fisher-ask2.mp3",
@@ -72,7 +73,8 @@
         }
       ],
       "t": 23.09000015258789,
-      "volume": 200
+      "volume": 200,
+      "actor": "v4-fisherman"
     }
   ],
   "moves": [
@@ -292,5 +294,11 @@
       "smooth": false
     }
   ],
-  "faces": []
+  "faces": [],
+  "mouths": {
+    "v4-fisherman": {
+      "shape": -1,
+      "gain": 1.0
+    }
+  }
 }
