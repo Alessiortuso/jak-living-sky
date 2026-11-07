@@ -866,6 +866,10 @@
 (defun dark-jak-face? ((pd process-drawable))
   (and *dark-jak* *target* (= pd *target*) (nonzero? (-> pd draw mgeo)) (= 14 (-> pd draw mgeo header blend-target-count))))
 
+;; Jak Living Sky: a character's face shapes set by hand (the scenes made in the game: mod-custom-code.gc,
+;; cutscene-face-hook-pc), added to the animation's weights (or alone): #t if it has some for this one
+(define *blerc-hook-pc* (the-as (function process-drawable (pointer float) int symbol) #f))
+
 (defun pc-merc-blend-shape ((pd process-drawable) (blerc-weights-out (pointer float)))
   "PC implementation to get blerc weights as floats and avoid the u16 rounding.
   Returns #f if there is no blerc running, which means that we should use base positions.
@@ -910,6 +914,12 @@
       (dotimes (i 14)
         (set! (-> blerc-weights-out i) (* 4032.0 (-> *dark-jak-face* i))))
       (set! got-weights #t))
+    ;; Jak Living Sky: the face set by hand, on top
+    (when (and *blerc-hook-pc* (zero? (-> pd draw cur-lod)) (-> pd draw mgeo))
+      (let ((n (min 40 (the int (-> pd draw mgeo header blend-target-count)))))
+        (when (> n 0)
+          (if (not got-weights) (dotimes (i n) (set! (-> blerc-weights-out i) 0.0)))
+          (if (*blerc-hook-pc* pd blerc-weights-out n) (set! got-weights #t)))))
     got-weights))
 
 ;; name   (128 char, 8 qw)

@@ -1014,8 +1014,20 @@
                   (the int (fmax -32000.0 (fmin 32000.0 (+ (the float (-> buf k)) (* 4096.0 (-> *cs-fc-w* (+ (* i 16) k))))))))))))
     found))
 
+(defun cutscene-face-hook-pc ((pd process-drawable) (out (pointer float)) (n int))
+  "(the PC's face weights: 4032 is all of a shape)"
+  (let ((found #f))
+    (when (nonzero? *cs-fc-count*)
+      (dotimes (i 6)
+        (when (and (nonzero? (-> *cs-fc-used* i)) (nonzero? (-> *cs-fc-seen* i)) (= (cutscene-face-proc i) pd))
+          (set! found #t)
+          (dotimes (k (min n 16))
+            (+! (-> out k) (* 4032.0 (-> *cs-fc-w* (+ (* i 16) k))))))))
+    found))
+
 (defun cutscene-faces-update ((on symbol))
   (set! *blerc-hook* cutscene-face-hook)
+  (set! *blerc-hook-pc* cutscene-face-hook-pc)
   (dotimes (i 6) (set! (-> *cs-fc-seen* i) 0))
   (when on
     (let ((i 0))
