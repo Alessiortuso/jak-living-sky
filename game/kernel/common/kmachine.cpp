@@ -433,6 +433,7 @@ u64 pc_cutscene_poll(u32 out, u32 speaker, u32 text, u32 max_len) {
   o[7] = f.letterbox ? 1.f : 0.f;
   o[8] = f.hold_jak ? 1.f : 0.f;
   o[9] = f.has_cam ? 1.f : 0.f;
+  o[10] = f.scan ? 1.f : 0.f;
   auto put = [&](u32 dest, const std::string& s) {
     // each string's own room (the speaker's is smaller: padding it to max_len ran over the text's header)
     auto* str = Ptr<String>(dest).c();
@@ -449,6 +450,39 @@ u64 pc_cutscene_poll(u32 out, u32 speaker, u32 text, u32 max_len) {
   put(speaker, f.speaker);
   put(text, f.text);
   return f.mode;
+}
+
+// the characters played now: the i-th one's name and animation into two strings (max_len), how far into it
+// (seconds) and whether it loops into out (floats); #f past the last
+u64 pc_cutscene_puppet(u32 i, u32 actor, u32 anim, u32 out) {
+  enhanced_cutscene::Puppet p;
+  if (!enhanced_cutscene::puppet((int)i, &p)) {
+    return s7.offset;
+  }
+  auto put = [](u32 dest, const std::string& s) {
+    auto* str = Ptr<String>(dest).c();
+    if (str->len == 0) {
+      return;
+    }
+    const size_t n = std::min<size_t>(s.size(), str->len - 1);
+    memcpy(str->data(), s.data(), n);
+    str->data()[n] = '\0';
+  };
+  put(actor, p.actor);
+  put(anim, p.anim);
+  float* o = Ptr<float>(out).c();
+  o[0] = p.secs;
+  o[1] = p.loop ? 1.f : 0.f;
+  return s7.offset + true_symbol_offset(g_game_version);
+}
+
+// the characters near the camera: a new list, then each one's animations (an empty name: one with none)
+void pc_cutscene_actors_begin() {
+  enhanced_cutscene::actors_begin();
+}
+
+void pc_cutscene_actor(u32 actor, u32 anim) {
+  enhanced_cutscene::actor_anim(Ptr<String>(actor).c()->data(), Ptr<String>(anim).c()->data());
 }
 
 // the editor's free camera, from the game: its place, the point it looks at (game units, 6 floats)
@@ -2129,6 +2163,9 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-stop", (void*)pc_cutscene_stop);
   make_func_symbol_func("pc-cutscene-poll", (void*)pc_cutscene_poll);
   make_func_symbol_func("pc-cutscene-report", (void*)pc_cutscene_report);
+  make_func_symbol_func("pc-cutscene-puppet", (void*)pc_cutscene_puppet);
+  make_func_symbol_func("pc-cutscene-actors-begin", (void*)pc_cutscene_actors_begin);
+  make_func_symbol_func("pc-cutscene-actor", (void*)pc_cutscene_actor);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);

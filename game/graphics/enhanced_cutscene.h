@@ -29,6 +29,7 @@ struct Frame {
   bool jump = false;   // (edit: the game's free camera to be put here, once)
   bool letterbox = true;
   bool hold_jak = true;
+  bool scan = false;    // (edit: the game to list the characters near the camera, actors_begin / actor_anim)
   std::string speaker;  // utf-8
   std::string text;     // utf-8
 };
@@ -36,6 +37,19 @@ struct Frame {
 Frame poll();
 // the free camera, from the game (edit), game units
 void report_camera(const float* pos, const float* look);
+
+// the characters played as puppets now (after poll, same frame): by the game's name ("jak" for Jak), one of
+// its animations by name, how far into it (seconds, at its own speed), looping or held on its last frame
+struct Puppet {
+  std::string actor;
+  std::string anim;
+  float secs = 0.f;
+  bool loop = true;
+};
+bool puppet(int i, Puppet* out);
+// the characters near the camera and their animations, from the game (when asked by poll's scan)
+void actors_begin();
+void actor_anim(const std::string& actor, const std::string& anim);
 
 // the Enhanced menu's Cutscenes section (the render thread)
 void draw_menu();

@@ -1211,6 +1211,9 @@ nav-enemy-default-event-handler
     (set! (-> this root) s5-0))
   (process-drawable-from-entity! this arg0)
   (initialize-skeleton this *fisher-sg* '())
+  ;; Jak Living Sky: his eyes animated (process-taskable does it for the vanilla fisherman: without it they
+  ;; stayed black)
+  (logior! (-> this skel status) (janim-status eye))
   (logclear! (-> this mask) (process-mask actor-pause))
   (init-defaults! this *muse-nav-enemy-info*)
   (go fisherman-v4-idle)

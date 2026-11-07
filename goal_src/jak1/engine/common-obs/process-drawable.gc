@@ -627,12 +627,17 @@
   0
   (none))
 
+;; Jak Living Sky: a character's animation forced from outside it, just before its joints are worked out (the
+;; scenes made in the game: mod-custom-code.gc, cutscene-puppet-hook)
+(define *ja-post-hook* (the-as (function process-drawable none) #f))
+
 ;; WARN: Function ja-post has a return type of none, but the expression builder found a return statement.
 (defbehavior ja-post process-drawable ()
   (when (nonzero? (-> self draw))
     (let ((gp-1 (logtest? (-> self draw status) (draw-status no-skeleton-update))))
       (logclear! (-> self draw status) (draw-status no-anim no-skeleton-update))
       (when (nonzero? (-> self skel))
+        (if *ja-post-hook* (*ja-post-hook* self))
         (evaluate-joint-control self)
         (when (or (logtest? (-> self skel status) (janim-status inited)) gp-1)
           (do-joint-math! self)

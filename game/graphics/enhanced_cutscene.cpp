@@ -43,6 +43,15 @@ struct Line {
   std::vector<Sub> subs;
 };
 
+// from t on, a character plays an animation (none: back to its own)
+struct AnimKey {
+  float t = 0.f;
+  std::string actor;  // the game's name for it ("jak" for Jak: Daxter follows him)
+  std::string anim;   // one of its art group's animations; empty: its own again
+  bool loop = true;
+  float speed = 1.f;
+};
+
 struct Scene {
   std::string name;
   float length = 10.f;
@@ -50,6 +59,7 @@ struct Scene {
   bool hold_jak = true;
   std::vector<Shot> shots;
   std::vector<Line> lines;
+  std::vector<AnimKey> anims;
 };
 
 using Clock = std::chrono::steady_clock;
@@ -69,6 +79,11 @@ float g_cam_pos[3] = {};      // (edit) where the game's free camera is, metres
 float g_cam_look[3] = {};
 bool g_cam_known = false;
 bool g_dirty = false;
+std::vector<Puppet> g_puppets;  // (poll) the characters played now
+// the characters near the camera, and their animations (the game's list, edit)
+std::vector<std::pair<std::string, std::vector<std::string>>> g_actors;
+bool g_scan_wanted = false;
+Clock::time_point g_last_scan;
 
 fs::path dir() {
   return file_util::get_jak_project_dir() / "custom_assets" / game_version_names[g_game_version] / "cutscenes";
@@ -107,6 +122,7 @@ void sort_scene(Scene& s) {
   for (auto& l : s.lines) {
     std::stable_sort(l.subs.begin(), l.subs.end(), [](const Sub& a, const Sub& b) { return a.t < b.t; });
   }
+  std::stable_sort(s.anims.begin(), s.anims.end(), [](const AnimKey& a, const AnimKey& b) { return a.t < b.t; });
 }
 
 bool load(const std::string& name, Scene* out) {
@@ -146,6 +162,15 @@ bool load(const std::string& name, Scene* out) {
       }
       s.lines.push_back(l);
     }
+    for (const auto& ja : j.value("anims", nlohmann::json::array())) {
+      AnimKey k;
+      k.t = ja.value("t", 0.f);
+      k.actor = ja.value("actor", std::string());
+      k.anim = ja.value("anim", std::string());
+      k.loop = ja.value("loop", true);
+      k.speed = ja.value("speed", 1.f);
+      s.anims.push_back(k);
+    }
     sort_scene(s);
     *out = s;
     return true;
@@ -175,6 +200,11 @@ void save(const Scene& s) {
       jl["subs"].push_back({{"t", sub.t}, {"text", sub.text}});
     }
     j["lines"].push_back(jl);
+  }
+  j["anims"] = nlohmann::json::array();
+  for (const auto& k : s.anims) {
+    j["anims"].push_back(
+        {{"t", k.t}, {"actor", k.actor}, {"anim", k.anim}, {"loop", k.loop}, {"speed", k.speed}});
   }
   file_util::create_dir_if_needed(dir());
   file_util::write_text_file(dir() / (s.name + ".json"), j.dump(2));
@@ -228,6 +258,32 @@ void subtitle_at(const Scene& s, float t, std::string* speaker, std::string* tex
   }
 }
 
+// each character's animation at time t: its last key by then
+void puppets_at(const Scene& s, float t) {
+  g_puppets.clear();
+  std::vector<const AnimKey*> cur;
+  for (const auto& k : s.anims) {
+    if (k.t > t || k.actor.empty()) {
+      continue;
+    }
+    bool found = false;
+    for (auto& c : cur) {
+      if (c->actor == k.actor) {
+        c = &k;
+        found = true;
+      }
+    }
+    if (!found) {
+      cur.push_back(&k);
+    }
+  }
+  for (const auto* k : cur) {
+    if (!k->anim.empty()) {
+      g_puppets.push_back({k->actor, k->anim, (t - k->t) * k->speed, k->loop});
+    }
+  }
+}
+
 void stop_voices() {
   for (size_t i = 0; i < g_scene.lines.size() && i < g_started.size(); i++) {
     if (g_started[i]) {
@@ -273,6 +329,7 @@ Frame poll() {
   Frame f;
   f.mode = g_mode;
   if (g_mode == kNone) {
+    g_puppets.clear();
     return f;
   }
   f.letterbox = g_scene.letterbox;
@@ -288,6 +345,13 @@ Frame poll() {
       }
     }
     subtitle_at(g_scene, g_cursor, &f.speaker, &f.text);
+    puppets_at(g_scene, g_cursor);
+    // the characters near the camera, every so often while the animations are being set
+    if (g_scan_wanted && Clock::now() - g_last_scan > std::chrono::milliseconds(1500)) {
+      g_last_scan = Clock::now();
+      f.scan = true;
+    }
+    g_scan_wanted = false;
     return f;
   }
   const float t = elapsed();
@@ -299,9 +363,11 @@ Frame poll() {
     if (g_mode == kPreview) {
       g_mode = kEdit;
       f.mode = kEdit;
+      puppets_at(g_scene, g_cursor);
     } else {
       g_mode = kNone;
       f.mode = kNone;
+      g_puppets.clear();
     }
     return f;
   }
@@ -322,7 +388,32 @@ Frame poll() {
     }
   }
   subtitle_at(g_scene, t, &f.speaker, &f.text);
+  puppets_at(g_scene, t);
   return f;
+}
+
+bool puppet(int i, Puppet* out) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (i < 0 || i >= (int)g_puppets.size()) {
+    return false;
+  }
+  *out = g_puppets[i];
+  return true;
+}
+
+void actors_begin() {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  g_actors.clear();
+}
+
+void actor_anim(const std::string& actor, const std::string& anim) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (g_actors.empty() || g_actors.back().first != actor) {
+    g_actors.push_back({actor, {}});
+  }
+  if (!anim.empty()) {
+    g_actors.back().second.push_back(anim);
+  }
 }
 
 void report_camera(const float* pos, const float* look) {
@@ -380,6 +471,11 @@ void timeline() {
       dl->AddLine(ImVec2(x, p0.y + 24.f), ImVec2(x, p0.y + 42.f), IM_COL32(255, 230, 160, 255), 1.5f);
     }
   }
+  for (const auto& k : g_scene.anims) {
+    const float x = x_of(k.t);
+    dl->AddTriangleFilled(ImVec2(x, p0.y + 42.f), ImVec2(x - 4.f, p0.y + 50.f), ImVec2(x + 4.f, p0.y + 50.f),
+                          k.anim.empty() ? IM_COL32(140, 140, 140, 255) : IM_COL32(90, 220, 110, 255));
+  }
   for (const auto& sh : g_scene.shots) {
     const float x = x_of(sh.t);
     dl->AddRectFilled(ImVec2(x - 2.f, p0.y + 4.f), ImVec2(x + 2.f, p0.y + 22.f),
@@ -387,6 +483,121 @@ void timeline() {
   }
   const float cx = x_of(g_cursor);
   dl->AddLine(ImVec2(cx, p0.y), ImVec2(cx, p0.y + h), IM_COL32(255, 60, 60, 255), 2.f);
+}
+
+// a character's animations, from the game's list (none if it isn't near)
+const std::vector<std::string>* anims_of(const std::string& actor) {
+  for (const auto& a : g_actors) {
+    if (a.first == actor) {
+      return &a.second;
+    }
+  }
+  return nullptr;
+}
+
+// an animation picked from a character's, filtered by what's typed
+bool anim_combo(const char* id, const std::string& actor, std::string* anim) {
+  static char filter[64] = "";
+  bool changed = false;
+  ImGui::SetNextItemWidth(230);
+  if (ImGui::BeginCombo(id, anim->empty() ? "(its own animation)" : anim->c_str(), ImGuiComboFlags_HeightLarge)) {
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputTextWithHint("##filter", "filter", filter, sizeof(filter));
+    if (ImGui::Selectable("(its own animation)", anim->empty())) {
+      anim->clear();
+      changed = true;
+    }
+    if (const auto* list = anims_of(actor)) {
+      for (const auto& a : *list) {
+        if (filter[0] && a.find(filter) == std::string::npos) {
+          continue;
+        }
+        if (ImGui::Selectable(a.c_str(), a == *anim)) {
+          *anim = a;
+          changed = true;
+        }
+      }
+    } else {
+      ImGui::TextDisabled("(not near the camera: fly closer in Edit)");
+    }
+    ImGui::EndCombo();
+  }
+  return changed;
+}
+
+void animations_menu() {
+  static int s_actor = 0;
+  if (g_mode == kEdit) {
+    g_scan_wanted = true;
+  }
+  if (g_actors.empty()) {
+    ImGui::TextDisabled(g_mode == kEdit ? "(no characters near the camera: fly closer)"
+                                        : "(Edit first: the characters near the camera are listed)");
+  } else {
+    s_actor = std::clamp(s_actor, 0, (int)g_actors.size() - 1);
+    ImGui::SetNextItemWidth(220);
+    if (ImGui::BeginCombo("Character", g_actors[s_actor].first.c_str())) {
+      for (int i = 0; i < (int)g_actors.size(); i++) {
+        char label[96];
+        std::snprintf(label, sizeof(label), "%s (%d)", g_actors[i].first.c_str(),
+                      (int)g_actors[i].second.size());
+        if (ImGui::Selectable(label, i == s_actor)) {
+          s_actor = i;
+        }
+      }
+      ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add an animation at the cursor")) {
+      AnimKey k;
+      k.t = g_cursor;
+      k.actor = g_actors[s_actor].first;
+      if (!g_actors[s_actor].second.empty()) {
+        k.anim = g_actors[s_actor].second[0];
+      }
+      g_scene.anims.push_back(k);
+      sort_scene(g_scene);
+      g_dirty = true;
+    }
+  }
+  ImGui::TextDisabled("(each key: from its time on, the character plays it; \"its own\" gives it back its own)");
+  int gone = -1;
+  for (size_t i = 0; i < g_scene.anims.size(); i++) {
+    auto& k = g_scene.anims[i];
+    ImGui::PushID(5000 + (int)i);
+    ImGui::SetNextItemWidth(80);
+    if (ImGui::DragFloat("##at", &k.t, 0.02f, 0.f, g_scene.length, "%.2f s")) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    ImGui::Text("%s", k.actor.c_str());
+    ImGui::SameLine();
+    if (anim_combo("##anim", k.actor, &k.anim)) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Checkbox("loop", &k.loop)) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    if (ImGui::DragFloat("##speed", &k.speed, 0.01f, 0.1f, 4.f, "x%.2f")) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Go")) {
+      g_cursor = k.t;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Delete")) {
+      gone = (int)i;
+    }
+    ImGui::PopID();
+  }
+  if (gone >= 0) {
+    g_scene.anims.erase(g_scene.anims.begin() + gone);
+    g_dirty = true;
+  }
 }
 
 }  // namespace
@@ -458,7 +669,9 @@ void draw_menu() {
       stop_voices();
       g_mode = kNone;
     }
-    ImGui::TextDisabled("Pad: left stick moves, right stick looks, L1 down, R1 up, Square slow, Circle fast");
+    ImGui::TextDisabled(
+        "Pad: left stick moves, right stick looks; L1 held: only across the view; R1 held: holds on to the\n"
+        "point aimed at (left stick: towards it, right stick: round it); Square slow, Circle fast");
   }
 
   ImGui::SetNextItemWidth(120);
@@ -653,6 +866,12 @@ void draw_menu() {
       g_scene.lines.erase(g_scene.lines.begin() + gone);
       g_dirty = true;
     }
+    ImGui::TreePop();
+  }
+
+  // the characters' animations
+  if (ImGui::TreeNodeEx("Animations", ImGuiTreeNodeFlags_DefaultOpen)) {
+    animations_menu();
     ImGui::TreePop();
   }
   ImGui::PopID();
