@@ -1096,7 +1096,7 @@
               (dotimes (k (-> nl length))
                 (if (= (-> nl data k) (-> csp parent)) (set! parent k)))
               (when (and (-> csp bone) (nonzero? (-> csp bone)) jt (nonzero? jt))
-                (pc-cutscene-joint-dump (cutscene-name-of p) j parent (-> jt name)
+                (pc-cutscene-joint-dump (cutscene-name-of p) (+ j (* 65536 (+ parent 1))) (-> jt name)
                                         (the-as (pointer float) (-> csp bone transform))))))))
       (none))
     *null-kernel-context*)

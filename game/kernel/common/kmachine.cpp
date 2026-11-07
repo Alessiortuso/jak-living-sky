@@ -653,10 +653,11 @@ u64 pc_cutscene_timeline_pad(u32 pressed, u32 held, u32 sticks) {
              : s7.offset;
 }
 
-// (a capture) a character's joint: index, parent (-1), name, world matrix (16 floats)
-void pc_cutscene_joint_dump(u32 actor, s32 j, s32 parent, u32 name, u32 m) {
-  enhanced_cutscene::joint_dump(Ptr<String>(actor).c()->data(), j, parent, Ptr<String>(name).c()->data(),
-                                Ptr<float>(m).c());
+// (a capture) a character's joint: its index and its parent's + 1 in one (index + 65536 * (parent + 1): no
+// more than 4 arguments reach a C function from the game here), name, world matrix (16 floats)
+void pc_cutscene_joint_dump(u32 actor, u32 packed, u32 name, u32 m) {
+  enhanced_cutscene::joint_dump(Ptr<String>(actor).c()->data(), (int)(packed & 0xffff), (int)(packed >> 16) - 1,
+                                Ptr<String>(name).c()->data(), Ptr<float>(m).c());
 }
 
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
