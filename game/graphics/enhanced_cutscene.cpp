@@ -73,6 +73,8 @@ struct PoseKey {
   float rot[3] = {};
   float off[3] = {};
   bool smooth = true;
+  bool has_q = false;  // (worked out, not set by hand: the turn as a quaternion, x y z w)
+  float q[4] = {0.f, 0.f, 0.f, 1.f};
 };
 
 // at t a character's face shapes are set by hand (-1..1 each); smooth: on to its next key
@@ -304,6 +306,10 @@ bool load(const std::string& name, Scene* out) {
         k.off[c] = jp["off"][c].get<float>();
       }
       k.smooth = jp.value("smooth", true);
+      if (jp.contains("q")) {
+        k.has_q = true;
+        for (int c = 0; c < 4; c++) k.q[c] = jp["q"][c].get<float>();
+      }
       s.poses.push_back(k);
     }
     for (const auto& [a, jm] : j.value("mouths", nlohmann::json::object()).items()) {
@@ -364,12 +370,14 @@ void save(const Scene& s) {
   }
   j["poses"] = nlohmann::json::array();
   for (const auto& k : s.poses) {
-    j["poses"].push_back({{"t", k.t},
-                          {"actor", k.actor},
-                          {"joint", k.joint},
-                          {"rot", {k.rot[0], k.rot[1], k.rot[2]}},
-                          {"off", {k.off[0], k.off[1], k.off[2]}},
-                          {"smooth", k.smooth}});
+    nlohmann::json jp = {{"t", k.t},
+                         {"actor", k.actor},
+                         {"joint", k.joint},
+                         {"rot", {k.rot[0], k.rot[1], k.rot[2]}},
+                         {"off", {k.off[0], k.off[1], k.off[2]}},
+                         {"smooth", k.smooth}};
+    if (k.has_q) jp["q"] = {k.q[0], k.q[1], k.q[2], k.q[3]};
+    j["poses"].push_back(jp);
   }
   j["moves"] = nlohmann::json::array();
   for (const auto& k : s.moves) {
@@ -541,6 +549,23 @@ void poses_at(const Scene& s, float t) {
     for (int c = 0; c < 3; c++) {
       p.rot[c] = a->rot[c] + (u > 0.f ? (b->rot[c] - a->rot[c]) * u : 0.f);
       p.off[c] = (a->off[c] + (u > 0.f ? (b->off[c] - a->off[c]) * u : 0.f)) * kMeter;
+    }
+    // (quaternions: on the sphere, the short way)
+    if (a->has_q || (b && b->has_q && u > 0.f)) {
+      const float id[4] = {0.f, 0.f, 0.f, 1.f};
+      const float* qa = a->has_q ? a->q : id;
+      const float* qb = (b && b->has_q) ? b->q : id;
+      float dot = 0.f;
+      for (int c = 0; c < 4; c++) dot += qa[c] * qb[c];
+      const float sgn = dot < 0.f ? -1.f : 1.f;
+      float n = 0.f;
+      for (int c = 0; c < 4; c++) {
+        p.q[c] = qa[c] + ((u > 0.f ? qb[c] * sgn : qa[c]) - qa[c]) * u;
+        n += p.q[c] * p.q[c];
+      }
+      n = std::sqrt(std::max(n, 1e-12f));
+      for (int c = 0; c < 4; c++) p.q[c] /= n;
+      p.has_q = true;
     }
     g_poses.push_back(p);
   }

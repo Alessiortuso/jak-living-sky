@@ -64,6 +64,8 @@ struct Pose {
   std::string joint;
   float rot[3] = {};
   float off[3] = {};
+  bool has_q = false;  // the turn as a quaternion (x y z w, in the joint's own space) instead of rot
+  float q[4] = {0.f, 0.f, 0.f, 1.f};
 };
 bool pose(int i, Pose* out);
 // (the game's list) a body part of a character near the camera

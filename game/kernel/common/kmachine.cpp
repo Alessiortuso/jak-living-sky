@@ -571,6 +571,11 @@ u64 pc_cutscene_pose(u32 i, u32 actor, u32 joint, u32 out) {
     o[k] = p.rot[k];
     o[3 + k] = p.off[k];
   }
+  // (6-9: a quaternion, 10: 1 if there is one)
+  for (int k = 0; k < 4; k++) {
+    o[6 + k] = p.q[k];
+  }
+  o[10] = p.has_q ? 1.f : 0.f;
   return s7.offset + true_symbol_offset(g_game_version);
 }
 

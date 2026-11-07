@@ -746,7 +746,7 @@
 (define *cs-jt-p2* (new 'static 'array uint32 24))
 (define *cs-pose-actor* (new 'global 'string 64 (the-as string #f)))
 (define *cs-pose-joint* (new 'global 'string 64 (the-as string #f)))
-(define *cs-pose-out* (new 'static 'array float 6))
+(define *cs-pose-out* (new 'static 'array float 12))
 
 (defun cutscene-joint-handler ((csp cspace) (xf transformq))
   (let ((i (the-as int (-> csp param1))))
@@ -819,6 +819,10 @@
                     (set-vector! rot (-> *cs-pose-out* 0) (-> *cs-pose-out* 1) (-> *cs-pose-out* 2) 0.0)
                     (set-vector! off (-> *cs-pose-out* 3) (-> *cs-pose-out* 4) (-> *cs-pose-out* 5) 0.0)
                     (cutscene-joint-set slot pd rot off)
+                    ;; (a quaternion worked out for it: that, as it is)
+                    (when (!= (-> *cs-pose-out* 10) 0.0)
+                      (set-vector! (-> *cs-jt-q* slot) (-> *cs-pose-out* 6) (-> *cs-pose-out* 7) (-> *cs-pose-out* 8)
+                                   (-> *cs-pose-out* 9)))
                     (set! (-> *cs-jt-seen* slot) 1)))))))
         (+! i 1))))
   ;; the ones let go: their own way back
