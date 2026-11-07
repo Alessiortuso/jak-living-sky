@@ -84,6 +84,10 @@ std::vector<int> g_puppet_status;  // (the game's answer for each: puppet_status
 Clock::time_point g_edit_clock = Clock::now();  // (edit) loops play on from the cursor, live
 // the characters near the camera, and their animations (the game's list, edit)
 std::vector<std::pair<std::string, std::vector<std::string>>> g_actors;
+// (the game's new list, filled apart and swapped in whole at the next poll: the menu, drawn meanwhile, never
+// saw it half done - an empty list moved what's under it, a click landed on a Teleport button)
+std::vector<std::pair<std::string, std::vector<std::string>>> g_actors_next;
+bool g_actors_ready = false;
 bool g_scan_wanted = false;
 Clock::time_point g_last_scan;
 
@@ -333,6 +337,10 @@ Frame poll() {
   std::lock_guard<std::mutex> lock(g_mutex);
   Frame f;
   f.mode = g_mode;
+  if (g_actors_ready) {
+    g_actors.swap(g_actors_next);
+    g_actors_ready = false;
+  }
   if (g_mode == kNone) {
     g_puppets.clear();
     return f;
@@ -419,16 +427,17 @@ bool puppet(int i, Puppet* out) {
 
 void actors_begin() {
   std::lock_guard<std::mutex> lock(g_mutex);
-  g_actors.clear();
+  g_actors_next.clear();
+  g_actors_ready = true;
 }
 
 void actor_anim(const std::string& actor, const std::string& anim) {
   std::lock_guard<std::mutex> lock(g_mutex);
-  if (g_actors.empty() || g_actors.back().first != actor) {
-    g_actors.push_back({actor, {}});
+  if (g_actors_next.empty() || g_actors_next.back().first != actor) {
+    g_actors_next.push_back({actor, {}});
   }
   if (!anim.empty()) {
-    g_actors.back().second.push_back(anim);
+    g_actors_next.back().second.push_back(anim);
   }
 }
 
