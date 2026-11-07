@@ -611,6 +611,14 @@ void pc_cutscene_actor_face(u32 actor, s32 count) {
   enhanced_cutscene::actor_face(Ptr<String>(actor).c()->data(), count);
 }
 
+// (edit) the pad on the timeline: #t while it has it
+u64 pc_cutscene_timeline_pad(u32 pressed, u32 held, u32 sticks) {
+  const float* s = Ptr<float>(sticks).c();
+  return enhanced_cutscene::timeline_pad(pressed, held, s[0], s[1], s[2])
+             ? s7.offset + true_symbol_offset(g_game_version)
+             : s7.offset;
+}
+
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
 void pc_cutscene_actors_begin() {
   enhanced_cutscene::actors_begin();
@@ -2313,6 +2321,7 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-cursor", (void*)pc_cutscene_cursor);
   make_func_symbol_func("pc-cutscene-undo", (void*)pc_cutscene_undo);
   make_func_symbol_func("pc-cutscene-face", (void*)pc_cutscene_face);
+  make_func_symbol_func("pc-cutscene-timeline-pad", (void*)pc_cutscene_timeline_pad);
   make_func_symbol_func("pc-cutscene-actor-face", (void*)pc_cutscene_actor_face);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);

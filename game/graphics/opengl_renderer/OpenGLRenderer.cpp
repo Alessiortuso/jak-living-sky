@@ -7,6 +7,7 @@
 #include "common/log/log.h"
 #include "common/util/FileUtil.h"
 
+#include "game/graphics/enhanced_cutscene.h"
 #include "game/graphics/opengl_renderer/BlitDisplays.h"
 #include "game/graphics/opengl_renderer/DepthCue.h"
 #include "game/graphics/opengl_renderer/DirectRenderer.h"
@@ -1140,6 +1141,8 @@ void OpenGLRenderer::render(DmaFollower dma, const RenderOptions& settings) {
   } else if (m_enhanced_post) {
     m_enhanced_post->draw_photo_hint();
     enhanced_editor_ui();
+    // Jak Living Sky: the cutscene editor's timeline bar
+    enhanced_cutscene::draw_overlay();
   }
 
   m_profiler.finish();

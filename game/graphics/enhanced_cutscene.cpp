@@ -122,7 +122,8 @@ std::map<std::string, std::vector<std::string>> g_actor_joints_next;  // (with t
 std::string g_sel_actor;      // (edit) the body part picked for the pad
 std::string g_sel_joint;
 std::string g_pick_actor;     // (a pick from the pad, for the menu's character)
-std::atomic<bool> g_edit_now{false};  // (editing: read by the input thread)
+std::atomic<bool> g_edit_now{false};  // (editing, or its preview: read by the input thread)
+bool g_tl_focus_now = false;           // (the timeline has the pad: Start plays)
 float g_cur_x = 0.f;          // the gyro cursor, -1..1
 float g_cur_y = 0.f;
 bool g_have_gyro = false;
@@ -620,7 +621,7 @@ Frame poll() {
   std::lock_guard<std::mutex> lock(g_mutex);
   Frame f;
   f.mode = g_mode;
-  g_edit_now = g_mode == kEdit;
+  g_edit_now = g_mode == kEdit || g_mode == kPreview;
   history_commit(false);
   if (g_actors_ready) {
     g_actors.swap(g_actors_next);
@@ -746,8 +747,14 @@ bool pose_selected(std::string* actor, std::string* joint) {
   return true;
 }
 
+void undo_redo_locked(int dir);
+
 void undo_redo(int dir) {
   std::lock_guard<std::mutex> lock(g_mutex);
+  undo_redo_locked(dir);
+}
+
+void undo_redo_locked(int dir) {
   if (!g_scene_loaded) {
     return;
   }
@@ -792,6 +799,17 @@ void gyro(const float* rad_per_s, float dt) {
 
 void start_button(bool down) {
   std::lock_guard<std::mutex> lock(g_mutex);
+  // (the timeline's: play from the cursor, or stop)
+  if (down && g_mode == kPreview) {
+    stop_voices();
+    g_mode = kEdit;
+    return;
+  }
+  if (down && g_mode == kEdit && g_tl_focus_now) {
+    g_mode = kPreview;
+    start_clock(g_cursor);
+    return;
+  }
   g_start_held = down;
   if (down) {
     g_cur_x = 0.f;
@@ -1787,6 +1805,456 @@ void draw_menu() {
     ImGui::TreePop();
   }
   ImGui::PopID();
+}
+
+
+// ---------------------------------------------------------------------------------------------------------
+// the timeline bar: at the bottom of the screen while editing, driven by the pad (Triangle: the timeline, or
+// the camera and the characters as before). A row for the camera's shots, one for the voices, one for each
+// character (its animations as blocks, its places, body parts and faces as marks), the cursor across them
+
+namespace {
+
+constexpr u32 kPadStart = 1u << 3, kPadUp = 1u << 4, kPadDown = 1u << 6, kPadL2 = 1u << 8, kPadR2 = 1u << 9,
+              kPadL1 = 1u << 10, kPadR1 = 1u << 11, kPadTriangle = 1u << 12, kPadCircle = 1u << 13,
+              kPadX = 1u << 14, kPadSquare = 1u << 15;
+
+bool g_tl_focus = false;        // the pad on the timeline
+int g_tl_row = 0;               // the row picked
+float g_tl_view0 = 0.f;         // the time shown at the left
+float g_tl_view = 0.f;          // how much time is shown (0: all of it)
+Clock::time_point g_tl_last = Clock::now();
+// the list opened on a row (a character's animations, the voices' mp3s)
+bool g_tl_list = false;
+int g_tl_list_kind = 0;         // 0 animations, 1 mp3s
+int g_tl_list_at = 0;
+std::vector<std::string> g_tl_items;
+std::string g_tl_list_actor;
+std::string g_tl_note;          // a word on what was just done
+Clock::time_point g_tl_note_at;
+
+struct Row {
+  int kind = 0;  // 0 camera, 1 voices, 2 a character
+  std::string actor;
+};
+
+// the rows: the camera, the voices, the characters with keys, then those near the camera
+std::vector<Row> tl_rows() {
+  std::vector<Row> rows = {{0, ""}, {1, ""}};
+  auto add = [&](const std::string& a) {
+    if (a.empty()) {
+      return;
+    }
+    for (const auto& r : rows) {
+      if (r.kind == 2 && r.actor == a) {
+        return;
+      }
+    }
+    rows.push_back({2, a});
+  };
+  for (const auto& k : g_scene.anims) add(k.actor);
+  for (const auto& k : g_scene.moves) add(k.actor);
+  for (const auto& k : g_scene.poses) add(k.actor);
+  for (const auto& k : g_scene.faces) add(k.actor);
+  for (const auto& a : g_actors) add(a.first);
+  return rows;
+}
+
+void tl_note(const std::string& s) {
+  g_tl_note = s;
+  g_tl_note_at = Clock::now();
+}
+
+// the times of a row's keys
+std::vector<float> tl_times(const Row& r) {
+  std::vector<float> out;
+  if (r.kind == 0) {
+    for (const auto& s : g_scene.shots) out.push_back(s.t);
+  } else if (r.kind == 1) {
+    for (const auto& l : g_scene.lines) {
+      out.push_back(l.t);
+      for (const auto& s : l.subs) out.push_back(l.t + s.t);
+    }
+  } else {
+    for (const auto& k : g_scene.anims) if (k.actor == r.actor) out.push_back(k.t);
+    for (const auto& k : g_scene.moves) if (k.actor == r.actor) out.push_back(k.t);
+    for (const auto& k : g_scene.poses) if (k.actor == r.actor) out.push_back(k.t);
+    for (const auto& k : g_scene.faces) if (k.actor == r.actor) out.push_back(k.t);
+  }
+  std::sort(out.begin(), out.end());
+  return out;
+}
+
+// the keys of a row at the cursor gone
+int tl_delete(const Row& r) {
+  const float t = g_cursor;
+  auto close_to = [&](float x) { return std::fabs(x - t) < 0.06f; };
+  size_t before = 0, after = 0;
+  if (r.kind == 0) {
+    before = g_scene.shots.size();
+    std::erase_if(g_scene.shots, [&](const Shot& s) { return close_to(s.t); });
+    after = g_scene.shots.size();
+  } else if (r.kind == 1) {
+    before = g_scene.lines.size();
+    std::erase_if(g_scene.lines, [&](const Line& l) { return close_to(l.t); });
+    after = g_scene.lines.size();
+  } else {
+    before = g_scene.anims.size() + g_scene.moves.size() + g_scene.poses.size() + g_scene.faces.size();
+    std::erase_if(g_scene.anims, [&](const AnimKey& k) { return k.actor == r.actor && close_to(k.t); });
+    std::erase_if(g_scene.moves, [&](const MoveKey& k) { return k.actor == r.actor && close_to(k.t); });
+    std::erase_if(g_scene.poses, [&](const PoseKey& k) { return k.actor == r.actor && close_to(k.t); });
+    std::erase_if(g_scene.faces, [&](const FaceKey& k) { return k.actor == r.actor && close_to(k.t); });
+    after = g_scene.anims.size() + g_scene.moves.size() + g_scene.poses.size() + g_scene.faces.size();
+  }
+  if (after != before) {
+    changed();
+  }
+  return (int)(before - after);
+}
+
+void tl_list_open(int kind, const std::string& actor) {
+  g_tl_items.clear();
+  if (kind == 0) {
+    g_tl_items.push_back("(its own animation)");
+    for (const auto& a : g_actors) {
+      if (a.first == actor) {
+        for (const auto& n : a.second) g_tl_items.push_back(n);
+      }
+    }
+  } else {
+    g_tl_items = voice_files();
+  }
+  if (g_tl_items.empty()) {
+    tl_note(kind == 0 ? "no animations: fly closer to it" : "no mp3s in custom_assets/jak1/audio");
+    return;
+  }
+  g_tl_list = true;
+  g_tl_list_kind = kind;
+  g_tl_list_at = 0;
+  g_tl_list_actor = actor;
+}
+
+void tl_list_pick() {
+  const std::string& item = g_tl_items[g_tl_list_at];
+  if (g_tl_list_kind == 0) {
+    AnimKey k;
+    k.t = g_cursor;
+    k.actor = g_tl_list_actor;
+    k.anim = g_tl_list_at == 0 ? std::string() : item;
+    // (one there already: changed)
+    bool done = false;
+    for (auto& a : g_scene.anims) {
+      if (a.actor == k.actor && std::fabs(a.t - k.t) < 0.06f) {
+        a.anim = k.anim;
+        done = true;
+      }
+    }
+    if (!done) {
+      g_scene.anims.push_back(k);
+    }
+    tl_note(g_tl_list_actor + ": " + item);
+  } else {
+    Line l;
+    l.t = g_cursor;
+    l.file = item;
+    l.len = enhanced_mp3_length(item);
+    l.speaker = "DAXTER";
+    g_scene.lines.push_back(l);
+    tl_note("voice " + item + " (its speaker and subtitles: the menu)");
+  }
+  sort_scene(g_scene);
+  changed();
+  g_tl_list = false;
+}
+
+}  // namespace
+
+bool timeline_pad(u32 pressed, u32 held, float lx, float ly, float rx) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  const auto now = Clock::now();
+  const float dt = std::clamp(std::chrono::duration<float>(now - g_tl_last).count(), 0.f, 0.1f);
+  g_tl_last = now;
+  if (g_mode != kEdit || !g_scene_loaded) {
+    g_tl_focus = false;
+    g_tl_focus_now = false;
+    g_tl_list = false;
+    return false;
+  }
+  if (pressed & kPadTriangle) {
+    if (g_tl_list) {
+      g_tl_list = false;
+    } else {
+      g_tl_focus = !g_tl_focus;
+      tl_note(g_tl_focus ? "timeline" : "camera");
+    }
+  }
+  g_tl_focus_now = g_tl_focus;
+  if (!g_tl_focus) {
+    return false;
+  }
+  const auto rows = tl_rows();
+  g_tl_row = std::clamp(g_tl_row, 0, (int)rows.size() - 1);
+  const Row& row = rows[g_tl_row];
+
+  // the list opened on a row
+  if (g_tl_list) {
+    const int n = (int)g_tl_items.size();
+    if (pressed & kPadDown) g_tl_list_at = (g_tl_list_at + 1) % n;
+    if (pressed & kPadUp) g_tl_list_at = (g_tl_list_at + n - 1) % n;
+    static float s_scroll = 0.f;
+    s_scroll -= ly * dt * 12.f;
+    while (s_scroll > 1.f) { g_tl_list_at = std::min(n - 1, g_tl_list_at + 1); s_scroll -= 1.f; }
+    while (s_scroll < -1.f) { g_tl_list_at = std::max(0, g_tl_list_at - 1); s_scroll += 1.f; }
+    if (pressed & kPadX) tl_list_pick();
+    if (pressed & kPadCircle) g_tl_list = false;
+    return true;
+  }
+
+  // time: the left stick (square slow, circle fast); the view: the right stick zooms
+  const float len = std::max(g_scene.length, 0.5f);
+  if (g_tl_view <= 0.f || g_tl_view > len) g_tl_view = len;
+  const float speed = (held & kPadSquare) ? 0.2f : (held & kPadCircle) ? 3.f : 1.f;
+  if (lx != 0.f) {
+    g_cursor = std::clamp(g_cursor + lx * dt * speed * std::max(1.f, g_tl_view * 0.25f), 0.f, len);
+  }
+  if (rx != 0.f) {
+    g_tl_view = std::clamp(g_tl_view * (1.f - rx * dt * 1.5f), 1.f, len);
+  }
+  // (the cursor kept in view)
+  if (g_cursor < g_tl_view0 + g_tl_view * 0.1f) g_tl_view0 = g_cursor - g_tl_view * 0.1f;
+  if (g_cursor > g_tl_view0 + g_tl_view * 0.9f) g_tl_view0 = g_cursor - g_tl_view * 0.9f;
+  g_tl_view0 = std::clamp(g_tl_view0, 0.f, std::max(0.f, len - g_tl_view));
+
+  // (the D-pad's left and right: back a change, on again, as everywhere)
+  constexpr u32 kPadRight = 1u << 5, kPadLeft = 1u << 7;
+  if (pressed & kPadLeft) {
+    undo_redo_locked(-1);
+    tl_note("undo");
+  }
+  if (pressed & kPadRight) {
+    undo_redo_locked(1);
+    tl_note("redo");
+  }
+  // rows: the D-pad's up and down
+  if (pressed & kPadDown) g_tl_row = std::min((int)rows.size() - 1, g_tl_row + 1);
+  if (pressed & kPadUp) g_tl_row = std::max(0, g_tl_row - 1);
+
+  // L1 / R1: the row's key before / after
+  if (pressed & (kPadL1 | kPadR1)) {
+    const auto times = tl_times(row);
+    float best = g_cursor;
+    for (float x : times) {
+      if ((pressed & kPadL1) && x < g_cursor - 0.01f) best = x;
+      if ((pressed & kPadR1) && x > g_cursor + 0.01f) {
+        best = x;
+        break;
+      }
+    }
+    g_cursor = best;
+  }
+
+  // X: a key here (a shot from the camera; a voice; a character's place now)
+  if (pressed & kPadX) {
+    if (row.kind == 0) {
+      if (g_cam_known) {
+        Shot sh;
+        sh.t = g_cursor;
+        std::memcpy(sh.pos, g_cam_pos, sizeof(sh.pos));
+        std::memcpy(sh.look, g_cam_look, sizeof(sh.look));
+        std::erase_if(g_scene.shots, [&](const Shot& s) { return std::fabs(s.t - g_cursor) < 0.06f; });
+        g_scene.shots.push_back(sh);
+        sort_scene(g_scene);
+        changed();
+        tl_note("shot: what the camera sees");
+      }
+    } else if (row.kind == 1) {
+      tl_list_open(1, "");
+    } else {
+      MoveKey k;
+      k.t = g_cursor;
+      k.actor = row.actor;
+      if (actor_now(k.actor, k.pos, &k.yaw)) {
+        std::erase_if(g_scene.moves,
+                      [&](const MoveKey& m) { return m.actor == k.actor && std::fabs(m.t - g_cursor) < 0.06f; });
+        g_scene.moves.push_back(k);
+        sort_scene(g_scene);
+        changed();
+        tl_note(row.actor + ": its place here");
+      } else {
+        tl_note("not near the camera: fly closer to it");
+      }
+    }
+  }
+  // R2: a character's animations
+  if ((pressed & kPadR2) && row.kind == 2) {
+    tl_list_open(0, row.actor);
+  }
+  // square: the row's keys here gone
+  if (pressed & kPadSquare) {
+    const int n = tl_delete(row);
+    tl_note(n ? "deleted" : "nothing here to delete");
+  }
+  return true;
+}
+
+void draw_overlay() {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (!g_scene_loaded || (g_mode != kEdit && g_mode != kPreview)) {
+    return;
+  }
+  auto* dl = ImGui::GetForegroundDrawList();
+  const ImVec2 ds = ImGui::GetIO().DisplaySize;
+  const float fs = std::max(16.f, ds.y / 45.f);  // (readable on a small screen)
+  auto* font = ImGui::GetFont();
+  const auto rows = tl_rows();
+  const int shown = std::min((int)rows.size(), 7);
+  const int first = std::clamp(g_tl_row - shown + 1, 0, std::max(0, (int)rows.size() - shown));
+  const float rh = fs * 1.5f;
+  const float h = fs * 3.6f + rh * shown;
+  const float x0 = ds.x * 0.02f, x1 = ds.x * 0.98f, y0 = ds.y - h - ds.y * 0.02f;
+  const float lw = fs * 9.f;  // the names' column
+  const float tx0 = x0 + lw, tx1 = x1 - fs * 0.5f;
+  dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y0 + h), IM_COL32(12, 14, 20, g_tl_focus ? 225 : 150), fs * 0.4f);
+  if (g_tl_focus) {
+    dl->AddRect(ImVec2(x0, y0), ImVec2(x1, y0 + h), IM_COL32(255, 200, 80, 255), fs * 0.4f, 0, 2.f);
+  }
+  const float len = std::max(g_scene.length, 0.5f);
+  const float v = (g_tl_view <= 0.f || g_tl_view > len) ? len : g_tl_view;
+  const float v0 = std::clamp(g_tl_view0, 0.f, std::max(0.f, len - v));
+  auto x_of = [&](float t) { return tx0 + (tx1 - tx0) * (t - v0) / v; };
+  auto in = [&](float t) { return t >= v0 - 0.001f && t <= v0 + v + 0.001f; };
+
+  // the header: the scene, the time, what the pad does now
+  char buf[256];
+  std::snprintf(buf, sizeof(buf), "%s   %.2f / %.1f s   %s", g_scene.name.c_str(), g_cursor, g_scene.length,
+                g_mode == kPreview ? "PLAYING (Start: stop)" : g_tl_focus ? "TIMELINE" : "CAMERA");
+  dl->AddText(font, fs, ImVec2(x0 + fs * 0.5f, y0 + fs * 0.3f), IM_COL32(255, 255, 255, 255), buf);
+  const char* hint =
+      g_tl_list ? "D-pad / left stick: choose   X: put it at the cursor   Circle: close"
+      : g_tl_focus
+          ? "Left stick: time   D-pad: row   L1/R1: keys   X: add   R2: animations   Square: delete   "
+            "Start: play   Triangle: camera"
+          : "Triangle: timeline   (camera, R2/L2, L1+X... as always)";
+  dl->AddText(font, fs * 0.8f, ImVec2(x0 + fs * 0.5f, y0 + fs * 1.4f), IM_COL32(190, 190, 200, 255), hint);
+  if (!g_tl_note.empty() && Clock::now() - g_tl_note_at < std::chrono::seconds(3)) {
+    const ImVec2 sz = font->CalcTextSizeA(fs * 0.85f, FLT_MAX, 0.f, g_tl_note.c_str());
+    dl->AddText(font, fs * 0.85f, ImVec2(x1 - sz.x - fs * 0.5f, y0 + fs * 0.35f), IM_COL32(255, 210, 90, 255),
+                g_tl_note.c_str());
+  }
+
+  // the ruler
+  const float ry = y0 + fs * 2.5f;
+  const float step = v > 40.f ? 5.f : v > 12.f ? 1.f : 0.5f;
+  for (float t = std::ceil(v0 / step) * step; t <= v0 + v; t += step) {
+    const float x = x_of(t);
+    const bool big = std::fmod(t, step * 5.f) < 0.001f;
+    dl->AddLine(ImVec2(x, ry + fs * (big ? 0.2f : 0.6f)), ImVec2(x, ry + fs), IM_COL32(120, 120, 135, 255));
+    if (big) {
+      std::snprintf(buf, sizeof(buf), "%.0f", t);
+      dl->AddText(font, fs * 0.7f, ImVec2(x + 2.f, ry - fs * 0.15f), IM_COL32(150, 150, 165, 255), buf);
+    }
+  }
+
+  // the rows
+  for (int i = 0; i < shown; i++) {
+    const Row& r = rows[first + i];
+    const float yy = ry + fs * 1.1f + rh * i;
+    const bool picked = g_tl_focus && first + i == g_tl_row;
+    if (picked) {
+      dl->AddRectFilled(ImVec2(x0 + 2.f, yy), ImVec2(x1 - 2.f, yy + rh - 2.f), IM_COL32(255, 200, 80, 45));
+    }
+    dl->AddRectFilled(ImVec2(tx0, yy + 2.f), ImVec2(tx1, yy + rh - 4.f), IM_COL32(30, 32, 42, 255), 3.f);
+    const char* name = r.kind == 0 ? "Camera" : r.kind == 1 ? "Voices" : r.actor.c_str();
+    dl->AddText(font, fs * 0.85f, ImVec2(x0 + fs * 0.5f, yy + rh * 0.2f),
+                picked ? IM_COL32(255, 220, 120, 255) : IM_COL32(220, 220, 230, 255), name);
+    const float my = yy + rh * 0.5f;
+    if (r.kind == 0) {
+      for (const auto& s : g_scene.shots) {
+        if (!in(s.t)) continue;
+        const float x = x_of(s.t);
+        dl->AddRectFilled(ImVec2(x - 3.f, yy + 4.f), ImVec2(x + 3.f, yy + rh - 6.f),
+                          s.smooth ? IM_COL32(110, 200, 255, 255) : IM_COL32(60, 120, 255, 255));
+      }
+    } else if (r.kind == 1) {
+      for (const auto& l : g_scene.lines) {
+        const float a = std::max(l.t, v0), b = std::min(l.t + std::max(l.len, 0.3f), v0 + v);
+        if (b <= a) continue;
+        dl->AddRectFilled(ImVec2(x_of(a), yy + 5.f), ImVec2(x_of(b), yy + rh - 7.f), IM_COL32(220, 140, 40, 210),
+                          3.f);
+        dl->PushClipRect(ImVec2(x_of(a), yy), ImVec2(x_of(b), yy + rh), true);
+        const auto slash = l.file.find_last_of('/');
+        dl->AddText(font, fs * 0.7f, ImVec2(x_of(a) + 4.f, yy + rh * 0.25f), IM_COL32(30, 20, 10, 255),
+                    l.file.substr(slash == std::string::npos ? 0 : slash + 1).c_str());
+        dl->PopClipRect();
+      }
+    } else {
+      // its animations: blocks, each up to its next
+      std::vector<const AnimKey*> ks;
+      for (const auto& k : g_scene.anims) if (k.actor == r.actor) ks.push_back(&k);
+      for (size_t k = 0; k < ks.size(); k++) {
+        const float a0 = ks[k]->t, a1 = k + 1 < ks.size() ? ks[k + 1]->t : len;
+        const float a = std::max(a0, v0), b = std::min(a1, v0 + v);
+        if (b <= a || ks[k]->anim.empty()) continue;
+        dl->AddRectFilled(ImVec2(x_of(a), yy + 5.f), ImVec2(x_of(b) - 1.f, yy + rh - 7.f),
+                          IM_COL32(70, 170, 95, 220), 3.f);
+        dl->PushClipRect(ImVec2(x_of(a), yy), ImVec2(x_of(b) - 2.f, yy + rh), true);
+        dl->AddText(font, fs * 0.7f, ImVec2(x_of(a) + 4.f, yy + rh * 0.25f), IM_COL32(10, 30, 15, 255),
+                    ks[k]->anim.c_str());
+        dl->PopClipRect();
+      }
+      for (const auto& k : g_scene.moves) {
+        if (k.actor != r.actor || !in(k.t)) continue;
+        const float x = x_of(k.t);
+        dl->AddQuadFilled(ImVec2(x, my - 6.f), ImVec2(x + 6.f, my), ImVec2(x, my + 6.f), ImVec2(x - 6.f, my),
+                          IM_COL32(255, 215, 80, 255));
+      }
+      for (const auto& k : g_scene.poses) {
+        if (k.actor != r.actor || !in(k.t)) continue;
+        dl->AddCircleFilled(ImVec2(x_of(k.t), yy + rh - 7.f), 3.5f, IM_COL32(200, 120, 255, 255));
+      }
+      for (const auto& k : g_scene.faces) {
+        if (k.actor != r.actor || !in(k.t)) continue;
+        const float x = x_of(k.t);
+        dl->AddTriangleFilled(ImVec2(x, yy + 4.f), ImVec2(x - 4.f, yy + 11.f), ImVec2(x + 4.f, yy + 11.f),
+                              IM_COL32(255, 130, 170, 255));
+      }
+    }
+  }
+  if ((int)rows.size() > shown) {
+    std::snprintf(buf, sizeof(buf), "%d/%d", g_tl_row + 1, (int)rows.size());
+    dl->AddText(font, fs * 0.7f, ImVec2(x0 + fs * 0.5f, y0 + h - fs * 0.9f), IM_COL32(150, 150, 165, 255), buf);
+  }
+
+  // the cursor
+  if (in(g_cursor)) {
+    const float cx = x_of(g_cursor);
+    dl->AddLine(ImVec2(cx, ry), ImVec2(cx, y0 + h - 4.f), IM_COL32(255, 70, 70, 255), 2.f);
+    dl->AddTriangleFilled(ImVec2(cx - 6.f, ry), ImVec2(cx + 6.f, ry), ImVec2(cx, ry + 8.f), IM_COL32(255, 70, 70, 255));
+  }
+
+  // the list, over the bar
+  if (g_tl_list) {
+    const int n = (int)g_tl_items.size();
+    const int vis = std::min(n, 10);
+    const int top = std::clamp(g_tl_list_at - vis / 2, 0, std::max(0, n - vis));
+    const float lh = fs * 1.25f, lw2 = fs * 18.f;
+    const float lx0 = std::clamp(x_of(g_cursor) - lw2 * 0.5f, x0, x1 - lw2), ly1 = y0 - fs * 0.4f;
+    const float ly0 = ly1 - lh * vis - fs * 1.6f;
+    dl->AddRectFilled(ImVec2(lx0, ly0), ImVec2(lx0 + lw2, ly1), IM_COL32(18, 20, 28, 240), fs * 0.3f);
+    dl->AddRect(ImVec2(lx0, ly0), ImVec2(lx0 + lw2, ly1), IM_COL32(255, 200, 80, 255), fs * 0.3f, 0, 2.f);
+    std::snprintf(buf, sizeof(buf), "%s  (%d/%d)",
+                  g_tl_list_kind == 0 ? g_tl_list_actor.c_str() : "Voices", g_tl_list_at + 1, n);
+    dl->AddText(font, fs * 0.85f, ImVec2(lx0 + fs * 0.5f, ly0 + fs * 0.3f), IM_COL32(255, 220, 120, 255), buf);
+    for (int i = 0; i < vis; i++) {
+      const int at = top + i;
+      const float yy = ly0 + fs * 1.4f + lh * i;
+      if (at == g_tl_list_at) {
+        dl->AddRectFilled(ImVec2(lx0 + 3.f, yy), ImVec2(lx0 + lw2 - 3.f, yy + lh), IM_COL32(255, 200, 80, 70));
+      }
+      dl->AddText(font, fs * 0.85f, ImVec2(lx0 + fs * 0.6f, yy + lh * 0.1f), IM_COL32(230, 230, 240, 255),
+                  g_tl_items[at].c_str());
+    }
+  }
 }
 
 }  // namespace enhanced_cutscene

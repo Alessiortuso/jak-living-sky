@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "common/common_types.h"
+
 /*!
  * Jak Living Sky: scenes made in the game (the Enhanced menu's Cutscenes editor): camera shots and voice lines
  * with their subtitles on one timeline, saved in custom_assets/<game>/cutscenes/<name>.json (metres, seconds).
@@ -107,6 +109,11 @@ void actor_anim(const std::string& actor, const std::string& anim);
 
 // the Enhanced menu's Cutscenes section (the render thread)
 void draw_menu();
+// the timeline bar at the bottom of the screen while editing (the render thread, the menu closed)
+void draw_overlay();
+// (edit) the pad on the timeline: buttons pressed this frame and held (the game's bits), the sticks (-1..1, up
+// positive); true while the timeline has it (the camera and the characters are left alone)
+bool timeline_pad(u32 pressed, u32 held, float lx, float ly, float rx);
 
 }  // namespace enhanced_cutscene
 

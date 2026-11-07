@@ -1048,6 +1048,15 @@
          (set! (-> *cs-fc-used* i) 0)))))
   (none))
 
+;; the pad to the timeline bar (Triangle takes it there and back): #t while it has it
+(define *cs-sticks* (new 'static 'array float 3))
+(defun cutscene-timeline-pad ()
+  (let ((pad (-> *cpad-list* cpads 0)))
+    (set! (-> *cs-sticks* 0) (cutscene-stick (the int (-> pad leftx))))
+    (set! (-> *cs-sticks* 1) (- (cutscene-stick (the int (-> pad lefty)))))
+    (set! (-> *cs-sticks* 2) (cutscene-stick (the int (-> pad rightx))))
+    (pc-cutscene-timeline-pad (the int (-> pad button0-rel 0)) (the int (-> pad button0-abs 0)) *cs-sticks*)))
+
 (defun cutscene-update ()
   (when (and *target* *camera*)
     (let ((mode (pc-cutscene-poll *cs-out* *cs-speaker* *cs-text* 512)))
@@ -1078,7 +1087,7 @@
               (set-vector! *cs-pos* (-> *cs-out* 0) (-> *cs-out* 1) (-> *cs-out* 2) 1.0)
               (set-vector! *cs-look* (-> *cs-out* 3) (-> *cs-out* 4) (-> *cs-out* 5) 1.0)
               (cutscene-aim-from-look))
-            (cutscene-free-camera)
+            (if (not (cutscene-timeline-pad)) (cutscene-free-camera))
             (set! (-> *cs-out* 0) (-> *cs-pos* x))
             (set! (-> *cs-out* 1) (-> *cs-pos* y))
             (set! (-> *cs-out* 2) (-> *cs-pos* z))

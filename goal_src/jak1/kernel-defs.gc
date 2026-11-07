@@ -662,6 +662,7 @@
 (define-extern pc-cutscene-undo (function int none))
 (define-extern pc-cutscene-face (function int string (pointer float) symbol))
 (define-extern pc-cutscene-actor-face (function string int none))
+(define-extern pc-cutscene-timeline-pad (function int int (pointer float) symbol))
 (define-extern pc-enhanced-menu-state (function int))
 (define-extern pc-enhanced-photo (function int int))
 (define-extern pc-enhanced-switch-game (function int int))
