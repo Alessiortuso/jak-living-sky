@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <map>
 #include <mutex>
 #include <vector>
 
@@ -52,6 +53,15 @@ struct AnimKey {
   float speed = 1.f;
 };
 
+// at t a character is at pos (metres), facing yaw (degrees); smooth: sliding on to its next key
+struct MoveKey {
+  float t = 0.f;
+  std::string actor;
+  float pos[3] = {};
+  float yaw = 0.f;
+  bool smooth = false;
+};
+
 struct Scene {
   std::string name;
   float length = 10.f;
@@ -60,6 +70,7 @@ struct Scene {
   std::vector<Shot> shots;
   std::vector<Line> lines;
   std::vector<AnimKey> anims;
+  std::vector<MoveKey> moves;
 };
 
 using Clock = std::chrono::steady_clock;
@@ -78,6 +89,14 @@ float g_jump_look[3] = {};
 float g_cam_pos[3] = {};      // (edit) where the game's free camera is, metres
 float g_cam_look[3] = {};
 bool g_cam_known = false;
+float g_cam_aim[3] = {};      // (edit) the first solid thing along its view, metres
+std::vector<Place> g_places;  // (poll) the characters placed now
+struct ActorAt {
+  float pos[3] = {};  // metres
+  float yaw = 0.f;    // degrees
+};
+std::map<std::string, ActorAt> g_actor_at;       // where the characters near the camera are
+std::map<std::string, ActorAt> g_actor_at_next;  // (filled with the list, swapped in with it)
 bool g_dirty = false;
 std::vector<Puppet> g_puppets;  // (poll) the characters played now
 std::vector<int> g_puppet_status;  // (the game's answer for each: puppet_status)
@@ -129,6 +148,7 @@ void sort_scene(Scene& s) {
     std::stable_sort(l.subs.begin(), l.subs.end(), [](const Sub& a, const Sub& b) { return a.t < b.t; });
   }
   std::stable_sort(s.anims.begin(), s.anims.end(), [](const AnimKey& a, const AnimKey& b) { return a.t < b.t; });
+  std::stable_sort(s.moves.begin(), s.moves.end(), [](const MoveKey& a, const MoveKey& b) { return a.t < b.t; });
 }
 
 bool load(const std::string& name, Scene* out) {
@@ -177,6 +197,17 @@ bool load(const std::string& name, Scene* out) {
       k.speed = ja.value("speed", 1.f);
       s.anims.push_back(k);
     }
+    for (const auto& jm : j.value("moves", nlohmann::json::array())) {
+      MoveKey k;
+      k.t = jm.value("t", 0.f);
+      k.actor = jm.value("actor", std::string());
+      for (int c = 0; c < 3; c++) {
+        k.pos[c] = jm["pos"][c].get<float>();
+      }
+      k.yaw = jm.value("yaw", 0.f);
+      k.smooth = jm.value("smooth", false);
+      s.moves.push_back(k);
+    }
     sort_scene(s);
     *out = s;
     return true;
@@ -206,6 +237,14 @@ void save(const Scene& s) {
       jl["subs"].push_back({{"t", sub.t}, {"text", sub.text}});
     }
     j["lines"].push_back(jl);
+  }
+  j["moves"] = nlohmann::json::array();
+  for (const auto& k : s.moves) {
+    j["moves"].push_back({{"t", k.t},
+                          {"actor", k.actor},
+                          {"pos", {k.pos[0], k.pos[1], k.pos[2]}},
+                          {"yaw", k.yaw},
+                          {"smooth", k.smooth}});
   }
   j["anims"] = nlohmann::json::array();
   for (const auto& k : s.anims) {
@@ -290,6 +329,49 @@ void puppets_at(const Scene& s, float t, float live = 0.f) {
   }
 }
 
+// each character's place at time t: its last key by then (on towards its next, if it slides)
+void places_at(const Scene& s, float t) {
+  g_places.clear();
+  std::vector<std::string> done;
+  for (const auto& k : s.moves) {
+    if (k.actor.empty() || std::find(done.begin(), done.end(), k.actor) != done.end()) {
+      continue;
+    }
+    done.push_back(k.actor);
+    const MoveKey* a = nullptr;
+    const MoveKey* b = nullptr;
+    for (const auto& m : s.moves) {
+      if (m.actor != k.actor) {
+        continue;
+      }
+      if (m.t <= t) {
+        a = &m;
+      } else if (!b) {
+        b = &m;
+      }
+    }
+    if (!a) {
+      continue;  // (before its first key: where it is)
+    }
+    Place p;
+    p.actor = a->actor;
+    float u = 0.f;
+    if (a->smooth && b && b->t > a->t) {
+      u = std::clamp((t - a->t) / (b->t - a->t), 0.f, 1.f);
+    }
+    for (int c = 0; c < 3; c++) {
+      p.pos[c] = (a->pos[c] + (b && u > 0.f ? (b->pos[c] - a->pos[c]) * u : 0.f)) * kMeter;
+    }
+    float yaw = a->yaw;
+    if (u > 0.f) {
+      float d = std::fmod(b->yaw - a->yaw + 540.f, 360.f) - 180.f;  // the short way round
+      yaw += d * u;
+    }
+    p.yaw = yaw;
+    g_places.push_back(p);
+  }
+}
+
 void stop_voices() {
   for (size_t i = 0; i < g_scene.lines.size() && i < g_started.size(); i++) {
     if (g_started[i]) {
@@ -339,10 +421,12 @@ Frame poll() {
   f.mode = g_mode;
   if (g_actors_ready) {
     g_actors.swap(g_actors_next);
+    g_actor_at.swap(g_actor_at_next);
     g_actors_ready = false;
   }
   if (g_mode == kNone) {
     g_puppets.clear();
+    g_places.clear();
     return f;
   }
   f.letterbox = g_scene.letterbox;
@@ -359,6 +443,7 @@ Frame poll() {
     }
     subtitle_at(g_scene, g_cursor, &f.speaker, &f.text);
     puppets_at(g_scene, g_cursor, std::chrono::duration<float>(Clock::now() - g_edit_clock).count());
+    places_at(g_scene, g_cursor);
     // the characters near the camera, every so often while the animations are being set
     if (g_scan_wanted && Clock::now() - g_last_scan > std::chrono::milliseconds(1500)) {
       g_last_scan = Clock::now();
@@ -377,10 +462,12 @@ Frame poll() {
       g_mode = kEdit;
       f.mode = kEdit;
       puppets_at(g_scene, g_cursor);
+      places_at(g_scene, g_cursor);
     } else {
       g_mode = kNone;
       f.mode = kNone;
       g_puppets.clear();
+      g_places.clear();
     }
     return f;
   }
@@ -402,7 +489,27 @@ Frame poll() {
   }
   subtitle_at(g_scene, t, &f.speaker, &f.text);
   puppets_at(g_scene, t);
+  places_at(g_scene, t);
   return f;
+}
+
+bool place(int i, Place* out) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (i < 0 || i >= (int)g_places.size()) {
+    return false;
+  }
+  *out = g_places[i];
+  return true;
+}
+
+void actor_at(const std::string& actor, const float* pos, float yaw) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  ActorAt a;
+  for (int k = 0; k < 3; k++) {
+    a.pos[k] = pos[k] / kMeter;
+  }
+  a.yaw = yaw;
+  g_actor_at_next[actor] = a;
 }
 
 void puppet_status(int i, int status) {
@@ -428,6 +535,7 @@ bool puppet(int i, Puppet* out) {
 void actors_begin() {
   std::lock_guard<std::mutex> lock(g_mutex);
   g_actors_next.clear();
+  g_actor_at_next.clear();
   g_actors_ready = true;
 }
 
@@ -441,11 +549,12 @@ void actor_anim(const std::string& actor, const std::string& anim) {
   }
 }
 
-void report_camera(const float* pos, const float* look) {
+void report_camera(const float* pos, const float* look, const float* aim) {
   std::lock_guard<std::mutex> lock(g_mutex);
   for (int k = 0; k < 3; k++) {
     g_cam_pos[k] = pos[k] / kMeter;
     g_cam_look[k] = look[k] / kMeter;
+    g_cam_aim[k] = aim[k] / kMeter;
   }
   g_cam_known = true;
 }
@@ -495,6 +604,11 @@ void timeline() {
       const float x = x_of(l.t + sub.t);
       dl->AddLine(ImVec2(x, p0.y + 24.f), ImVec2(x, p0.y + 42.f), IM_COL32(255, 230, 160, 255), 1.5f);
     }
+  }
+  for (const auto& k : g_scene.moves) {
+    const float x = x_of(k.t);
+    dl->AddRectFilled(ImVec2(x - 3.f, p0.y + 43.f), ImVec2(x + 3.f, p0.y + 49.f),
+                      k.smooth ? IM_COL32(255, 220, 90, 255) : IM_COL32(220, 170, 40, 255));
   }
   for (const auto& k : g_scene.anims) {
     const float x = x_of(k.t);
@@ -635,6 +749,121 @@ void animations_menu() {
   }
   if (gone >= 0) {
     g_scene.anims.erase(g_scene.anims.begin() + gone);
+    g_dirty = true;
+  }
+}
+
+// where a character is now (the game's list), metres and degrees
+bool actor_now(const std::string& actor, float* pos, float* yaw) {
+  auto it = g_actor_at.find(actor);
+  if (it == g_actor_at.end()) {
+    return false;
+  }
+  for (int k = 0; k < 3; k++) {
+    pos[k] = it->second.pos[k];
+  }
+  *yaw = it->second.yaw;
+  return true;
+}
+
+// which way from a to b, degrees (the game's: 0 looks down +z)
+float yaw_towards(const float* a, const float* b) {
+  return std::atan2(b[0] - a[0], b[2] - a[2]) * 57.29578f;
+}
+
+void moves_menu() {
+  static int s_actor = 0;
+  if (g_mode == kEdit) {
+    g_scan_wanted = true;
+  }
+  if (g_actors.empty()) {
+    ImGui::TextDisabled(g_mode == kEdit ? "(no characters near the camera: fly closer)"
+                                        : "(Edit first: the characters near the camera are listed)");
+  } else {
+    s_actor = std::clamp(s_actor, 0, (int)g_actors.size() - 1);
+    ImGui::SetNextItemWidth(220);
+    if (ImGui::BeginCombo("Character##move", g_actors[s_actor].first.c_str())) {
+      for (int i = 0; i < (int)g_actors.size(); i++) {
+        if (ImGui::Selectable(g_actors[i].first.c_str(), i == s_actor)) {
+          s_actor = i;
+        }
+      }
+      ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add a place at the cursor (where it is now)")) {
+      MoveKey k;
+      k.t = g_cursor;
+      k.actor = g_actors[s_actor].first;
+      if (!actor_now(k.actor, k.pos, &k.yaw) && g_cam_known) {
+        std::memcpy(k.pos, g_cam_aim, sizeof(k.pos));
+      }
+      g_scene.moves.push_back(k);
+      sort_scene(g_scene);
+      g_dirty = true;
+    }
+  }
+  ImGui::TextDisabled("(each key: the character is there at its time; \"slide\" takes it on to its next key)");
+  int gone = -1;
+  for (size_t i = 0; i < g_scene.moves.size(); i++) {
+    auto& k = g_scene.moves[i];
+    ImGui::PushID(8000 + (int)i);
+    ImGui::Separator();
+    ImGui::SetNextItemWidth(80);
+    if (ImGui::DragFloat("##mt", &k.t, 0.02f, 0.f, g_scene.length, "%.2f s")) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    ImGui::Text("%s", k.actor.c_str());
+    ImGui::SameLine();
+    if (ImGui::Checkbox("slide", &k.smooth)) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Go")) {
+      g_cursor = k.t;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Delete")) {
+      gone = (int)i;
+    }
+    ImGui::Indent(20.f);
+    ImGui::SetNextItemWidth(240);
+    if (ImGui::DragFloat3("x y z (m)", k.pos, 0.02f, 0.f, 0.f, "%.2f")) {
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(80);
+    if (ImGui::DragFloat("facing", &k.yaw, 0.5f, -360.f, 360.f, "%.0f deg")) {
+      g_dirty = true;
+    }
+    if (ImGui::Button("Where it is now")) {
+      float y;
+      if (actor_now(k.actor, k.pos, &y)) {
+        k.yaw = y;
+        g_dirty = true;
+      }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Where the camera aims") && g_cam_known) {
+      std::memcpy(k.pos, g_cam_aim, sizeof(k.pos));
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Face the camera") && g_cam_known) {
+      k.yaw = yaw_towards(k.pos, g_cam_pos);
+      g_dirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Face where the camera aims") && g_cam_known) {
+      k.yaw = yaw_towards(k.pos, g_cam_aim);
+      g_dirty = true;
+    }
+    ImGui::Unindent(20.f);
+    ImGui::PopID();
+  }
+  if (gone >= 0) {
+    g_scene.moves.erase(g_scene.moves.begin() + gone);
     g_dirty = true;
   }
 }
@@ -911,6 +1140,12 @@ void draw_menu() {
   // the characters' animations
   if (ImGui::TreeNodeEx("Animations", ImGuiTreeNodeFlags_DefaultOpen)) {
     animations_menu();
+    ImGui::TreePop();
+  }
+
+  // where the characters are, and which way they face
+  if (ImGui::TreeNodeEx("Places", ImGuiTreeNodeFlags_DefaultOpen)) {
+    moves_menu();
     ImGui::TreePop();
   }
   ImGui::PopID();

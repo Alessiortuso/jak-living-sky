@@ -35,8 +35,20 @@ struct Frame {
 };
 // once a frame, from the game's thread: the state now (starting the voices due)
 Frame poll();
-// the free camera, from the game (edit), game units
-void report_camera(const float* pos, const float* look);
+// the free camera, from the game (edit), game units: where it is, what it looks at, the first solid thing
+// along its view (where a character is put by "where the camera aims")
+void report_camera(const float* pos, const float* look, const float* aim);
+
+// the characters placed now (after poll, same frame): where (game units) and which way they face (degrees,
+// round the vertical: 0 looks down +z)
+struct Place {
+  std::string actor;
+  float pos[3] = {};
+  float yaw = 0.f;
+};
+bool place(int i, Place* out);
+// (the game's list) where a character near the camera is now, and which way it faces (game units, degrees)
+void actor_at(const std::string& actor, const float* pos, float yaw);
 
 // the characters played as puppets now (after poll, same frame): by the game's name ("jak" for Jak), one of
 // its animations by name, how far into it (seconds, at its own speed), looping or held on its last frame

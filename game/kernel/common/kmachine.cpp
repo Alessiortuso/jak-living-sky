@@ -481,6 +481,33 @@ void pc_cutscene_puppet_status(u32 i, u32 status) {
   enhanced_cutscene::puppet_status((int)i, (int)status);
 }
 
+// the characters placed now: the i-th one's name into a string, where and which way (game units, degrees) into
+// out (floats); #f past the last
+u64 pc_cutscene_place(u32 i, u32 actor, u32 out) {
+  enhanced_cutscene::Place p;
+  if (!enhanced_cutscene::place((int)i, &p)) {
+    return s7.offset;
+  }
+  auto* str = Ptr<String>(actor).c();
+  if (str->len > 0) {
+    const size_t n = std::min<size_t>(p.actor.size(), str->len - 1);
+    memcpy(str->data(), p.actor.data(), n);
+    str->data()[n] = '\0';
+  }
+  float* o = Ptr<float>(out).c();
+  for (int k = 0; k < 3; k++) {
+    o[k] = p.pos[k];
+  }
+  o[3] = p.yaw;
+  return s7.offset + true_symbol_offset(g_game_version);
+}
+
+// where a character near the camera is now (game units) and which way it faces (degrees), for the editor
+void pc_cutscene_actor_at(u32 actor, u32 at) {
+  const float* a = Ptr<float>(at).c();
+  enhanced_cutscene::actor_at(Ptr<String>(actor).c()->data(), a, a[3]);
+}
+
 // the characters near the camera: a new list, then each one's animations (an empty name: one with none)
 void pc_cutscene_actors_begin() {
   enhanced_cutscene::actors_begin();
@@ -493,7 +520,7 @@ void pc_cutscene_actor(u32 actor, u32 anim) {
 // the editor's free camera, from the game: its place, the point it looks at (game units, 6 floats)
 void pc_cutscene_report(u32 cam) {
   const float* c = Ptr<float>(cam).c();
-  enhanced_cutscene::report_camera(c, c + 3);
+  enhanced_cutscene::report_camera(c, c + 3, c + 6);
 }
 
 u64 playMP3(u32 filePathu32, u32 volume) {
@@ -2172,6 +2199,8 @@ void init_common_pc_port_functions(
   make_func_symbol_func("pc-cutscene-actors-begin", (void*)pc_cutscene_actors_begin);
   make_func_symbol_func("pc-cutscene-actor", (void*)pc_cutscene_actor);
   make_func_symbol_func("pc-cutscene-puppet-status", (void*)pc_cutscene_puppet_status);
+  make_func_symbol_func("pc-cutscene-place", (void*)pc_cutscene_place);
+  make_func_symbol_func("pc-cutscene-actor-at", (void*)pc_cutscene_actor_at);
   make_func_symbol_func("pc-enhanced-editing?", (void*)pc_enhanced_editing);
   make_func_symbol_func("pc-enhanced-editor-probe", (void*)pc_enhanced_editor_probe);
   make_func_symbol_func("pc-enhanced-editor-probe-hit", (void*)pc_enhanced_editor_probe_hit);
