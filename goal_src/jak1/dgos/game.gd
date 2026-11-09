@@ -345,6 +345,7 @@
   "darkjak-claw-ag.go"
   "darkjak-turn-ag.go"
   "darkpump-ag.go" ;; Jak Living Sky: the fisherman's mission's pump
+  "merchant-ag.go" ;; Jak Living Sky: the white eco merchant
   "deathcam-ag.go"
   "game-cnt.go"
   "rigid-body-h.o"

@@ -859,6 +859,7 @@
   ;; Jak Living Sky: in the mod options, to give Jak orbs and white eco
   (give-orbs #x2007)
   (give-white-eco #x2008)
+  (place-merchant #x2009)
   (save-and-load-game #x3000)
   ;; GAME-TEXT-ID ENUM ENDS
 

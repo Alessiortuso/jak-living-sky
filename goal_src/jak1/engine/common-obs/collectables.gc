@@ -1726,6 +1726,54 @@
     (else (pc-enhanced-denied)))
   (none))
 
+(defconstant SOUL-SHOP-ROWS 5)
+
+;; Jak Living Sky: the white eco's shop, a screen of the warp gate's menu: a list that scrolls
+(defun soul-shop-screen ()
+  (when (cpad-pressed? 0 up)
+    (cpad-clear! 0 up)
+    (sound-play "cursor-up-down")
+    (set! *soul-shop-cursor* (if (> *soul-shop-cursor* 0) (+ *soul-shop-cursor* -1) (+ (soul-shop-items) -1))))
+  (when (cpad-pressed? 0 down)
+    (cpad-clear! 0 down)
+    (sound-play "cursor-up-down")
+    (set! *soul-shop-cursor* (if (< *soul-shop-cursor* (+ (soul-shop-items) -1)) (+ *soul-shop-cursor* 1) 0)))
+  (when (cpad-pressed? 0 circle)
+    (cpad-clear! 0 circle)
+    (soul-shop-buy *soul-shop-cursor*))
+  (when (cpad-pressed? 0 triangle)
+    (cpad-clear! 0 triangle)
+    (sound-play "cursor-options")
+    (set! *soul-shop-open* #f))
+  (let ((font (new 'stack 'font-context *font-default-matrix* 6 40 0.0 (font-color default) (font-flags shadow kerning)))
+        ;; the rows shown: the cursor stays among them
+        (first (max 0 (min (- *soul-shop-cursor* 2) (- (soul-shop-items) SOUL-SHOP-ROWS)))))
+    (set-scale! font 0.8)
+    (set-width! font 500)
+    (set-height! font 24)
+    (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
+    (set! (-> font color) (font-color progress-yellow))
+    (print-game-text "NEGOZIO" font #f 128 22)
+    (set! (-> font color) (font-color default))
+    (+! (-> font origin y) 24.0)
+    (format (clear *temp-string*) "ECO BIANCO ~D" (the int *soul-eco*))
+    (print-game-text *temp-string* font #f 128 22)
+    (+! (-> font origin y) 28.0)
+    (set-scale! font 0.7)
+    (dotimes (row SOUL-SHOP-ROWS)
+      (let ((i (+ first row)))
+        (when (< i (soul-shop-items))
+          (set! (-> font color) (if (= i *soul-shop-cursor*) (font-color progress-yellow) (font-color default)))
+          (if (< (soul-item-have i) (soul-item-most i))
+            (format (clear *temp-string*) "~S   COSTO ~D" (soul-item-name i) (soul-item-cost i))
+            (format (clear *temp-string*) "~S   AL MASSIMO" (soul-item-name i)))
+          (print-game-text *temp-string* font #f 128 22)))
+      (+! (-> font origin y) 18.0))
+    (set! (-> font color) (font-color default))
+    (+! (-> font origin y) 8.0)
+    (print-game-text "~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H COMPRA    ~Y~22L<~Z~Y~26L;~Z~Y~1L>~Z~Y~23L[~Z~+26H ESCI" font #f 128 22))
+  (none))
+
 ;; Jak Living Sky: the game being played, not its title or intro (the Naughty Dog logo plays in the title level,
 ;; Jak there too)
 (defun soul-in-play? ()
@@ -2287,11 +2335,180 @@
 (define-extern quest-now (function time-frame))
 (define-extern cutscene-update (function none))
 
+;; ---------------------------------------------------------------------------------------------------------
+;; Jak Living Sky: the white eco merchant, the shop's own place: a fat little trader in a patched hood, only his eyes
+;; to be seen, at his stall in each village (scripts/enhanced/merchant_model.py). Up to him and Circle: the shop
+(def-actor merchant :bounds (0 1.2 -0.5 3.2))
+
+;; his place in each village: village1, village2, village3, brume (game units; w: 1 placed), and which way he faces
+(define *merchant-spots* (new 'static 'inline-array vector 4
+                              (new 'static 'vector)
+                              (new 'static 'vector)
+                              (new 'static 'vector)
+                              (new 'static 'vector)))
+(define *merchant-yaw* (new 'static 'array float 4 0.0 0.0 0.0 0.0))
+;; (a handle in a 64-bit slot, as the pump's)
+(define *merchant-handle* (new 'static 'array handle 1))
+(set! (-> *merchant-handle* 0) (the-as handle #f))
+(define *merchant-at* -1) ;; (the village he's spawned for)
+
+(deftype merchant (process-drawable)
+  ((root collide-shape :override))
+  (:states
+    merchant-idle
+    merchant-shop))
+
+;; Jak close enough and free to talk
+(defbehavior merchant-near? merchant ()
+  (and *target*
+       (< (vector-vector-distance (-> self root trans) (-> *target* control trans)) (meters 3.2))
+       (not *progress-process*)
+       (logtest? (-> *target* control status) (cshape-moving-flags onsurf))
+       (not (logtest? (-> *target* state-flags) (state-flags dangerous being-attacked grabbed dying board)))))
+
+;; his idle, a loop
+(defbehavior merchant-anim-step merchant ()
+  (if (ja-done? 0)
+    (ja-no-eval :group! (-> self draw art-group data 2) :num! (seek!) :frame-num 0.0)
+    (ja :num! (seek!)))
+  (none))
+
+(defstate merchant-idle (merchant)
+  :trans
+    (behavior ()
+      (when (merchant-near?)
+        (let ((font (new 'stack 'font-context *font-default-matrix* 6 300 0.0 (font-color default) (font-flags shadow kerning))))
+          (set-scale! font 0.7)
+          (set-width! font 500)
+          (set-height! font 30)
+          (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
+          (print-game-text "PREMI ~Y~22L<~Z~Y~26L;~Z~Y~1L>~Z~Y~23L[~Z~+26H PER IL NEGOZIO" font #f 128 22))
+        (when (cpad-pressed? 0 circle)
+          (cpad-clear! 0 circle)
+          (if (process-grab? *target*) (go merchant-shop)))))
+  :code
+    (behavior ()
+      (ja-no-eval :group! (-> self draw art-group data 2) :num! (seek!) :frame-num 0.0)
+      (loop
+        (suspend)
+        (merchant-anim-step)))
+  :post ja-post)
+
+(defstate merchant-shop (merchant)
+  :enter
+    (behavior ()
+      (sound-play "start-options")
+      (set! *soul-shop-cursor* 0)
+      (set! *soul-shop-open* #t))
+  :exit
+    (behavior ()
+      (set! *soul-shop-open* #f)
+      (if *target* (process-release? *target*)))
+  :trans
+    (behavior ()
+      ;; Jak turned to face him
+      (when *target*
+        (let* ((ctrl (-> *target* control))
+               (d (deg-diff (y-angle ctrl)
+                            (vector-y-angle (vector-! (new 'stack-no-clear 'vector) (-> self root trans) (-> ctrl trans))))))
+          (if (!= d 0.0)
+            (send-event *target*
+                        'rotate-y-angle
+                        (fmax (fmin d (* 65536.0 (seconds-per-frame))) (* -65536.0 (seconds-per-frame))))))))
+  :code
+    (behavior ()
+      (while (and *soul-shop-open* *target*)
+        (can-grab-display? self)
+        (hide-hud)
+        (soul-shop-screen)
+        (merchant-anim-step)
+        (suspend))
+      (go merchant-idle))
+  :post ja-post)
+
+(defbehavior merchant-init merchant ((i int))
+  (logclear! (-> self mask) (process-mask actor-pause))
+  (let ((cs (new 'process 'collide-shape self (collide-list-enum hit-by-player))))
+    (let ((prim (new 'process 'collide-shape-prim-sphere cs (the-as uint 0))))
+      (set! (-> prim prim-core collide-as) (collide-kind ground-object))
+      (set! (-> prim collide-with) (collide-kind target))
+      (set! (-> prim prim-core action) (collide-action solid))
+      (set! (-> prim prim-core offense) (collide-offense indestructible))
+      ;; (him and his stall behind him)
+      (set-vector! (-> prim local-sphere) 0.0 (meters 1.0) (meters -0.55) (meters 1.45))
+      (set-root-prim! cs prim))
+    (backup-collide-with-as cs)
+    (set! (-> self root) cs))
+  (set! (-> self root trans quad) (-> *merchant-spots* i quad))
+  (set! (-> self root trans w) 1.0)
+  (quaternion-axis-angle! (-> self root quat) 0.0 1.0 0.0 (-> *merchant-yaw* i))
+  (vector-identity! (-> self root scale))
+  (initialize-skeleton self *merchant-sg* '())
+  (transform-post)
+  (go merchant-idle)
+  (none))
+
+;; which of his villages: village1, village2, village3, brume (-1: none)
+(defun merchant-index ((name symbol))
+  (case name
+    (('village1) 0)
+    (('village2) 1)
+    (('village3) 2)
+    (('brume) 3)
+    (else -1)))
+
+;; him there while Jak's in his village, once placed
+(defun merchant-update ()
+  (let* ((proc (handle->process (-> *merchant-handle* 0)))
+         (lev (the-as level (and *target* (level-get-target-inside *level*))))
+         (i (if lev (merchant-index (-> lev name)) -1)))
+    (cond
+      ((and (>= i 0) (< 0.5 (-> *merchant-spots* i w)) (soul-in-play?))
+       (when (and proc (!= i *merchant-at*))
+         (deactivate proc)
+         (set! proc #f))
+       (when (not proc)
+         (set! *merchant-at* i)
+         (set! (-> *merchant-handle* 0) (ppointer->handle (process-spawn merchant i :init merchant-init :to *entity-pool*)))))
+      ((and proc (< i 0) (not *soul-shop-open*))
+       (deactivate proc)
+       (set! (-> *merchant-handle* 0) (the-as handle #f))
+       (set! *merchant-at* -1))))
+  (none))
+
+;; the mod options' "place the merchant here": 3 m in front of Jak, facing him, told in the log to be written into
+;; *merchant-spots*
+(defun merchant-place-here ()
+  (let* ((lev (the-as level (and *target* (level-get-target-inside *level*))))
+         (i (if lev (merchant-index (-> lev name)) -1)))
+    (cond
+      ((< i 0) (format 0 "[merchant] not in one of his villages~%"))
+      (else
+       (let ((yaw (y-angle (-> *target* control))))
+         (set! (-> *merchant-spots* i quad) (-> *target* control trans quad))
+         (+! (-> *merchant-spots* i x) (* (meters 3) (sin yaw)))
+         (+! (-> *merchant-spots* i z) (* (meters 3) (cos yaw)))
+         (set! (-> *merchant-yaw* i) (+ yaw 32768.0)))
+       (set! (-> *merchant-spots* i w) 1.0)
+       (format 0
+               "[merchant] ~A spot ~f ~f ~f yaw ~f~%"
+               (-> lev name)
+               (-> *merchant-spots* i x)
+               (-> *merchant-spots* i y)
+               (-> *merchant-spots* i z)
+               (-> *merchant-yaw* i))
+       (let ((proc (handle->process (-> *merchant-handle* 0))))
+         (when proc
+           (deactivate proc)
+           (set! (-> *merchant-handle* 0) (the-as handle #f)))))))
+  (none))
+
 (defun soul-pile-update ()
   ;; (the voice lines' clock kept running: quest-now; the scenes made in the game)
   (quest-now)
   (cutscene-update)
   (darkpump-update)
+  (merchant-update)
   (brume-radio-update)
   (soul-dark-enemies-update)
   (soul-dark-meter-update)
