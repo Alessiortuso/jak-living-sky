@@ -58,7 +58,9 @@
                                    ))
             (or
               #| (logtest? (-> target target-effect) (target-effect te0)) |#
-              (zero? (-> target skel active-channels))))
+              (zero? (-> target skel active-channels)))
+            ;; Jak Living Sky: not on his back before it's bought in the shop (*soul-board*)
+            (<= *soul-board* 0.0))
       (logior! (-> self draw status)
                (draw-status hidden
                             #| no-draw |#
