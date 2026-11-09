@@ -254,9 +254,9 @@
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id back) :scale #f)))
 
 ;; maps options to a progress screen
-;; the length matches with `(progress-screen max)`
+;; the length matches with `(progress-screen max)` (72 with the JET-Board's mod-options: keep them equal, a screen past the end overwrites memory)
 (define *options-remap*
-  (new 'static 'boxed-array :type (array game-option) :length 0 :allocated-length (#if (not PC_PORT) 35 68)))
+  (new 'static 'boxed-array :type (array game-option) :length 0 :allocated-length (#if (not PC_PORT) 35 72)))
 
 ;; added in PC port
 (defenum level-task-data-index
