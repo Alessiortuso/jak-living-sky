@@ -8,7 +8,7 @@ follows.
 **Brume Village** and its levels are by [Cuttlefishthesage](https://github.com/Cuttlefishthesage/BrumeVillage), used with their permission. Reach it from Rock Village's warp gate.
 
 The **JET-Board** is from [The JET-Board Legacy](https://github.com/Hat-Kid/og-j1-board) by Hat Kid (with Matt
-Dallmeyer's speedometer), ISC license. Here it can't be used in Fire Canyon, Lava Tube, Precursor Basin, Mountain Pass or the Mountain Range, nor by Dark Jak.
+Dallmeyer's speedometer), ISC license. Here it can't be used in Fire Canyon, Lava Tube, Precursor Basin, Mountain Pass or the Mountain Range, nor by Dark Jak, and it's bought in the white eco's shop once the warrior has put back Rock Village's pontoons.
 
 ---
 

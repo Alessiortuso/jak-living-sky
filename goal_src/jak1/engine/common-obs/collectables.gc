@@ -1618,7 +1618,16 @@
   (none))
 
 ;; The white eco's shop, what's on sale. To add an item: raise the count and add a line to each of these.
-(defconstant SOUL-SHOP-ITEMS 5)
+(defconstant SOUL-SHOP-ITEMS 6)
+
+;; the JET-Board (the last item) is on sale once the warrior has put back Rock Village's pontoons (paid: his
+;; task, which brings them up)
+(defun soul-board-on-sale? ()
+  (task-closed? (game-task village2-warrior-money) (task-status need-resolution)))
+
+;; the items on sale now
+(defun soul-shop-items ()
+  (if (soul-board-on-sale?) SOUL-SHOP-ITEMS (+ SOUL-SHOP-ITEMS -1)))
 
 ;; its name, in capitals (small letters are other characters in the game's font)
 (defun soul-item-name ((i int))
@@ -1628,6 +1637,7 @@
     ((2) "AUMENTA DURATA ECO")
     ((3) "AUMENTA DURATA DARK JAK")
     ((4) "ECO OSCURO X2 DAI NEMICI")
+    ((5) "JET-BOARD")
     (else "")))
 
 ;; how much of it Jak has
@@ -1638,6 +1648,7 @@
     ((2) (the int *soul-eco-time*))
     ((3) (the int *soul-dark-time*))
     ((4) (the int *soul-dark-double*))
+    ((5) (the int *soul-board*))
     (else 0)))
 
 ;; the most he can have
@@ -1648,6 +1659,7 @@
     ((2) 3)
     ((3) 2)
     ((4) 1)
+    ((5) 1)
     (else 0)))
 
 ;; what the next one costs
@@ -1666,6 +1678,7 @@
            ((0) 500)
            (else 1000)))
     ((4) 800)
+    ((5) 700)
     (else 0)))
 
 ;; giving it to him
@@ -1677,7 +1690,8 @@
     ((1) (set! *soul-double* 1.0))
     ((2) (set! *soul-eco-time* (+ *soul-eco-time* 1.0)))
     ((3) (set! *soul-dark-time* (+ *soul-dark-time* 1.0)))
-    ((4) (set! *soul-dark-double* 1.0)))
+    ((4) (set! *soul-dark-double* 1.0))
+    ((5) (set! *soul-board* 1.0)))
   (none))
 
 ;; resting at a warp gate: Jak's health full, and every enemy killed back where it was (what reset-actors does

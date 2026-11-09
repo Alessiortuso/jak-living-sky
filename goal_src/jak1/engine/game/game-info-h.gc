@@ -241,6 +241,9 @@
 (define *soul-dark-double* 0.0)
 ;; Jak Living Sky: bought in the shop: how long Dark Jak lasts (0: 10 s, 1: 15 s, 2: 20 s)
 (define *soul-dark-time* 0.0)
+;; Jak Living Sky: bought in the shop: the JET-Board (0 no, 1 yes; on sale once the warrior has put back Rock
+;; Village's pontoons)
+(define *soul-board* 0.0)
 (defun dark-jak-duration ()
   (the-as time-frame (the int (* (+ 10.0 (* 5.0 *soul-dark-time*)) (the float (seconds 1))))))
 ;; Jak Living Sky: Jak turned into Dark Jak (and since when)

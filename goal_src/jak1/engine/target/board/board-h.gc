@@ -411,8 +411,9 @@
       (let ((lev (level-get-target-inside *level*)))
         (and lev (case (-> lev name) (('firecanyon 'lavatube 'rolling 'ogre 'mount) #t) (else #f))))))
 
+;; Jak Living Sky: the board is bought in the white eco's shop (*soul-board*, collectables.gc)
 (defbehavior want-to-board? target ()
-  (and (not (board-banned-here?)) (not (symbol-member? (-> self next-state name)
+  (and (> *soul-board* 0.0) (not (board-banned-here?)) (not (symbol-member? (-> self next-state name)
                             '(target-wheel target-wheel-flip
                                           target-hit-ground-hard
                                           target-turn-around
