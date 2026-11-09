@@ -1948,6 +1948,21 @@ float g_tl_view = 0.f;          // how much time is shown (0: all of it)
 Clock::time_point g_tl_last = Clock::now();
 // the list opened on a row (a character's animations, the voices' mp3s)
 bool g_tl_list = false;
+// the timeline's clipboard (L2 held): a row's keys at the cursor, or between the mark and the cursor, their
+// times from its start; pasted at the cursor (onto any character's row: theirs then)
+struct Clip {
+  std::vector<AnimKey> anims;
+  std::vector<MoveKey> moves;
+  std::vector<PoseKey> poses;
+  std::vector<FaceKey> faces;
+  std::vector<Shot> shots;
+  float span = 0.f;
+  int kind = -1;  // the row's kind it came from (0 camera, 2 a character)
+  size_t count() const { return anims.size() + moves.size() + poses.size() + faces.size() + shots.size(); }
+};
+Clip g_clip;
+float g_tl_mark = -1.f;  // (the stretch's start: < 0 none)
+bool g_tl_l2 = false;    // (L2 held: the bar shows the clipboard's buttons)
 int g_tl_list_kind = 0;         // 0 animations, 1 mp3s
 int g_tl_list_at = 0;
 std::vector<std::string> g_tl_items;
@@ -2157,6 +2172,96 @@ bool timeline_pad(u32 pressed, u32 held, float lx, float ly, float rx) {
     undo_redo_locked(1);
     tl_note("redo");
   }
+  // L2 held: the clipboard. Up: a mark at the cursor (the stretch from it to the cursor); down: no mark; X: copy
+  // the row's keys (the stretch's, or the cursor's); circle: paste them at the cursor (a stretch: the cursor goes
+  // to its end, so pasting again repeats it after)
+  g_tl_l2 = (held & kPadL2) != 0;
+  if (held & kPadL2) {
+    if (pressed & kPadUp) {
+      g_tl_mark = g_cursor;
+      tl_note("mark: copy from here to the cursor");
+    }
+    if (pressed & kPadDown) {
+      g_tl_mark = -1.f;
+      tl_note("no mark");
+    }
+    if (pressed & kPadX) {
+      const bool span = g_tl_mark >= 0.f && std::fabs(g_tl_mark - g_cursor) > 0.02f;
+      const float a = span ? std::min(g_tl_mark, g_cursor) : g_cursor - 0.03f;
+      const float b = span ? std::max(g_tl_mark, g_cursor) : g_cursor + 0.03f;
+      const float base = span ? a : g_cursor;
+      auto in = [&](float x) { return x >= a - 0.001f && x <= b + 0.001f; };
+      Clip c;
+      c.kind = row.kind;
+      c.span = span ? b - a : 0.f;
+      if (row.kind == 0) {
+        for (auto s : g_scene.shots) if (in(s.t)) { s.t = std::max(0.f, s.t - base); c.shots.push_back(s); }
+      } else if (row.kind == 2) {
+        for (auto k : g_scene.anims) if (k.actor == row.actor && in(k.t)) { k.t = std::max(0.f, k.t - base); c.anims.push_back(k); }
+        for (auto k : g_scene.moves) if (k.actor == row.actor && in(k.t)) { k.t = std::max(0.f, k.t - base); c.moves.push_back(k); }
+        for (auto k : g_scene.poses) if (k.actor == row.actor && in(k.t)) { k.t = std::max(0.f, k.t - base); c.poses.push_back(k); }
+        for (auto k : g_scene.faces) if (k.actor == row.actor && in(k.t)) { k.t = std::max(0.f, k.t - base); c.faces.push_back(k); }
+      }
+      if (c.count() == 0) {
+        tl_note(span ? "no keys in that stretch" : "no keys at the cursor");
+      } else {
+        g_clip = c;
+        char buf[96];
+        std::snprintf(buf, sizeof(buf), "copied %d keys%s", (int)c.count(), span ? " (a stretch)" : "");
+        tl_note(buf);
+      }
+    }
+    if (pressed & kPadCircle) {
+      if (g_clip.count() == 0) {
+        tl_note("nothing copied yet (L2 + X)");
+      } else if ((g_clip.kind == 0) != (row.kind == 0) || row.kind == 1) {
+        tl_note(g_clip.kind == 0 ? "shots go on the Camera row" : "keys go on a character's row");
+      } else {
+        const float t0 = g_cursor;
+        auto close_by = [](float x, float y) { return std::fabs(x - y) < 0.02f; };
+        for (auto s : g_clip.shots) {
+          s.t += t0;
+          std::erase_if(g_scene.shots, [&](const Shot& o) { return close_by(o.t, s.t); });
+          g_scene.shots.push_back(s);
+        }
+        for (auto k : g_clip.anims) {
+          k.t += t0;
+          k.actor = row.actor;
+          std::erase_if(g_scene.anims, [&](const AnimKey& o) { return o.actor == k.actor && close_by(o.t, k.t); });
+          g_scene.anims.push_back(k);
+        }
+        for (auto k : g_clip.moves) {
+          k.t += t0;
+          k.actor = row.actor;
+          std::erase_if(g_scene.moves, [&](const MoveKey& o) { return o.actor == k.actor && close_by(o.t, k.t); });
+          g_scene.moves.push_back(k);
+        }
+        for (auto k : g_clip.poses) {
+          k.t += t0;
+          k.actor = row.actor;
+          std::erase_if(g_scene.poses,
+                        [&](const PoseKey& o) { return o.actor == k.actor && o.joint == k.joint && close_by(o.t, k.t); });
+          g_scene.poses.push_back(k);
+        }
+        for (auto k : g_clip.faces) {
+          k.t += t0;
+          k.actor = row.actor;
+          std::erase_if(g_scene.faces, [&](const FaceKey& o) { return o.actor == k.actor && close_by(o.t, k.t); });
+          g_scene.faces.push_back(k);
+        }
+        sort_scene(g_scene);
+        changed();
+        if (g_clip.span > 0.f) {
+          g_cursor = std::min(std::max(g_scene.length, 0.5f), t0 + g_clip.span);
+        }
+        char buf[96];
+        std::snprintf(buf, sizeof(buf), "pasted %d keys", (int)g_clip.count());
+        tl_note(buf);
+      }
+    }
+    return true;
+  }
+
   // rows: the D-pad's up and down
   if (pressed & kPadDown) g_tl_row = std::min((int)rows.size() - 1, g_tl_row + 1);
   if (pressed & kPadUp) g_tl_row = std::max(0, g_tl_row - 1);
@@ -2252,7 +2357,10 @@ void draw_overlay() {
                 g_mode == kPreview ? "PLAYING (Start: stop)" : g_tl_focus ? "TIMELINE" : "CAMERA");
   dl->AddText(font, fs, ImVec2(x0 + fs * 0.5f, y0 + fs * 0.3f), IM_COL32(255, 255, 255, 255), buf);
   const char* hint =
-      g_tl_list ? "D-pad / left stick: choose   X: put it at the cursor   Circle: close"
+      g_tl_l2 && g_tl_focus
+          ? "L2 +   Up: mark   X: copy (the stretch, or the cursor's keys)   Circle: paste at the cursor   "
+            "Down: no mark"
+      : g_tl_list ? "D-pad / left stick: choose   X: put it at the cursor   Circle: close"
       : g_tl_focus
           ? "Left stick: time   D-pad: row   L1/R1: keys   X: add   R2: animations   Square: delete   "
             "Start: play   Triangle: camera"
@@ -2345,6 +2453,26 @@ void draw_overlay() {
   if ((int)rows.size() > shown) {
     std::snprintf(buf, sizeof(buf), "%d/%d", g_tl_row + 1, (int)rows.size());
     dl->AddText(font, fs * 0.7f, ImVec2(x0 + fs * 0.5f, y0 + h - fs * 0.9f), IM_COL32(150, 150, 165, 255), buf);
+  }
+
+  // the marked stretch, and what's copied
+  if (g_tl_mark >= 0.f) {
+    const float a = std::max(std::min(g_tl_mark, g_cursor), v0), b = std::min(std::max(g_tl_mark, g_cursor), v0 + v);
+    if (b > a) {
+      dl->AddRectFilled(ImVec2(x_of(a), ry), ImVec2(x_of(b), y0 + h - 4.f), IM_COL32(120, 200, 255, 45));
+    }
+    if (in(g_tl_mark)) {
+      dl->AddLine(ImVec2(x_of(g_tl_mark), ry), ImVec2(x_of(g_tl_mark), y0 + h - 4.f), IM_COL32(120, 200, 255, 255),
+                  2.f);
+    }
+  }
+  if (g_clip.count() > 0) {
+    std::snprintf(buf, sizeof(buf), "copied: %d keys%s", (int)g_clip.count(), g_clip.span > 0.f ? "" : " (one frame)");
+    if (g_clip.span > 0.f) {
+      std::snprintf(buf, sizeof(buf), "copied: %d keys, %.2f s", (int)g_clip.count(), g_clip.span);
+    }
+    const ImVec2 sz = font->CalcTextSizeA(fs * 0.75f, FLT_MAX, 0.f, buf);
+    dl->AddText(font, fs * 0.75f, ImVec2(x1 - sz.x - fs * 0.5f, y0 + fs * 1.45f), IM_COL32(120, 200, 255, 255), buf);
   }
 
   // the cursor
