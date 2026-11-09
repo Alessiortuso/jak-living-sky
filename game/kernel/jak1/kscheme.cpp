@@ -573,6 +573,8 @@ Ptr<Function> make_function_symbol_from_c(const char* name, void* f) {
   auto sym = intern_from_c(name);
   auto func = make_function_from_c(f);
   sym->value = func.offset;
+  // Jak Living Sky: where each C function's GOAL trampoline is (a crash in one names it: game/main.cpp)
+  lg::debug("[c-func] {} at #x{:x}", name, func.offset);
   return func;
 }
 
@@ -584,6 +586,7 @@ Ptr<Function> make_stack_arg_function_symbol_from_c(const char* name, void* f) {
   auto sym = intern_from_c(name);
   auto func = make_stack_arg_function_from_c(f);
   sym->value = func.offset;
+  lg::debug("[c-func] {} at #x{:x} (stack args)", name, func.offset);
   return func;
 }
 

@@ -731,7 +731,7 @@
                ;; og:j1-board changed (and Jak Living Sky: its own art kept)
                (when (or (not s5-1) (= (-> s5-1 name) 'default)) ;; not part of level load, just normal login.
                  (login this)
-                 (if (or (needs-link? this) (string= (-> this name) "sidekick-board+0") (string= (-> this name) "eichar-board+0"))
+                 (if (or (needs-link? this) (string= (-> this name) "eichar-board+0")) ;; (as the mod shipped: its board-overrides linked Jak's only)
                    (link-art! this)))
                (if (string= (-> this name) "jak-nap") (set! *enhanced-nap-ag* this))
                (if (string= (-> this name) "darkjak-turn") (set! *darkjak-turn-ag* this))

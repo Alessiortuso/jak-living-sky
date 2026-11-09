@@ -25,6 +25,42 @@
 
 #include "third-party/CLI11.hpp"
 
+#include "common/goal_constants.h"
+#ifdef _WIN32
+#include <windows.h>
+
+// Jak Living Sky: a crash said in the log before the game goes - where (in GOAL's memory: its address there,
+// to be matched with the log's "[c-func]" trampolines and "link and exec" files), what it touched, and the
+// addresses into GOAL's memory on the stack (the GOAL code that called it)
+static LONG WINAPI jls_crash_filter(EXCEPTION_POINTERS* e) {
+  const u64 base = (u64)g_ee_main_mem;
+  const u64 base_x = (u64)g_ee_main_mem_exec;
+  auto goal = [&](u64 a) -> s64 {
+    if (base && a >= base && a < base + EE_MAIN_MEM_SIZE) return (s64)(a - base);
+    if (base_x && a >= base_x && a < base_x + EE_MAIN_MEM_SIZE) return (s64)(a - base_x);
+    return -1;
+  };
+  const auto* r = e->ExceptionRecord;
+  const auto* c = e->ContextRecord;
+  lg::error("[crash] exception {:#x} at rip {:#x} (GOAL #x{:x}), address {:#x} (GOAL #x{:x})", r->ExceptionCode,
+            c->Rip, goal(c->Rip), r->NumberParameters > 1 ? r->ExceptionInformation[1] : 0,
+            goal(r->NumberParameters > 1 ? r->ExceptionInformation[1] : 0));
+  lg::error("[crash] rax {:#x} rbx {:#x} rcx {:#x} rdx {:#x} rsi {:#x} rdi {:#x} rbp {:#x} rsp {:#x}", c->Rax, c->Rbx,
+            c->Rcx, c->Rdx, c->Rsi, c->Rdi, c->Rbp, c->Rsp);
+  lg::error("[crash] r8 {:#x} r9 {:#x} r10 {:#x} r11 {:#x} r12 {:#x} r13 {:#x} r14 {:#x} r15 {:#x}", c->R8, c->R9,
+            c->R10, c->R11, c->R12, c->R13, c->R14, c->R15);
+  const u64* sp = (const u64*)c->Rsp;
+  for (int i = 0; i < 128; i++) {
+    MEMORY_BASIC_INFORMATION mbi;
+    if (!VirtualQuery(sp + i, &mbi, sizeof(mbi)) || mbi.State != MEM_COMMIT) break;
+    const s64 g = goal(sp[i]);
+    if (g >= 0) lg::error("[crash] stack +{}: GOAL #x{:x}", i * 8, g);
+  }
+  lg::finish();
+  return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
 #ifdef _WIN32
 extern "C" {
 __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
@@ -90,6 +126,9 @@ std::string game_arg_documentation() {
  */
 int main(int argc, char** argv) {
   ArgumentGuard u8_guard(argc, argv);
+#ifdef _WIN32
+  SetUnhandledExceptionFilter(jls_crash_filter);
+#endif
 
   // CLI flags
   bool show_version = false;
