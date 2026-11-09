@@ -1728,6 +1728,72 @@ void share_replacement_with_lods(tfrag3::Level& lvl,
   }
 }
 
+// Jak Living Sky: a new model of a character that has live eyes (the JET-Board's Jak and Daxter riding it,
+// "eichar-board+0-lod0" of "eichar-lod0") has only a still picture of the iris on them: on Daxter, whose eye is
+// mostly its white and pupil, the whole eye a dark iris. Its iris draws made the character's own eye draws (the
+// EyeRenderer's picture, the slot the game draws them in): left or right as that model's own eye on the same
+// side
+static void link_custom_model_eyes(tfrag3::Level& lvl, tfrag3::MercModel& mdl) {
+  const auto plus = mdl.name.find("-board+0-lod0");
+  if (plus == std::string::npos) {
+    return;
+  }
+  const std::string source_name = mdl.name.substr(0, plus) + "-lod0";
+  const auto& verts = lvl.merc_data.vertices;
+  const auto& idx = lvl.merc_data.indices;
+  // the middle of a draw, across (x)
+  auto mid_x = [&](const tfrag3::MercDraw& d) {
+    double sum = 0;
+    int n = 0;
+    for (u32 i = 0; i < d.index_count; i++) {
+      const u32 v = idx.at(d.first_index + i);
+      if (v != UINT32_MAX && v < verts.size()) {
+        sum += verts[v].x;
+        n++;
+      }
+    }
+    return n ? sum / n : 0.0;
+  };
+  // (the model is often added before its source is extracted: then the slots the game gives them, "merc eyes" in
+  // the log; the left eye on the character's left, +x, as it faces +z)
+  int slot = source_name == "eichar-lod0" ? 0 : source_name == "sidekick-lod0" ? 1 : -1;
+  double left_x = 1;
+  for (const auto& m : lvl.merc_data.models) {
+    if (m.name != source_name) {
+      continue;
+    }
+    for (const auto& eff : m.effects) {
+      for (const auto& d : eff.all_draws) {
+        if (d.eye_id != 0xff) {
+          slot = d.eye_id >> 1;
+          if (!(d.eye_id & 1)) {
+            left_x = mid_x(d);
+          }
+        }
+      }
+    }
+  }
+  if (slot < 0) {
+    lg::warn("custom model {}: no eye slot known for {}", mdl.name, source_name);
+    return;
+  }
+  for (auto& eff : mdl.effects) {
+    for (auto& d : eff.all_draws) {
+      if (d.tree_tex_id < 0 || d.tree_tex_id >= (int)lvl.textures.size()) {
+        continue;
+      }
+      const auto& tex_name = lvl.textures[d.tree_tex_id].debug_name;
+      if (tex_name.find("iris") == std::string::npos) {
+        continue;
+      }
+      const bool left = (mid_x(d) >= 0) == (left_x >= 0);
+      d.eye_id = (slot << 1) | (left ? 0 : 1);
+      lg::info("custom model {}: {} drawn as {} eye of slot {}", mdl.name, tex_name,
+               left ? "left" : "right", slot);
+    }
+  }
+}
+
 void add_custom_model_to_level(tfrag3::Level& lvl,
                                const std::string& name,
                                const fs::path& mdl_path) {
@@ -1745,6 +1811,7 @@ void add_custom_model_to_level(tfrag3::Level& lvl,
   lvl.merc_data.models.push_back(merc_data.new_model);
   lvl.textures.insert(lvl.textures.end(), merc_data.new_textures.begin(),
                       merc_data.new_textures.end());
+  link_custom_model_eyes(lvl, lvl.merc_data.models.back());
 }
 
 /*!
