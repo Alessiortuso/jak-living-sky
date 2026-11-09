@@ -1777,15 +1777,36 @@ static void link_custom_model_eyes(tfrag3::Level& lvl, tfrag3::MercModel& mdl) {
     lg::warn("custom model {}: no eye slot known for {}", mdl.name, source_name);
     return;
   }
+  // a draw over both eyes at once (Jak's: each eye twice in his model, the second pair one draw) can't be either
+  // eye: a copy of the others, left out
+  auto both_sides = [&](const tfrag3::MercDraw& d) {
+    bool neg = false, pos = false;
+    for (u32 i = 0; i < d.index_count; i++) {
+      const u32 v = idx.at(d.first_index + i);
+      if (v != UINT32_MAX && v < verts.size()) {
+        (verts[v].x < 0 ? neg : pos) = true;
+      }
+    }
+    return neg && pos;
+  };
+  auto is_iris = [&](const tfrag3::MercDraw& d) {
+    return d.tree_tex_id >= 0 && d.tree_tex_id < (int)lvl.textures.size() &&
+           lvl.textures[d.tree_tex_id].debug_name.find("iris") != std::string::npos;
+  };
   for (auto& eff : mdl.effects) {
+    const size_t before = eff.all_draws.size();
+    eff.all_draws.erase(std::remove_if(eff.all_draws.begin(), eff.all_draws.end(),
+                                       [&](const tfrag3::MercDraw& d) { return is_iris(d) && both_sides(d); }),
+                        eff.all_draws.end());
+    if (eff.all_draws.size() != before) {
+      lg::info("custom model {}: {} iris draw(s) over both eyes left out", mdl.name,
+               before - eff.all_draws.size());
+    }
     for (auto& d : eff.all_draws) {
-      if (d.tree_tex_id < 0 || d.tree_tex_id >= (int)lvl.textures.size()) {
+      if (!is_iris(d)) {
         continue;
       }
       const auto& tex_name = lvl.textures[d.tree_tex_id].debug_name;
-      if (tex_name.find("iris") == std::string::npos) {
-        continue;
-      }
       const bool left = (mid_x(d) >= 0) == (left_x >= 0);
       d.eye_id = (slot << 1) | (left ? 0 : 1);
       lg::info("custom model {}: {} drawn as {} eye of slot {}", mdl.name, tex_name,

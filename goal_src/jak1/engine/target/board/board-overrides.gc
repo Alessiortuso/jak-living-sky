@@ -121,7 +121,12 @@
   ;; og:j1-board changed
   (let ((radius-backup (-> self control unknown-sphere-array00 0 prim-core world-sphere w)))
     (if (board?) (+! (-> self control unknown-sphere-array00 0 prim-core world-sphere w) (meters 2)))
-    (water-control-method-10 (-> self water))
+    ;; Jak Living Sky: on the board the bigger sphere has him wading: no wading splashes then, flickering about
+    ;; his body at random joints every frame (water.gc, part-splash: parts 110 and 111); the board's wake kept
+    (let ((splash? (logtest? (-> self water flag) (water-flag part-splash))))
+      (if (board?) (logclear! (-> self water flag) (water-flag part-splash)))
+      (water-control-method-10 (-> self water))
+      (if splash? (logior! (-> self water flag) (water-flag part-splash))))
     (set! (-> self control unknown-sphere-array00 0 prim-core world-sphere w) radius-backup))
   (when (not *weather-off*)
     (case (-> self current-level name)
