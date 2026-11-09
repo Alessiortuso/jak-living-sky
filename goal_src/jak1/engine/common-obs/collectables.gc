@@ -1720,7 +1720,9 @@
     ((and (< (soul-item-have i) (soul-item-most i)) (>= *soul-eco* (the float (soul-item-cost i))))
      (set! *soul-eco* (- *soul-eco* (the float (soul-item-cost i))))
      (soul-item-give i)
-     (sound-play "cursor-options" :pitch -1.0))
+     (sound-play "cursor-options" :pitch -1.0)
+     ;; Jak Living Sky: what's bought kept at once (the auto save, as for a power cell)
+     (auto-save-command 'auto-save 0 0 *default-pool*))
     (else (pc-enhanced-denied)))
   (none))
 

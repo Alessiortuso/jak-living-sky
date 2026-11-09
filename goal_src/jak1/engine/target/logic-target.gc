@@ -722,9 +722,49 @@
 
 (define-extern soul-pile-update (function none))
 
+;; Jak Living Sky: the sea's edge on the board. Out at sea, past where its floor ends, nothing is under the water
+;; and the board falls into the void: there it turns him back. Falling there: below the water he rode on a moment
+;; ago, not in it, nothing found under him (gspot-pos, collide-shape.gc: -40959590 then). So a jump, over the sea
+;; or a gap on land, is left alone
+(define *board-sea-safe* (new 'global 'vector))
+(define *board-sea-turn-time* (the-as time-frame 0))
+(define *board-on-water-time* (the-as time-frame 0))
+(define *board-water-height* 0.0)
+
+;; there: put back at the last place with something under him, his way turned round toward it (half his speed,
+;; 8 m/s at least), with a splash
+(defbehavior board-sea-edge-update target ()
+  (when (or (logtest? (-> self control status) (cshape-moving-flags on-water))
+            (logtest? (-> self water flag) (water-flag touch-water)))
+    (set! *board-on-water-time* (current-time))
+    (set! *board-water-height* (-> self water height)))
+  (cond
+    ((and (board?)
+          (< (-> self control gspot-pos y) -20480000.0)
+          (not (time-elapsed? *board-on-water-time* (seconds 3)))
+          (< (-> self control trans y) (- *board-water-height* (meters 1)))
+          (not (logtest? (-> self water flag) (water-flag touch-water))))
+     (let ((back (vector-! (new 'stack-no-clear 'vector) *board-sea-safe* (-> self control trans))))
+       (set! (-> back y) 0.0)
+       (when (< 0.0 (vector-length back))
+         (vector-normalize! back 1.0)
+         (set! (-> self control trans x) (-> *board-sea-safe* x))
+         (set! (-> self control trans z) (-> *board-sea-safe* z))
+         (set! (-> self control trans y) (fmax (-> self control trans y) (-> *board-sea-safe* y)))
+         (let ((speed (fmax (meters 8) (* 0.5 (vector-xz-length (-> self control transv))))))
+           (set! (-> self control transv x) (* speed (-> back x)))
+           (set! (-> self control transv z) (* speed (-> back z))))
+         (when (time-elapsed? *board-sea-turn-time* (seconds 0.5))
+           (set! *board-sea-turn-time* (current-time))
+           (sound-play "large-splash")))))
+    ((or (< -20480000.0 (-> self control gspot-pos y)) (logtest? (-> self water flag) (water-flag touch-water)))
+     (set! (-> *board-sea-safe* quad) (-> self control trans quad))))
+  (none))
+
 (defbehavior enhanced-player-update target ()
   ;; (on the board into Fire Canyon or Lava Tube: off it, as soon as he's there)
   (if (and (board?) (board-banned-here?)) (send-event self 'end-mode 'board))
+  (board-sea-edge-update)
   (soul-pile-update)
   (enhanced-menu-update)
   (enhanced-strike-update)
