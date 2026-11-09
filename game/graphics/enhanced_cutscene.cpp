@@ -535,8 +535,23 @@ void poses_at(const Scene& s, float t) {
         b = &m;
       }
     }
+    // (a body part with no key of its own yet: at rest at the character's last key before, any part's - a
+    // character's keys at one time are a frame - and sliding from it to its own first key)
+    PoseKey rest;
     if (!a) {
-      continue;
+      float ta = -1.f;
+      for (const auto& m : s.poses) {
+        if (m.actor == k.actor && m.t <= t && m.t > ta) ta = m.t;
+      }
+      if (ta < 0.f || !b) {
+        continue;
+      }
+      rest.t = ta;
+      rest.actor = k.actor;
+      rest.joint = k.joint;
+      rest.smooth = true;
+      rest.has_q = b->has_q;
+      a = &rest;
     }
     float u = 0.f;
     if (a->smooth && b && b->t > a->t) {
