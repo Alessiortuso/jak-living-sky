@@ -117,6 +117,9 @@
        game-option
        (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id skip-fuel-cell-anim) :scale #t)
        (new 'static 'game-option :option-type (game-option-type on-off) :name (text-id show-speed) :scale #t)
+       ;; Jak Living Sky: orbs and white eco given (to pay the warrior and buy the board, say)
+       (new 'static 'game-option :option-type (game-option-type button) :name (text-id give-orbs) :scale #t)
+       (new 'static 'game-option :option-type (game-option-type button) :name (text-id give-white-eco) :scale #t)
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id back) :scale #t)))
 
 (define *main-options-pc*
@@ -2513,6 +2516,13 @@
               ((= (-> options (-> obj option-index) option-type) (game-option-type button))
                ;; a button. what?
                (case (-> options (-> obj option-index) name)
+                 ;; Jak Living Sky: the mod options' gifts
+                 (((text-id give-orbs))
+                  (+! (-> *game-info* money) 100.0)
+                  (sound-play "money-pickup"))
+                 (((text-id give-white-eco))
+                  (set! *soul-eco* (+ *soul-eco* 500.0))
+                  (sound-play "cursor-options"))
                  (((text-id exit-demo))
                   ;; exit demo!
                   (set! *master-exit* 'force)
