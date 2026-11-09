@@ -1,0 +1,187 @@
+# MODEBORD  version=3  bank_id=0x6d626f72
+# sounds=32  grains=123
+
+[000] "board-q-jump"  vol=70  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] STARTCHILDSOUND  delay=0  vol=127  pan=0  reg=[0,0,0,0]  sound_id=1  sndname="board-jump"
+  grain[1] TONE  delay=0  priority=111  vol=100  note=-74  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00005260  -> BOARD_Q_JUMP.wav
+
+[001] "board-jump"  vol=120  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=0  target=4  target_extra=0 shape=1  duty_cycle=1024  depth=512  flags=0x0000  start_offset=0  step_size=3355443
+  grain[1] TONE  delay=0  priority=122  vol=127  note=-68  fine=124  pan=0  map=[0,0]  pb=[10,0]  adsr=[0xaeff,0x9fc0]  flags=0x0001  offset=0x0000a260  -> BOARD_JUMP_0.wav
+  grain[2] TONE  delay=0  priority=120  vol=50  note=-70  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fcc]  flags=0x0001  offset=0x0000e740  -> BOARD_JUMP_1.wav
+
+[002] "board-k-jump"  vol=127  volgroup=0  pan=0  instlimit=0  flags=0x0000
+[003] "board-kick"  vol=110  volgroup=0  pan=0  instlimit=0  flags=0x0000
+[004] "board-bounce"  vol=65  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] SET_REGISTER_RAND  delay=2  param=[0, 100, 127, 0]
+  grain[1] RAND_PB  delay=2  param=[35, 0, 0, 0]
+  grain[2] TONE  delay=0  priority=112  vol=90  note=-70  fine=3  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x0000e740  -> BOARD_BOUNCE_0.wav
+  grain[3] TONE  delay=0  priority=111  vol=-1  note=-74  fine=66  pan=0  map=[0,0]  pb=[1,1]  adsr=[0x80ff,0xcbc0]  flags=0x0001  offset=0x00001270  loop=1  -> BOARD_BOUNCE_1.wav
+  grain[4] TONE  delay=0  priority=120  vol=-1  note=-74  fine=66  pan=0  map=[0,0]  pb=[2,2]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00003040  -> BOARD_BOUNCE_2.wav
+  grain[5] TONE  delay=0  priority=111  vol=80  note=-73  fine=66  pan=0  map=[0,0]  pb=[1,1]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00004140  -> BOARD_BOUNCE_3.wav
+
+[005] "board-glance"  vol=79  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] SET_REGISTER_RAND  delay=2  param=[0, 100, 127, 0]
+  grain[1] RAND_PB  delay=2  param=[35, 0, 0, 0]
+  grain[2] TONE  delay=0  priority=111  vol=-1  note=-74  fine=66  pan=0  map=[0,0]  pb=[2,2]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00003040  -> BOARD_GLANCE_0.wav
+  grain[3] TONE  delay=0  priority=111  vol=55  note=-74  fine=66  pan=0  map=[0,0]  pb=[2,2]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00000000  -> BOARD_GLANCE_1.wav
+
+[006] "board-wind"  vol=100  volgroup=0  pan=0  instlimit=0  flags=0x0000
+[007] "board-turn"  vol=100  volgroup=0  pan=0  instlimit=0  flags=0x0000
+[008] "board-hit"  vol=100  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] SET_REGISTER_RAND  delay=2  param=[0, 100, 127, 0]
+  grain[1] RAND_PB  delay=2  param=[35, 0, 0, 0]
+  grain[2] RAND_PLAY  delay=0  param=[2, 1, 0, 0]
+  grain[3] TONE  delay=0  priority=100  vol=-1  note=-74  fine=66  pan=0  map=[0,0]  pb=[2,2]  adsr=[0xad3a,0x9fd2]  flags=0x0001  offset=0x00000000  -> BOARD_HIT_0.wav
+  grain[4] TONE  delay=0  priority=100  vol=-1  note=-74  fine=66  pan=0  map=[0,0]  pb=[2,2]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00000000  -> BOARD_HIT_1.wav
+
+[009] "board-bank"  vol=90  volgroup=0  pan=0  instlimit=1  flags=0x0029
+  grain[0] TONE  delay=0  priority=123  vol=127  note=-70  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xa3ff,0x9fcd]  flags=0x0001  offset=0x00013a10  loop=1  -> BOARD_BANK.wav
+
+[010] "board-boost"  vol=100  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] RAND_PLAY  delay=25  param=[3, 1, 0, 0]
+  grain[1] TONE  delay=0  priority=70  vol=127  note=-80  fine=124  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x000082b0  -> BOARD_BOOST_0.wav
+  grain[2] TONE  delay=0  priority=70  vol=127  note=-80  fine=124  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x000076a0  -> BOARD_BOOST_1.wav
+  grain[3] TONE  delay=0  priority=70  vol=127  note=-80  fine=124  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00006e70  -> BOARD_BOOST_2.wav
+
+[011] "BOARD_AIR"  vol=90  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] TONE  delay=0  priority=111  vol=127  note=-54  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xb3ff,0x9fd2]  flags=0x0001  offset=0x00005260  -> BOARD_AIR_0.wav
+  grain[1] TONE  delay=0  priority=111  vol=80  note=-74  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fd2]  flags=0x0001  offset=0x00005260  -> BOARD_AIR_1.wav
+
+[012] "BOARD_SPIN_LOOP"  vol=120  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=1  target=1  target_extra=0 shape=1  duty_cycle=1024  depth=1024  flags=0x0000  start_offset=0  step_size=251658
+  grain[1] LFO_SETTINGS  delay=0  which_lfo=0  target=4  target_extra=0 shape=1  duty_cycle=1024  depth=819  flags=0x0000  start_offset=511  step_size=195734
+  grain[2] SET_REGISTER  delay=0  param=[3, 10, 0, 0]
+  grain[3] TONE  delay=0  priority=111  vol=50  note=-54  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xaaff,0x9fc0]  flags=0x0001  offset=0x00005260  -> BOARD_SPIN_LOOP_0.wav
+  grain[4] LOOP_START  delay=0  param=[0, 0, 0, 0]
+  grain[5] TONE  delay=0  priority=123  vol=127  note=-68  fine=124  pan=0  map=[0,0]  pb=[10,0]  adsr=[0xb1ff,0x9fd2]  flags=0x0001  offset=0x0000a260  -> BOARD_SPIN_LOOP_1.wav
+  grain[6] TONE  delay=0  priority=123  vol=60  note=-70  fine=66  pan=0  map=[0,0]  pb=[3,0]  adsr=[0xa3ff,0x9fcc]  flags=0x0001  offset=0x0000e740  -> BOARD_SPIN_LOOP_2.wav
+  grain[7] KEY_OFF_VOICES  delay=27  param=[0, 0, 0, 0]
+  grain[8] DEC_REGISTER  delay=0  param=[3, 0, 0, 0]
+  grain[9] TEST_REGISTER  delay=0  param=[3, 1, 1, 0]
+  grain[10] STOP  delay=0  param=[0, 0, 0, 0]
+  grain[11] LOOP_END  delay=0  param=[0, 0, 0, 0]
+
+[013] "BOARD_FLIP"  vol=120  volgroup=0  pan=0  instlimit=1  flags=0x0008
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=1  target=1  target_extra=0 shape=1  duty_cycle=1024  depth=1024  flags=0x0000  start_offset=0  step_size=251658
+  grain[1] LFO_SETTINGS  delay=0  which_lfo=0  target=4  target_extra=0 shape=1  duty_cycle=1024  depth=921  flags=0x0000  start_offset=511  step_size=167772
+  grain[2] SET_REGISTER  delay=0  param=[3, 5, 0, 0]
+  grain[3] TONE  delay=0  priority=111  vol=50  note=-54  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xaaff,0x9fc0]  flags=0x0001  offset=0x00005260  -> BOARD_FLIP_0.wav
+  grain[4] LOOP_START  delay=0  param=[0, 0, 0, 0]
+  grain[5] TONE  delay=0  priority=122  vol=127  note=-68  fine=124  pan=0  map=[0,0]  pb=[10,0]  adsr=[0xb1ff,0x9fd2]  flags=0x0001  offset=0x0000a260  -> BOARD_FLIP_1.wav
+  grain[6] TONE  delay=0  priority=123  vol=60  note=-70  fine=66  pan=0  map=[0,0]  pb=[3,0]  adsr=[0xa3ff,0x9fcc]  flags=0x0001  offset=0x0000e740  -> BOARD_FLIP_2.wav
+  grain[7] KEY_OFF_VOICES  delay=55  param=[0, 0, 0, 0]
+  grain[8] DEC_REGISTER  delay=0  param=[3, 0, 0, 0]
+  grain[9] TEST_REGISTER  delay=0  param=[3, 1, 1, 0]
+  grain[10] STOP  delay=0  param=[0, 0, 0, 0]
+  grain[11] LOOP_END  delay=0  param=[0, 0, 0, 0]
+
+[014] "board-nosegrab"  vol=120  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] STARTCHILDSOUND  delay=0  vol=127  pan=0  reg=[0,0,0,0]  sound_id=1  sndname="board-jump"
+
+[015] "board-noseflip"  vol=120  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=1  target=1  target_extra=0 shape=1  duty_cycle=1024  depth=1024  flags=0x0000  start_offset=0  step_size=503314
+  grain[1] LFO_SETTINGS  delay=0  which_lfo=0  target=4  target_extra=0 shape=1  duty_cycle=1024  depth=921  flags=0x0000  start_offset=511  step_size=167772
+  grain[2] SET_REGISTER  delay=0  param=[3, 4, 0, 0]
+  grain[3] TONE  delay=0  priority=111  vol=50  note=-54  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xaaff,0x9fc0]  flags=0x0001  offset=0x00005260  -> BOARD_NOSEFLIP_0.wav
+  grain[4] LOOP_START  delay=0  param=[0, 0, 0, 0]
+  grain[5] TONE  delay=0  priority=122  vol=127  note=-68  fine=124  pan=0  map=[0,0]  pb=[10,0]  adsr=[0xb1ff,0x9fd2]  flags=0x0001  offset=0x0000a260  -> BOARD_NOSEFLIP_1.wav
+  grain[6] TONE  delay=0  priority=123  vol=60  note=-70  fine=66  pan=0  map=[0,0]  pb=[3,0]  adsr=[0xa3ff,0x9fcc]  flags=0x0001  offset=0x0000e740  -> BOARD_NOSEFLIP_2.wav
+  grain[7] KEY_OFF_VOICES  delay=35  param=[0, 0, 0, 0]
+  grain[8] DEC_REGISTER  delay=0  param=[3, 0, 0, 0]
+  grain[9] TEST_REGISTER  delay=0  param=[3, 1, 1, 0]
+  grain[10] STOP  delay=0  param=[0, 0, 0, 0]
+  grain[11] LOOP_END  delay=0  param=[0, 0, 0, 0]
+
+[016] "board-kickflip"  vol=120  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=1  target=1  target_extra=0 shape=1  duty_cycle=1024  depth=1024  flags=0x0000  start_offset=0  step_size=279620
+  grain[1] LFO_SETTINGS  delay=0  which_lfo=0  target=4  target_extra=0 shape=1  duty_cycle=1024  depth=614  flags=0x0000  start_offset=511  step_size=195734
+  grain[2] SET_REGISTER  delay=0  param=[3, 5, 0, 0]
+  grain[3] TONE  delay=0  priority=111  vol=50  note=-54  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xaaff,0x9fc0]  flags=0x0001  offset=0x00005260  -> BOARD_KICKFLIP_0.wav
+  grain[4] LOOP_START  delay=0  param=[0, 0, 0, 0]
+  grain[5] TONE  delay=0  priority=125  vol=127  note=-68  fine=124  pan=0  map=[0,0]  pb=[12,0]  adsr=[0xb1ff,0x9fd2]  flags=0x0001  offset=0x0000a260  -> BOARD_KICKFLIP_1.wav
+  grain[6] TONE  delay=0  priority=123  vol=60  note=-70  fine=66  pan=0  map=[0,0]  pb=[3,0]  adsr=[0xa3ff,0x9fcc]  flags=0x0001  offset=0x0000e740  -> BOARD_KICKFLIP_2.wav
+  grain[7] KEY_OFF_VOICES  delay=60  param=[0, 0, 0, 0]
+  grain[8] DEC_REGISTER  delay=0  param=[3, 0, 0, 0]
+  grain[9] TEST_REGISTER  delay=0  param=[3, 1, 1, 0]
+  grain[10] STOP  delay=0  param=[0, 0, 0, 0]
+  grain[11] LOOP_END  delay=0  param=[0, 0, 0, 0]
+
+[017] "board-boardspin"  vol=120  volgroup=0  pan=0  instlimit=1  flags=0x0008
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=1  target=1  target_extra=0 shape=1  duty_cycle=1024  depth=1024  flags=0x0000  start_offset=0  step_size=335543
+  grain[1] LFO_SETTINGS  delay=0  which_lfo=0  target=4  target_extra=0 shape=1  duty_cycle=1024  depth=819  flags=0x0000  start_offset=511  step_size=195734
+  grain[2] SET_REGISTER  delay=40  param=[3, 6, 0, 0]
+  grain[3] TONE  delay=0  priority=111  vol=50  note=-54  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xaaff,0x9fc0]  flags=0x0001  offset=0x00005260  -> BOARD_BOARDSPIN_0.wav
+  grain[4] LOOP_START  delay=0  param=[0, 0, 0, 0]
+  grain[5] TONE  delay=0  priority=125  vol=127  note=-68  fine=124  pan=0  map=[0,0]  pb=[10,0]  adsr=[0xb1ff,0x9fd2]  flags=0x0001  offset=0x0000a260  -> BOARD_BOARDSPIN_1.wav
+  grain[6] TONE  delay=0  priority=123  vol=80  note=-70  fine=66  pan=0  map=[0,0]  pb=[3,0]  adsr=[0xa3ff,0x9fcc]  flags=0x0001  offset=0x0000e740  -> BOARD_BOARDSPIN_2.wav
+  grain[7] KEY_OFF_VOICES  delay=20  param=[0, 0, 0, 0]
+  grain[8] DEC_REGISTER  delay=0  param=[3, 0, 0, 0]
+  grain[9] TEST_REGISTER  delay=0  param=[3, 1, 1, 0]
+  grain[10] STOP  delay=0  param=[0, 0, 0, 0]
+  grain[11] LOOP_END  delay=0  param=[0, 0, 0, 0]
+
+[018] "board-whoosh"  vol=127  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] TONE  delay=0  priority=122  vol=127  note=-77  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x9a24,0x9fd2]  flags=0x0001  offset=0x00005260  -> BOARD_WHOOSH.wav
+
+[019] "board-stead"  vol=100  volgroup=0  pan=0  instlimit=0  flags=0x0001
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=0  target=1  target_extra=0 shape=1  duty_cycle=1024  depth=92  flags=0x0002  start_offset=0  step_size=335543
+  grain[1] TONE  delay=0  priority=125  vol=110  note=-74  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xaeff,0x9fcd]  flags=0x0001  offset=0x00008990  loop=1  -> BOARD_STEAD.wav
+
+[020] "board-boots"  vol=80  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] STARTCHILDSOUND  delay=0  vol=127  pan=0  reg=[0,0,0,0]  sound_id=21  sndname="run-smt1"
+  grain[1] STARTCHILDSOUND  delay=11  vol=127  pan=0  reg=[0,0,0,0]  sound_id=22  sndname="run-smt2"
+
+[021] "run-smt1"  vol=127  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] SET_REGISTER_RAND  delay=2  param=[0, 30, 35, 0]
+  grain[1] SET_REGISTER_RAND  delay=2  param=[1, 120, 125, 0]
+  grain[2] RAND_PB  delay=2  param=[35, 0, 0, 0]
+  grain[3] TONE  delay=0  priority=0  vol=80  note=-86  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x0000cfe0  -> RUN_SMT1_0.wav
+  grain[4] TONE  delay=0  priority=70  vol=-2  note=-74  fine=66  pan=0  map=[0,0]  pb=[1,1]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x0000adb0  -> RUN_SMT1_1.wav
+  grain[5] TONE  delay=0  priority=70  vol=-1  note=-80  fine=66  pan=0  map=[0,0]  pb=[2,2]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x0000b800  -> RUN_SMT1_2.wav
+
+[022] "run-smt2"  vol=127  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] SET_REGISTER_RAND  delay=2  param=[0, 30, 35, 0]
+  grain[1] SET_REGISTER_RAND  delay=2  param=[1, 120, 125, 0]
+  grain[2] RAND_PB  delay=2  param=[35, 0, 0, 0]
+  grain[3] TONE  delay=0  priority=70  vol=-2  note=-74  fine=66  pan=0  map=[0,0]  pb=[1,1]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x0000c590  -> RUN_SMT2_0.wav
+  grain[4] TONE  delay=0  priority=70  vol=-1  note=-80  fine=66  pan=0  map=[0,0]  pb=[2,2]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x0000b800  -> RUN_SMT2_1.wav
+
+[023] "board-impact"  vol=70  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] RAND_PB  delay=1  param=[30, 0, 0, 0]
+  grain[1] TONE  delay=0  priority=80  vol=110  note=-79  fine=124  pan=0  map=[0,0]  pb=[1,2]  adsr=[0xa1ff,0x9fcc]  flags=0x0001  offset=0x0000d650  -> BOARD_IMPACT.wav
+
+[024] "board-steady"  vol=105  volgroup=0  pan=0  instlimit=0  flags=0x0005
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=0  target=4  target_extra=0 shape=1  duty_cycle=1024  depth=665  flags=0x0000  start_offset=0  step_size=559237
+  grain[1] TONE  delay=0  priority=124  vol=110  note=-56  fine=66  pan=0  map=[0,0]  pb=[1,1]  adsr=[0xaeff,0x9fcd]  flags=0x0001  offset=0x00016750  loop=1  -> BOARD_STEADY_0.wav
+  grain[2] TONE  delay=0  priority=124  vol=90  note=-70  fine=66  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xaeff,0x9fcd]  flags=0x0001  offset=0x00013a10  loop=1  -> BOARD_STEADY_1.wav
+
+[025] "board-adjust"  vol=65  volgroup=0  pan=0  instlimit=1  flags=0x0028
+  grain[0] RAND_PB  delay=0  param=[20, 0, 0, 0]
+  grain[1] TONE  delay=0  priority=123  vol=127  note=-70  fine=66  pan=0  map=[0,0]  pb=[1,1]  adsr=[0x80ff,0x9fce]  flags=0x0001  offset=0x00010930  -> BOARD_ADJUST.wav
+
+[026] "board-rail-mtl"  vol=70  volgroup=0  pan=0  instlimit=0  flags=0x0005
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=0  target=4  target_extra=0 shape=5  duty_cycle=1024  depth=409  flags=0x0002  start_offset=0  step_size=2796202
+  grain[1] TONE  delay=0  priority=120  vol=100  note=-74  fine=66  pan=0  map=[0,0]  pb=[0,1]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00001270  loop=1  -> BOARD_RAIL_MTL_0.wav
+  grain[2] TONE  delay=0  priority=120  vol=100  note=-86  fine=66  pan=0  map=[0,0]  pb=[1,0]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00001270  loop=1  -> BOARD_RAIL_MTL_1.wav
+
+[027] "board-rail-wood"  vol=110  volgroup=0  pan=0  instlimit=0  flags=0x0005
+  grain[0] LFO_SETTINGS  delay=0  which_lfo=0  target=4  target_extra=0 shape=5  duty_cycle=1024  depth=409  flags=0x0002  start_offset=0  step_size=2796202
+  grain[1] TONE  delay=0  priority=120  vol=70  note=-74  fine=66  pan=0  map=[0,0]  pb=[1,1]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00019e30  loop=1  -> BOARD_RAIL_WOOD_0.wav
+  grain[2] TONE  delay=0  priority=120  vol=110  note=-82  fine=66  pan=0  map=[0,0]  pb=[1,1]  adsr=[0x80ff,0x9fc0]  flags=0x0001  offset=0x00019e30  loop=1  -> BOARD_RAIL_WOOD_1.wav
+
+[028] "board-launch"  vol=90  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] TONE  delay=0  priority=123  vol=127  note=-71  fine=66  pan=30  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fcd]  flags=0x0001  offset=0x0001c420  -> BOARD_LAUNCH_0.wav
+  grain[1] TONE  delay=4  priority=123  vol=127  note=-72  fine=66  pan=330  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fcd]  flags=0x0001  offset=0x0001c420  -> BOARD_LAUNCH_1.wav
+
+[029] "board-zap"  vol=120  volgroup=0  pan=0  instlimit=0  flags=0x0000
+  grain[0] TONE  delay=0  priority=124  vol=127  note=-72  fine=2  pan=0  map=[0,0]  pb=[0,0]  adsr=[0x80ff,0x9fce]  flags=0x0001  offset=0x00022250  -> BOARD_ZAP.wav
+
+[030] "board-zap-hit"  vol=110  volgroup=0  pan=0  instlimit=1  flags=0x0028
+  grain[0] RAND_PB  delay=0  param=[40, 0, 0, 0]
+  grain[1] TONE  delay=0  priority=123  vol=127  note=-72  fine=0  pan=0  map=[0,0]  pb=[1,1]  adsr=[0x80ff,0xcdc0]  flags=0x0001  offset=0x0001f6a0  -> BOARD_ZAP_HIT.wav
+
+[031] "board-charge"  vol=110  volgroup=0  pan=0  instlimit=0  flags=0x0001
+  grain[0] TONE  delay=0  priority=123  vol=127  note=-80  fine=124  pan=0  map=[0,0]  pb=[0,0]  adsr=[0xa3ff,0x9fcc]  flags=0x0001  offset=0x00020ba0  loop=1  -> BOARD_CHARGE.wav
+
+

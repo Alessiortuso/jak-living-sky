@@ -56,7 +56,9 @@
    (relative-y-angle-to-point (_type_ vector) float)
    (roll-relative-to-gravity (_type_) float)
    (set-and-limit-velocity (_type_ int vector float) trsqv)
-   (get-quaternion (_type_) quaternion)))
+   (get-quaternion (_type_) quaternion)
+   ;; og:j1-board added
+   (rotate-toward-orientation2! (_type_ quaternion float float int int float) quaternion)))
 
 (defmethod global-y-angle-to-point ((this trsqv) (arg0 vector))
   "Get the angle in the xz plane from the position of this trsqv to the point arg0."

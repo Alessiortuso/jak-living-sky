@@ -195,6 +195,9 @@
    (discord-rpc?                     symbol) ;; enable discord rich presence integration
    (speedrunner-mode?                symbol) ;; enable speedrunner mode
    (flava-hack                       int64)
+   ;; og:j1-board added
+   (skip-fuel-cell-anim?             symbol)
+   (show-speed?                      symbol)
    ;; settings originally stored in the game save
    ;; now stored in pc-settings
    (memcard-volume-sfx               float)
@@ -401,6 +404,8 @@
   (set! (-> obj subtitle-speaker?) 'auto)
   (reset-camera obj call-handlers)
   (set! (-> obj territory) -1) ;; auto
+  (set! (-> obj skip-fuel-cell-anim?) #f)
+  (set! (-> obj show-speed?) #f)
   0)
 
 (defmethod reset-camera ((obj pc-settings) (call-handlers symbol))

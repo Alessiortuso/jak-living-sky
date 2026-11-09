@@ -676,6 +676,8 @@
                         (= v1-2 (progress-screen mouse-binds))
                         (= v1-2 (progress-screen controller-options))
                         (= v1-2 (progress-screen mouse-options))
+                        ;; og:j1-board added
+                        (= v1-2 (progress-screen mod-options))
                         (= v1-2 (progress-screen reassign-binds-options)))))))))
 
 (defmethod visible? ((this progress))

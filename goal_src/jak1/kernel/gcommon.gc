@@ -991,3 +991,6 @@
       (pc-prof ,name (pc-prof-event end)))
     (begin
       ,@body)))
+
+(defmacro field-deref (obj type offset)
+  `(-> (&+ (the (pointer ,type) ,obj) ,offset)))

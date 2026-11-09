@@ -392,7 +392,43 @@
                         ((= v1-61 (pat-material neutral)) (-> *part-id-table* 2774))
                         (else (-> *part-id-table* 107)))))
            (if (nonzero? s0-1)
-             (launch-particles s0-1 (vector<-cspace! (new 'stack-no-clear 'vector) (-> this process node-list data arg2))))))))
+             (launch-particles s0-1 (vector<-cspace! (new 'stack-no-clear 'vector) (-> this process node-list data arg2))))))
+        ;; og:j1-board added
+        (('effect-board-poof)
+         (let ((part (-> *part-id-table*
+                         3012
+                         ; (-> (new 'static
+                         ;          'boxed-array
+                         ;          :type
+                         ;          uint32
+                         ;          727
+                         ;          728
+                         ;          729
+                         ;          730
+                         ;          731
+                         ;          732
+                         ;          733
+                         ;          734
+                         ;          735
+                         ;          736
+                         ;          737
+                         ;          727
+                         ;          738
+                         ;          739
+                         ;          740
+                         ;          741
+                         ;          742
+                         ;          743
+                         ;          735
+                         ;          744
+                         ;          727
+                         ;          742
+                         ;          745
+                         ;          )
+                         ;     (-> arg4 material))
+                         )))
+           (if (nonzero? part)
+             (launch-particles part (vector<-cspace! (new 'stack-no-clear 'vector) (-> this process node-list data arg2))))))))
     (if s1-0 (effect-control-method-12 this arg0 arg1 arg2 arg3 s1-0)))
   0
   (none))

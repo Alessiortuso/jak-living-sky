@@ -587,12 +587,25 @@ bool run_build_actor(const std::string& mdl_name,
   if (skin_idx) {
     lg::info("GLTF file contained a skin, this actor will have a real skeleton");
   }
+
+  bool has_align_in_gltf = false;
+  if (skin_idx) {
+    const auto& skin = model.skins.at(*skin_idx);
+    for (auto joint_node_idx : skin.joints) {
+      if (model.nodes.at(joint_node_idx).name == "align") {
+        has_align_in_gltf = true;
+        break;
+      }
+    }
+  }
+  const int merc_joint_offset = has_align_in_gltf ? 0 : 2;
+
   std::vector<anim::CompressedAnim> user_anims;
 
   ArtGroup ag(ag_name);
   std::vector<Joint> joints;
   MercExtractData extract_data;
-  extract("test", extract_data, model, all_nodes, 0, 0, 0);
+  extract("test", extract_data, model, all_nodes, 0, 0, 0, merc_joint_offset);
   ag.mdl = &extract_data.new_model;
   // MercSwapData out;
   // merc_convert(out, extract_data);

@@ -462,7 +462,9 @@
         (if (= (-> this health) 0.0)
           (adjust (-> (the-as target (-> this process)) game) 'life (- (-> *GAME-bank* life-single-inc)) source-handle))))
      ;; green eco vents power-up when racing.
-     (b! (and (logtest? (-> (the-as collide-shape (-> this process root)) root-prim prim-core action) (collide-action racer))
+     ;; og:j1-board changed
+     (b! (and (or (logtest? (-> (the target (-> this process)) state-flags) (state-flags board))
+                  (logtest? (-> (the-as collide-shape (-> this process root)) root-prim prim-core action) (collide-action racer)))
               (type-type? (-> (handle->process source-handle) type) vent))
          cfg-80
          :delay (nop!))
@@ -694,7 +696,8 @@
   0
   (none))
 
-(defun-debug game-task->string ((arg0 game-task))
+;; og:j1-board changed
+(defun game-task->string ((arg0 game-task))
   (enum->string game-task arg0))
 
 (defmethod debug-print ((this game-info) (arg0 symbol))

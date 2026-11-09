@@ -728,7 +728,11 @@
             ((not (file-info-correct-version? (-> this info) (file-kind art-group) 0)) (the-as art-group #f))
             (else
              (let ((s5-1 (-> *level* loading-level)))
-               (if (or (not s5-1) (= (-> s5-1 name) 'default)) (login this)) ;; not part of level load, just normal login.
+               ;; og:j1-board changed (and Jak Living Sky: its own art kept)
+               (when (or (not s5-1) (= (-> s5-1 name) 'default)) ;; not part of level load, just normal login.
+                 (login this)
+                 (if (or (needs-link? this) (string= (-> this name) "sidekick-board+0") (string= (-> this name) "eichar-board+0"))
+                   (link-art! this)))
                (if (string= (-> this name) "jak-nap") (set! *enhanced-nap-ag* this))
                (if (string= (-> this name) "darkjak-turn") (set! *darkjak-turn-ag* this))
                (if s5-1 (set-loaded-art (-> s5-1 art-group) this))) ;; part of level load, add to level's ag, but don't log in yet.

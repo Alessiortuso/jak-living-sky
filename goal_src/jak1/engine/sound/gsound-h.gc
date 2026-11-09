@@ -141,7 +141,11 @@
   (trans)
   (fo-min)
   (fo-max)
-  (fo-curve))
+  (fo-curve)
+  ;; og:j1-board added
+  (sm-unk1)
+  (sm-unk2)
+  (reg0))
 
 (defenum sound-mirror-mode
   :type uint8
@@ -155,16 +159,19 @@
    (command sound-command)))
 
 (deftype sound-play-parms (structure)
-  ((mask      sound-mask)
-   (pitch-mod int16)
-   (bend      int16)
-   (fo-min    int16)
-   (fo-max    int16)
-   (fo-curve  int8)
-   (priority  int8)
-   (volume    int32)
-   (trans     vector3w :inline)
-   (group     sound-group))
+  ((mask          sound-mask)
+   (pitch-mod     int16)
+   (bend          int16)
+   (fo-min        int16)
+   (fo-max        int16)
+   (fo-curve      int8)
+   (priority      int8)
+   (volume        int32)
+   (trans         vector3w :inline)
+   (group         sound-group)
+   ;; og:j1-board added
+   (reg           uint8 3)
+   (group-and-reg uint32 :overlay-at group))
   :pack-me)
 
 (deftype sound-rpc-bank-cmd (sound-rpc-cmd)
@@ -288,6 +295,9 @@
   ((mask            sound-mask)
    (num             float)
    (group           sound-group)
+   ;; og:j1-board added
+   (reg             uint8 3)
+   (group-and-reg   uint32 :overlay-at group)
    (sound-name-char uint8 16 :offset 16)
    (sound-name      sound-name :overlay-at (-> sound-name-char 0))
    (trans           float 4)

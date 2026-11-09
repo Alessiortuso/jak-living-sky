@@ -113,6 +113,8 @@
    (drip-speed        float)
    (drip-height       meters)
    (drip-mult         float)
+   ;; og:j1-board added
+   (collide-height    meters)
    (flag              water-flag :overlay-at flags))
   (:methods
    (new (symbol type process int float float float) _type_)

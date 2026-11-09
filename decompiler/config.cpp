@@ -339,6 +339,9 @@ Config make_config_via_json(nlohmann::json& json) {
   if (json.contains("rip_music")) {
     config.rip_music = json.at("rip_music").get<bool>();
   }
+  if (json.contains("rip_sound_banks")) {
+    config.rip_sound_banks = json.at("rip_sound_banks").get<bool>();
+  }
 
   if (inputs_json.contains("animated_textures")) {
     config.animated_textures =

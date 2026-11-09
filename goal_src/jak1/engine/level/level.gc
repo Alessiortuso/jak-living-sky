@@ -1051,8 +1051,15 @@
     (initialize! *game-info* 'game (the-as game-save #f) (the-as string #f)))
   0)
 
+;; og:j1-board added
+(define *board-bank-loaded?* #f)
+
 (defun update-sound-banks ()
   (if (nonzero? (rpc-busy? RPC-SOUND-LOADER)) (return 0))
+  ;; og:j1-board added
+  (when (not *board-bank-loaded?*)
+    (sound-bank-load (static-sound-name "board"))
+    (true! *board-bank-loaded?*))
   (let ((gp-0 #f)
         (s5-0 #f))
     (dotimes (s4-0 (-> *level* length))

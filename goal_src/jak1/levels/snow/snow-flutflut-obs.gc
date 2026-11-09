@@ -213,7 +213,8 @@
       (case message
         (('touch 'attack 'bonk)
          (when (and (= (-> proc type) target)
-                    (logtest? (-> *target* control root-prim prim-core action) (collide-action flut))
+                    ;; og:j1-board changed
+                    (or (board?) (logtest? (-> *target* control root-prim prim-core action) (collide-action flut)))
                     (>= 10649.6 (vector-vector-xz-distance (-> self root trans) (target-pos 0))))
            (close-specific-task! (game-task snow-ball) (task-status need-hint))
            (logclear! (-> self mask) (process-mask actor-pause))

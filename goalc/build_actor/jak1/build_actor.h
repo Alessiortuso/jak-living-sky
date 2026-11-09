@@ -225,3 +225,4 @@ bool run_build_actor(const std::string& input_model,
                      const std::string& output_file,
                      const BuildActorParams1& params);
 }  // namespace jak1
+

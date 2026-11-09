@@ -462,9 +462,11 @@
   :code
     (behavior ()
       (transform-post)
-      (loop
-        (logior! (-> self mask) (process-mask sleep))
-        (suspend))))
+      ;; og:j1-board changed
+      (let ((offense (-> self root root-prim prim-core offense)))
+        (loop
+          (set! (-> self root root-prim prim-core offense) (if (board?) (collide-offense touch) offense))
+          (suspend)))))
 
 (defstate ecoventrock-break (ecoventrock)
   :event process-drawable-fuel-cell-handler
@@ -785,7 +787,12 @@
   :event
     (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
       (when (and (= message 'attack)
-                 (or (= (-> block param 1) 'punch) (= (-> block param 1) 'spin) (= (-> block param 1) 'spin-air))
+                 ;; og:j1-board changed
+                 (or (= (-> block param 1) 'punch)
+                     (= (-> block param 1) 'spin)
+                     (= (-> block param 1) 'spin-air)
+                     (= (-> block param 1) 'board)
+                     (= (-> block param 1) 'board-zap))
                  (!= (-> self incomming-attack-id) (-> block param 2)))
         (set! (-> self incomming-attack-id) (-> block param 2))
         (flutflutegg-hit-sounds)

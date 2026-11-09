@@ -589,7 +589,8 @@
               (kill-current-level-hint '() '(sidekick voicebox ambient) 'exit)
               (level-hint-surpress!)
               (hide-hud)
-              (when (and (hud-hidden?) (can-grab-display? self))
+              ;; og:j1-board changed
+              (when (and (if (not (-> *pc-settings* skip-fuel-cell-anim?)) (not (board?)) #t) (hud-hidden?) (can-grab-display? self))
                 (let ((gp-1 (new 'stack 'font-context *font-default-matrix* 32 140 0.0 (font-color default) (font-flags shadow kerning))))
                   (set-width! gp-1 440)
                   (set-height! gp-1 60)

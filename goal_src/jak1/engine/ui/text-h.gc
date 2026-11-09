@@ -852,7 +852,10 @@
   (pad-circle #x2001)
   (pad-x #x2002)
   (pad-square #x2003)
-
+  ;; og:j1-board added
+  (mod-options #x2004)
+  (skip-fuel-cell-anim #x2005)
+  (show-speed #x2006)
   (save-and-load-game #x3000)
   ;; GAME-TEXT-ID ENUM ENDS
 

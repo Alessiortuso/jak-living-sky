@@ -21,6 +21,7 @@ add_library(
         analysis/variable_naming.cpp
 
         data/dir_tpages.cpp
+        data/extract_sbk.cpp
         data/game_count.cpp
         data/game_text.cpp
         data/streamed_audio.cpp

@@ -231,6 +231,22 @@
               :tool 'build-actor
               :out '(,(string-append "$OUT/obj/" name "-ag.go")))))
 
+;; build a custom soundbank from a list of wav files
+;; options:
+;; - force-run: force-run: when #t, always forces a rebuild of the sbk instead of checking the "last modified" timestamp.
+;; - bank-id: numeric bank id embedded in the SBlk header (default 0).
+;; - manifest: a list of pairs containing sound names. if there is more than one entry in a pair,
+;; each entry is a different variant and the sound system chooses one of these variants at random
+;; when calling "sound-play".
+(defmacro build-sbk (name &key (force-run #f) &key (bank-id 0) &key (manifest ()))
+  (let* ((sfx-path (string-append "custom_assets/jak1/sounds/sfx/" name))
+         (out-path (string-append "$OUT/iso/" name ".SBK")))
+    `(begin
+      (defstep :in '(,sfx-path ,force-run ,bank-id #t ,manifest)
+               :tool 'build-sbk
+               :out '(,out-path))
+      (set! *all-sbk* (cons ,out-path *all-sbk*)))))
+
 (defun copy-iso-file (name subdir ext)
   (let* ((path (string-append "$ISO/" subdir name ext))
          (out-name (string-append "$OUT/iso/" name ext)))
@@ -1704,6 +1720,163 @@
 ;; Jak Living Sky: Dark Jak's transformation, an animation of Jak's (scripts/enhanced/darkjak_anim.py)
 (build-actor "darkjak-turn" :texture-bucket #f :master-art-group "eichar-ag")
 
+(build-actor "board" :texture-bucket 2 :force-run #t)
+(build-actor "eichar-board+0"
+             :texture-bucket 2
+             :force-run #t
+             :framerate 60
+             :joint-channel 24
+             :master-art-group eichar
+             :master-ag-map
+             ((jakb-board-air-turn 180)
+              (jakb-board-airwalk 181)
+              (jakb-board-airwalk-end 182)
+              (jakb-board-airwalk-loop 183)
+              (jakb-board-backgrab 184)
+              (jakb-board-backgrab-end 185)
+              (jakb-board-backgrab-loop 186)
+              (jakb-board-duck-turn 187)
+              (jakb-board-flip-backward 188)
+              (jakb-board-flip-backward-loop 189)
+              (jakb-board-flip-forward 190)
+              (jakb-board-flip-forward-loop 191)
+              (jakb-board-get-off 192)
+              (jakb-board-get-off-pre 193)
+              (jakb-board-get-on 194)
+              (jakb-board-get-on-land 195)
+              (jakb-board-grenade 196)
+              (jakb-board-hit 197)
+              (jakb-board-hit-elec 198)
+              (jakb-board-hit-forward 199)
+              (jakb-board-hit-get-off 200)
+              (jakb-board-jump 201)
+              (jakb-board-jump-high 202)
+              (jakb-board-jump-kick 203)
+              (jakb-board-jump-kickoff 204)
+              (jakb-board-jump-loop 205)
+              (jakb-board-kickflip-a 206)
+              (jakb-board-kickflip-b 207)
+              (jakb-board-kickflip-c 208)
+              (jakb-board-kickspin-a 209)
+              (jakb-board-kickspin-b 210)
+              (jakb-board-kickspin-c 211)
+              (jakb-board-method 212)
+              (jakb-board-method-cross 213)
+              (jakb-board-method-cross-end 214)
+              (jakb-board-method-cross-loop 215)
+              (jakb-board-method-end 216)
+              (jakb-board-method-loop 217)
+              (jakb-board-noseflip 218)
+              (jakb-board-nosegrab 219)
+              (jakb-board-nosegrab-end 220)
+              (jakb-board-nosegrab-loop 221)
+              (jakb-board-ride-turn-back 222)
+              (jakb-board-ride-turn-front 223)
+              (jakb-board-ride-turn-left 224)
+              (jakb-board-ride-turn-right 225)
+              (jakb-board-spin 226)
+              (jakb-board-stance 227)
+              (jakb-board-turn 228)
+              (jakb-board-turn-around 229)
+              (jakb-board-turn-down 230)
+              (jakb-board-turn-left 231)
+              (jakb-board-turn-right 232)
+              (jakb-board-turn-up 233))
+              )
+
+(build-actor "sidekick-board+0"
+             :texture-bucket 2
+             :force-run #t
+             :framerate 60
+             :joint-channel 24
+             :master-art-group sidekick
+             :master-ag-map
+             ((daxter-board-air-turn 124)
+              (daxter-board-airwalk 125)
+              (daxter-board-airwalk-end 126)
+              (daxter-board-airwalk-loop 127)
+              (daxter-board-backgrab 128)
+              (daxter-board-backgrab-end 129)
+              (daxter-board-backgrab-loop 130)
+              (daxter-board-duck-turn 131)
+              (daxter-board-flip-backward 132)
+              (daxter-board-flip-backward-loop 133)
+              (daxter-board-flip-forward 134)
+              (daxter-board-flip-forward-loop 135)
+              (daxter-board-get-off 136)
+              (daxter-board-get-off-pre 137)
+              (daxter-board-get-on 138)
+              (daxter-board-get-on-land 139)
+              (daxter-board-hit 140)
+              (daxter-board-hit-forward 141)
+              (daxter-board-hit-get-off 142)
+              (daxter-board-jump 143)
+              (daxter-board-jump-high 144)
+              (daxter-board-jump-kick 145)
+              (daxter-board-jump-kickoff 146)
+              (daxter-board-jump-loop 147)
+              (daxter-board-kickflip-a 148)
+              (daxter-board-kickflip-b 149)
+              (daxter-board-kickflip-c 150)
+              (daxter-board-kickspin-a 151)
+              (daxter-board-kickspin-b 152)
+              (daxter-board-kickspin-c 153)
+              (daxter-board-method 154)
+              (daxter-board-method-cross 155)
+              (daxter-board-method-cross-end 156)
+              (daxter-board-method-cross-loop 157)
+              (daxter-board-method-end 158)
+              (daxter-board-method-loop 159)
+              (daxter-board-noseflip 160)
+              (daxter-board-nosegrab 161)
+              (daxter-board-nosegrab-end 162)
+              (daxter-board-nosegrab-loop 163)
+              (daxter-board-ride-turn-back 164)
+              (daxter-board-ride-turn-front 165)
+              (daxter-board-ride-turn-left 166)
+              (daxter-board-ride-turn-right 167)
+              (daxter-board-spin 168)
+              (daxter-board-spin-ccw 169)
+              (daxter-board-spin-cw 170)
+              (daxter-board-stance 171)
+              (daxter-board-turn 172)
+              (daxter-board-turn-around 173)
+              (daxter-board-turn-down 174)
+              (daxter-board-turn-left 175)
+              (daxter-board-turn-right 176)
+              (daxter-board-turn-up 177)))
+
+(build-sbk "BOARD"
+           :force-run #t
+           ; :manifest
+           ; ((board-adjust)
+           ;  (board-air board-air-1)
+           ;  (board-bank)
+           ;  (board-boardspin board-boardspin-1 board-boardspin-2)
+           ;  (board-boost board-boost-1 board-boost-2)
+           ;  (board-bounce board-bounce-1 board-bounce-2 board-bounce-3)
+           ;  (board-charge)
+           ;  (board-flip board-flip-1 board-flip-2)
+           ;  (board-glance board-glance-1)
+           ;  (board-hit board-hit-1)
+           ;  (board-impact)
+           ;  (board-jump board-jump-1)
+           ;  (board-kickflip board-kickflip-1 board-kickflip-2)
+           ;  (board-launch board-launch-1)
+           ;  (board-noseflip board-noseflip-1 board-noseflip-2)
+           ;  (board-q-jump)
+           ;  (board-rail-mtl board-rail-mtl-1)
+           ;  (board-rail-wood board-rail-wood-1)
+           ;  (board-spin-loop board-spin-loop-1 board-spin-loop-2)
+           ;  (board-stead)
+           ;  (board-steady board-steady-1)
+           ;  (board-whoosh)
+           ;  (board-zap)
+           ;  (board-zap-hit)
+           ;  (run-smt1 run-smt1-1 run-smt1-2)
+           ;  (run-smt2 run-smt2-1))
+            )
+
 ;;;;;;;;;;;;;;;;;;;;;
 ;; Game Engine Code
 ;;;;;;;;;;;;;;;;;;;;;
@@ -2000,6 +2173,7 @@
 
  :deps
  ("$OUT/obj/generic-obs.o")
+ "target/board/board-h.gc"
  "target/target-util.gc"
  "target/target-part.gc"
  "target/collide-reaction-target.gc"
@@ -2010,6 +2184,10 @@
  "target/target.gc"
  "target/target2.gc"
  "target/target-death.gc"
+ "target/board/board-util.gc"
+ "target/board/target-board.gc"
+ "target/board/board-part.gc"
+ "target/board/board-states.gc"
  "debug/menu.gc"
  "draw/drawable.gc"
  "draw/drawable-group.gc"
@@ -2165,6 +2343,7 @@
 (goal-src "levels/common/blocking-plane-b.gc" "process-drawable")
 (goal-src "engine/mods/input-display.gc")
 (goal-src "engine/mods/orb-placer.gc")
+(goal-src "engine/target/board/board-overrides.gc" "ticky")
 
 (group-list "all-code"
   `(,@(reverse *all-gc*))

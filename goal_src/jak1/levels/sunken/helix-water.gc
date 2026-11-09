@@ -417,6 +417,9 @@
                 ((< 1.0 f0-7) (set! f0-7 1.0)))
               (set! (-> self transv-y) (+ 3584.0 (* 12800.0 f0-7)))))))
       (+! (-> self root trans y) (* (-> self transv-y) (seconds-per-frame)))
+      ;; og:j1-board added
+      (if (and (board?) (logtest? (-> *target* water flags) (water-flags wt09)))
+        (+! (-> *target* root trans y) (* (-> self transv-y) (seconds-per-frame))))
       (if (< (-> self end-y) (-> self root trans y)) (set! (-> self root trans y) (-> self end-y)))
       (send-event (ppointer->process (-> self dark-eco)) 'move-to (-> self root trans))
       (helix-water-method-21 self))

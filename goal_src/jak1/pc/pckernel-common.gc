@@ -549,6 +549,9 @@
     (("memcard-volume-music") (set! (-> obj memcard-volume-music) (file-stream-read-float file)))
     (("memcard-volume-dialog") (set! (-> obj memcard-volume-dialog) (file-stream-read-float file)))
     (("memcard-vibration?") (set! (-> obj memcard-vibration?) (file-stream-read-symbol file)))
+    ;; og:j1-board added
+    (("skip-fuel-cell-anim?") (set! (-> obj skip-fuel-cell-anim?) (file-stream-read-symbol file)))
+    (("show-speed?") (set! (-> obj show-speed?) (file-stream-read-symbol file)))
     ;; debug
     (("debug-font-scale") (set! (-> obj debug-font-scale) (file-stream-read-float file)))
     (("debug-font-scale-auto?") (set! (-> obj debug-font-scale-auto?) (file-stream-read-symbol file)))
@@ -625,6 +628,9 @@
   (format file "  (memcard-volume-music ~f)~%" (-> obj memcard-volume-music))
   (format file "  (memcard-volume-dialog ~f)~%" (-> obj memcard-volume-dialog))
   (format file "  (memcard-vibration? ~A)~%" (-> obj memcard-vibration?))
+  ;; og:j1-board added
+  (format file "  (skip-fuel-cell-anim? ~A)~%" (-> obj skip-fuel-cell-anim?))
+  (format file "  (show-speed? ~A)~%" (-> obj show-speed?))
   0)
 
 (defmethod write-to-file ((obj pc-settings) (filename string))

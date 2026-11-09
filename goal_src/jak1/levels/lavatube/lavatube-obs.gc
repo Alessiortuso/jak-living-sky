@@ -811,12 +811,15 @@
         (('attack 'touch) (send-event proc 'attack (-> block param 0) (static-attack-info ((mode 'deadly)))) (go-virtual die))))
   :code
     (behavior ()
-      (loop
-        (ja-no-eval :group! (ja-group) :num! (seek!) :frame-num 0.0)
-        (until (ja-done? 0)
-          (if (nonzero? (-> self sound)) (update! (-> self sound)))
-          (suspend)
-          (ja :num! (seek!)))))
+      ;; og:j1-board added
+      (let ((offense (-> self root root-prim prim-core offense)))
+        (loop
+          (set! (-> self root root-prim prim-core offense) (if (board?) (collide-offense touch) offense))
+          (ja-no-eval :group! (ja-group) :num! (seek!) :frame-num 0.0)
+          (until (ja-done? 0)
+            (if (nonzero? (-> self sound)) (update! (-> self sound)))
+            (suspend)
+            (ja :num! (seek!))))))
   :post ja-post)
 
 (defmethod init-from-entity! ((this chainmine) (arg0 entity-actor))

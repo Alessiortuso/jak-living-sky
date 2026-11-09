@@ -723,6 +723,8 @@
 (define-extern soul-pile-update (function none))
 
 (defbehavior enhanced-player-update target ()
+  ;; (on the board into Fire Canyon or Lava Tube: off it, as soon as he's there)
+  (if (and (board?) (board-banned-here?)) (send-event self 'end-mode 'board))
   (soul-pile-update)
   (enhanced-menu-update)
   (enhanced-strike-update)

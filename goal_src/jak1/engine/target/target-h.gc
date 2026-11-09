@@ -12,6 +12,8 @@
 
 (declare-type sidekick process-drawable)
 
+(declare-type board-info basic)
+
 ;; DECOMP BEGINS
 
 (deftype target (process-drawable)
@@ -41,7 +43,17 @@
    (fp-hud              handle)
    (no-load-wait        time-frame)
    (no-look-around-wait time-frame)
-   (burn-proc           handle))
+   (burn-proc           handle)
+   ;; og:j1-board added
+   (board               board-info)
+   (old-node-list       cspace-array)
+   (board-node-list     cspace-array)
+   (old-skeleton        skeleton)
+   (board-skeleton      skeleton)
+   (old-jgeo            art-joint-geo)
+   (board-jgeo          art-joint-geo)
+   (old-lod             lod-set :inline)
+   (board-lod           lod-set :inline))
   (:methods
    (find-edge-grabs! (_type_ collide-cache) object))
   (:states
@@ -151,15 +163,53 @@
    target-wheel
    (target-wheel-flip float float)
    target-yellow-blast
-   target-yellow-jump-blast))
+   target-yellow-jump-blast
+   ;; og:j1-board added
+   (target-board-start handle)
+   target-board-get-on
+   (target-board-get-off handle symbol)
+   target-board-stance
+   (target-board-turn-to vector time-frame)
+   target-board-turn-around
+   (target-board-jump meters meters surface)
+   target-board-jump-kick
+   (target-board-wall-kick vector float)
+   (target-board-hold float float symbol)
+   (target-board-ride-edge symbol)
+   (target-board-flip float float symbol)
+   target-board-duck-stance
+   (target-board-hit symbol attack-info)
+   target-board-hit-ground
+   target-board-falling
+   (target-board-grab symbol)
+   (target-board-trickx float float symbol)
+   (target-board-tricky float float symbol)
+   target-board-halfpipe
+   (target-board-clone-anim handle)
+   target-board-yellow-blast
+   target-board-yellow-jump-blast
+   (target-board-launch float state vector time-frame)
+   (target-board-launch-jump float float)))
 
 (define-perm *target* target #f)
 
 (deftype sidekick (process-drawable)
-  ((parent-override  (pointer target) :overlay-at parent)
-   (control          control-info :overlay-at root)
-   (anim-seed        uint64 :offset 192)
-   (shadow-in-movie? symbol))
+  ((parent-override     (pointer target) :overlay-at parent)
+   (control             control-info :overlay-at root)
+   (anim-seed           uint64 :offset 192)
+   (shadow-in-movie?    symbol)
+   ;; og:j1-board added
+   (old-node-list       cspace-array)
+   (board-node-list     cspace-array)
+   (old-skeleton        skeleton)
+   (board-skeleton      skeleton)
+   (old-jgeo            art-joint-geo)
+   (board-jgeo          art-joint-geo)
+   (old-lod             lod-set :inline)
+   (board-lod           lod-set :inline)
+   (special-anim-time   time-frame)
+   (special-anim-interp float)
+   (special-anim-frame  float))
   (:states
    sidekick-clone))
 

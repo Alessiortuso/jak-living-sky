@@ -1,0 +1,605 @@
+;;-*-Lisp-*-
+(in-package goal)
+(define-extern target-board-setup (function symbol none :behavior target))
+
+(define-extern target-board-joint-points (function none :behavior target))
+
+(defconstant group-board-land-straight (-> *part-group-id-table* 710))
+
+(defconstant group-board-quick-jump (-> *part-group-id-table* 711))
+
+(defconstant group-board-launch (-> *part-group-id-table* 712))
+
+(defconstant group-target-board-duck-charge (-> *part-group-id-table* 713))
+
+(defconstant group-target-board (-> *part-group-id-table* 714))
+
+(defconstant group-board-spin-attack (-> *part-group-id-table* 715))
+
+(defconstant group-board-zap-attack (-> *part-group-id-table* 716))
+
+(defconstant group-board-green-eco-zap-attack (-> *part-group-id-table* 717))
+
+(defconstant group-board-red-eco-zap-attack (-> *part-group-id-table* 718))
+
+(defconstant group-board-yellow-eco-zap-attack (-> *part-group-id-table* 719))
+
+(defconstant BOARD_MAX_SPEED (meters 35))
+
+(defenum board-tricks
+  :type uint32
+  :bitfield #f
+  (none 0)
+  (board-spin 1)
+  (board-boost 2)
+  (board-flip 3)
+  (board-rail 4)
+  (board-rail-jump 5)
+  (board-nosegrab 6)
+  (board-board-spin 7)
+  (board-board-flip 8)
+  (board-noseflip 9)
+  (board-kickflip 10)
+  (board-kickspin 11)
+  (board-method 12)
+  (board-method-cross 13)
+  (board-backgrab 14)
+  (board-airwalk 15)
+  (board-jump 16)
+  (board-duck-jump 17)
+  (board-quick-jump 18)
+  (darkjak 19)
+  (darkjak-bomb0 20)
+  (darkjak-bomb1 21)
+  (darkjak-smack 22)
+  (darkjak-tracking 23)
+  (lightjak 24)
+  (lightjak-regen 25)
+  (lightjak-swoop 26)
+  (lightjak-freeze 27)
+  (lightjak-shield 28))
+
+(defmacro board? ()
+  `(if *target* (logtest? (-> *target* state-flags) (state-flags board))))
+
+(defun cspace<-cspace-normalized! ((dst cspace) (src cspace))
+  "Set one cspace's bone from another, and normalize the rows of the matrix."
+  (let ((gp-0 (matrix-copy! (-> dst bone transform) (-> src bone transform))))
+    (vector-normalize! (-> gp-0 rvec) 1.0)
+    (vector-normalize! (-> gp-0 uvec) 1.0)
+    (vector-normalize! (-> gp-0 fvec) 1.0)
+    gp-0))
+
+(defbehavior make-nodes-from-jg-no-connection process-drawable ((jgeo art-joint-geo))
+  (let ((node-list (new 'process 'cspace-array (1+ (-> jgeo length))))
+        (skel (new 'process 'skeleton (1+ (-> jgeo length)))))
+    (set! (-> self draw skeleton) skel)
+    (when (or (zero? node-list) (zero? skel))
+      (go process-drawable-art-error "memory")
+      (set! node-list (the cspace-array #f))
+      (return node-list))
+    (reset-and-assign-geo! (-> node-list data 0) #f)
+    (set! (-> node-list data 0 bone) (-> skel bones 0))
+    (set! (-> node-list data 0 param0) cspace<-transformq!)
+    (set! (-> node-list data 0 param1) (the basic (-> self root trans)))
+    (set! (-> node-list data 0 bone cache bone-matrix) (the uint 0))
+    (reset-and-assign-geo! (-> node-list data 1) #f)
+    (set! (-> node-list data 1 joint) (-> jgeo data 0))
+    (set! (-> node-list data 1 bone) (-> skel bones 1))
+    (set! (-> node-list data 1 parent) (-> node-list data 0))
+    (set! (-> node-list data 1 bone cache bone-matrix) (the uint 128))
+    (reset-and-assign-geo! (-> node-list data 2) #f)
+    (set! (-> node-list data 2 joint) (-> jgeo data 1))
+    (set! (-> node-list data 2 bone) (-> skel bones 2))
+    (set! (-> node-list data 2 parent) (-> node-list data 0))
+    (set! (-> node-list data 2 param0) cspace<-parented-matrix-joint!)
+    (set! (-> node-list data 2 param1) self)
+    (set! (-> node-list data 2 bone cache bone-matrix) (the uint 256))
+    (let ((bone-idx 3))
+      (while (< bone-idx (-> node-list length))
+        (let* ((cur-joint (-> jgeo data (1- bone-idx)))
+               (parent-idx (if (-> cur-joint parent) (+ (-> cur-joint parent number) 1) 0))
+               (cspace (reset-and-assign-geo! (-> node-list data bone-idx) #f)))
+          (set! (-> cspace joint) cur-joint)
+          (set! (-> cspace bone) (-> skel bones bone-idx))
+          (set! (-> cspace parent) (-> node-list data parent-idx))
+          (set! (-> cspace bone cache bone-matrix) (the uint (* bone-idx 128)))
+          (set! (-> cspace bone cache parent-matrix) (the uint (* parent-idx 128))))
+        (1+! bone-idx)))
+    ; (add-connection (-> (if (-> self entity) (-> self entity extra level) (-> *level* level-default))
+    ;                     foreground-draw-engine
+    ;                     (-> self draw sink-group merc-sink foreground-texture-page))
+    ;                 self
+    ;                 add-process-drawable
+    ;                 self
+    ;                 (-> self draw)
+    ;                 #f)
+    node-list))
+
+;; hack for the smoothed matrix from vectors to handle cases where they accidentally set turnvf to 0.
+;; this causes the smoothing to go away on ps2, due to some behavior of inf/nan that differ.
+;; if we cheat this to a small but nonzero value, it behaves like on ps2.
+(defmacro int-to-float-nonzero-hack (f)
+  `(if (= ,f 0) 0.00000000001 (the float ,f)))
+
+(defun matrix-from-two-vectors-smooth! ((arg0 matrix) (arg1 vector) (arg2 vector) (arg3 float) (arg4 int))
+  "This function can help smoothly rotate from a current heading vector to a target one.
+   It returns a rotation to move arg1 closer to arg2, subject to two different speed limits.
+   arg3 is a rotations-per-frame rate. This limit takes frame rate into account (when lagging, the rotation is larger)
+   arg4 is a 'slow down when getting close to the end' limit.
+   This is used in rotate-toward-orientation, which is much improved from jak 1."
+  (let* ((s5-1 (vector-normalize! (vector-cross! (new 'stack-no-clear 'vector) arg2 arg1) 1.0))
+         (f0-1 (vector-dot arg1 arg2))
+         (f0-2 (acos f0-1))
+         ;; og:preserve-this
+         (f1-2 (fmin (* arg3 (seconds-per-frame)) (/ (* 5.0 (fabs f0-2)) (int-to-float-nonzero-hack arg4))))
+         (f30-0 (fmax (fmin f0-2 f1-2) (- f1-2))))
+    (matrix-axis-sin-cos! arg0 s5-1 (sin f30-0) (cos f30-0)))
+  arg0)
+
+(defun matrix-from-two-vectors-the-long-way-smooth! ((arg0 matrix) (arg1 vector) (arg2 vector) (arg3 float) (arg4 int))
+  "Same as above, but rotates you away from the target.
+   Note that the 'near the end' smoothing will apply when you're near the target."
+  (let* ((s5-1 (vector-normalize! (vector-cross! (new 'stack-no-clear 'vector) arg2 arg1) 1.0))
+         (f0-1 (vector-dot arg1 arg2))
+         (f0-3 (- (acos f0-1)))
+         ;; og:preserve-this
+         (f1-2 (fmin (* arg3 (seconds-per-frame)) (/ (* 5.0 (fabs f0-3)) (int-to-float-nonzero-hack arg4))))
+         (f30-0 (fmax (fmin f0-3 f1-2) (- f1-2))))
+    (matrix-axis-sin-cos! arg0 s5-1 (sin f30-0) (cos f30-0)))
+  arg0)
+
+(defun quaternion-from-two-vectors-smooth! ((arg0 quaternion) (arg1 vector) (arg2 vector) (arg3 float) (arg4 int))
+  "Same as above, but returns a quaternion."
+  (let ((a1-1 (matrix-from-two-vectors-smooth! (new 'stack-no-clear 'matrix) arg1 arg2 arg3 arg4)))
+    (matrix->quaternion arg0 a1-1)))
+
+(defun matrix->quat ((arg0 matrix) (arg1 quaternion))
+  "Convert matrix to quaternion, works for matrix with scale.
+   unlike matrix->quaternion."
+  (let ((s5-0 (matrix-copy! (new 'stack-no-clear 'matrix) arg0)))
+    (vector-reset! (-> s5-0 trans))
+    (vector-normalize! (-> s5-0 rvec) 1.0)
+    (vector-normalize! (-> s5-0 uvec) 1.0)
+    (vector-normalize! (-> s5-0 fvec) 1.0)
+    (matrix->quaternion arg1 s5-0)))
+
+(deftype board-trick-tracker (structure)
+  ((tricks-in-combo     board-tricks 16)
+   (num-tricks-in-combo uint32)
+   (points-in-combo     float)
+   (combo-in-progress?  symbol))
+  (:methods
+   (reset-combo! (_type_) none)
+   (add-trick-to-combo! (_type_ board-tricks float) none)
+   (render-combo (_type_) none)
+   (end-combo! (_type_) none)))
+
+(define-extern *board-trick-tracker* board-trick-tracker)
+
+(deftype board (process-drawable)
+  ((self          board :override)
+   (parent        (pointer target) :override)
+   (control       control-info :overlay-at root)
+   (shadow-backup shadow-geo :offset 208)
+   (main          joint-mod)
+   (in-head-time  time-frame))
+  (:state-methods (idle symbol)
+   use
+   hidden))
+
+(deftype board-info (basic)
+  ((board                        (pointer board))
+   (camera-interp                float)
+   (process                      (pointer target))
+   (board-tq                     transformq :inline)
+   (board-trans                  vector :inline :overlay-at (-> board-tq trans))
+   (board-quat                   quaternion :inline :overlay-at (-> board-tq quat))
+   (board-scale                  vector :inline :overlay-at (-> board-tq scale))
+   (main                         joint-mod)
+   (upper-body                   joint-mod)
+   (mode-sound-bank              connection)
+   (sound-bank-knob              float)
+   (sound-air-knob               float)
+   (wind-sound-id                sound-id)
+   (wind-sound-pitch             float)
+   (wind-sound-volume            float)
+   (engine-sound-id              sound-id)
+   (engine-sound-pitch           float)
+   (engine-sound-volume          float)
+   (bank-sound-id                sound-id)
+   (bank-sound-pitch             float)
+   (bank-sound-volume            float)
+   (ride-sound-id                sound-id)
+   (spin-sound-id                sound-id)
+   (spin-sound-volume            float)
+   (spin-sound-pitch             float)
+   (turn-sound-id                sound-id)
+   (trick-sound-id               sound-id)
+   (jump-sound-id                sound-id)
+   (eco-sound-id                 sound-id)
+   (eco-sound-volume             float)
+   (charge-sound-id              sound-id)
+   (adjust-time                  time-frame)
+   (up-vector                    vector 2 :inline)
+   (slow-transv                  vector :inline)
+   (board-time                   time-frame)
+   (board-get-on-time            time-frame)
+   (in-air-time                  time-frame)
+   (last-jump-time               time-frame)
+   (jump-end-time                time-frame)
+   (unk-time-frame01             time-frame)
+   (stick-lock                   symbol)
+   (stick-off                    symbol)
+   (stance-info                  ground-tween-info :inline)
+   (mods-backup                  surface)
+   (attack-id                    uint32)
+   (latch?                       symbol)
+   (probe-intersect              vector :inline)
+   (probe-normal                 vector :inline)
+   (probe-pat                    pat-surface)
+   (probe                        symbol)
+   (unstuck-time                 time-frame)
+   (stuck-count                  int32)
+   (thrust-scale                 float)
+   (flip-time                    time-frame)
+   (transv-max                   meters)
+   (turn-anim-tilt?              symbol)
+   (turn-anim-mag                float)
+   (turn-anim-targ               float)
+   (turn-anim-frame              float)
+   (unk-float000                 float)
+   (unk-float001                 float)
+   (turn-anim-vel                float)
+   (turn-anim-duck               float)
+   (turn-anim-duck-vel           float)
+   (tilt-anim-frame              vector :inline)
+   (tilt-anim-targ               vector :inline)
+   (smack-surface-time           time-frame)
+   (smack-speed                  meters)
+   (smack-normal                 vector :inline)
+   (glance-time                  time-frame)
+   (glance-speed                 meters)
+   (glance-in-transv             vector :inline)
+   (glance-out-transv            vector :inline)
+   (glance-normal                vector :inline)
+   (on-flat-time                 time-frame)
+   (jump-land-time               time-frame)
+   (slip-factor                  float)
+   (ground-on-dir                vector :inline)
+   (ride-time                    time-frame)
+   (ride-start-time              time-frame)
+   (ride-button-time             time-frame)
+   (ride-lean-targ               float)
+   (ride-lean                    float)
+   (ride-leanv                   float)
+   (ride-lean-mag                float)
+   (ride-tilt-targ               float)
+   (ride-tilt                    float)
+   (ride-tiltv                   float)
+   (ride-tilt-mag                float)
+   (ride-lock                    symbol)
+   (ride-lock-on                 symbol)
+   (ride-speed                   meters)
+   (ride-mode                    uint32)
+   (ride-rot                     degrees)
+   (ride-rot-old                 degrees)
+   (ride-rot-abs                 degrees 2)
+   (ride-rotv-abs                degrees)
+   (ride-touch-segment           vector 2 :inline)
+   (ride-dir                     vector :inline)
+   (ride-vertex-length           int16)
+   (ride-vertex-length-old       int16)
+   (ride-vertex-base             int16)
+   (ride-vertex-base2            int16)
+   (ride-vertex-index            float)
+   (ride-vertex-index2           float)
+   (ride-vertex-index-old        float)
+   (ride-vertex                  vector 3 :inline)
+   (ride-segment                 vector :inline)
+   (ride-dir-lean                vector :inline)
+   (ride-pad-vector              vector 1 :inline)
+   (ride-vertex-old              vector 3 :inline)
+   (ride-segment-old             vector :inline)
+   (ride-vertex-trail            vector 128 :inline)
+   (halfpipe-side-time           time-frame)
+   (halfpipe-jump-time           time-frame)
+   (halfpipe-lip-time            time-frame)
+   (halfpipe-time                time-frame)
+   (halfpipe-gspot-time          time-frame)
+   (halfpipe-lip-event           symbol)
+   (spin-check-time              time-frame)
+   (spin-time                    time-frame)
+   (spin-start-time              time-frame)
+   (spin-start-dir               vector :inline)
+   (spin-control                 float)
+   (spin-ground-start-time       time-frame)
+   (spin-ground-time             time-frame)
+   (spin-ground-press-time       time-frame)
+   (flip-control                 float)
+   (flip-count                   int32)
+   (unk-time000                  time-frame :offset 3152)
+   (tricky-time                  time-frame)
+   (tricky-exit-time             time-frame)
+   (duck-start-time              time-frame)
+   (unk-float005                 float)
+   (unk-float006                 float)
+   (unk-float007                 float)
+   (trickx-count                 int32)
+   (unk-time001                  time-frame :offset 3208)
+   (hold-start-time              time-frame)
+   (hold-exit-time               time-frame)
+   (l2-start-time                time-frame)
+   (rotyv-max                    degrees)
+   (rotyv                        degrees)
+   (roty                         degrees)
+   (roty-cum                     degrees)
+   (unk-deg00                    degrees)
+   (upper-body-rotyv-max         degrees :offset 3260)
+   (upper-body-rotyv             degrees)
+   (upper-body-roty              degrees)
+   (cushion-base                 meters)
+   (cushion-offset               meters)
+   (shock-offset                 meters)
+   (shock-offsetv                meters)
+   (shock-rotx                   meters)
+   (effect-part                  sparticle-launch-control)
+   (charge-part                  sparticle-launch-control)
+   (trick-count                  int32)
+   (trick-array                  board-tricks 16)
+   (trick-points-array           float 16 :offset 3368)
+   (trick-list                   board-tricks 16 :offset 3432)
+   (charge-start-time            time-frame :offset 3496)
+   (charge-time                  time-frame)
+   (charge-progress              float)
+   (zap-start-time               time-frame :offset 3520)
+   (unknown-sound-id00           sound-id)
+   (prevent-board?               symbol)
+   (yellow-eco-zap-last-use-time time-frame))
+  (:methods
+   (add-to-trick-list (_type_ board-tricks float) none)
+   (flush-trick-list (_type_) none)))
+
+(deftype target-board-bank (basic)
+  ((jump-height-min        meters)
+   (jump-height-max        meters)
+   (duck-jump-height-min   meters)
+   (duck-jump-height-max   meters)
+   (turn-frames            float)
+   (wall-kick-window       time-frame)
+   (cushion                meters)
+   (trickx-jump-height-min meters)
+   (trickx-jump-height-max meters)
+   (tricky-jump-height-min meters)
+   (tricky-jump-height-max meters)
+   (trickz-jump-height-min meters)
+   (trickz-jump-height-max meters)
+   (charge-jump-time       time-frame)
+   (charge-jump-fade-time  time-frame)
+   (charge-jump-height     meters)
+   (zap-duration           time-frame)
+   (zap-reset-time         time-frame)))
+
+(define *TARGET_BOARD-bank*
+  (new 'static
+       'target-board-bank
+       :jump-height-min (meters 1.01)
+       :jump-height-max (meters 3.5)
+       :duck-jump-height-min (meters 2.5)
+       :duck-jump-height-max (meters 5)
+       :turn-frames 8.0
+       :wall-kick-window (seconds 0.05)
+       :cushion (meters 1)
+       :trickx-jump-height-min (meters 0.9)
+       :trickx-jump-height-max (meters 1.2)
+       :tricky-jump-height-min (meters 0.9)
+       :tricky-jump-height-max (meters 1.2)
+       :trickz-jump-height-min (meters 0.9)
+       :trickz-jump-height-max (meters 1.2)
+       :charge-jump-time (seconds 0.7)
+       :charge-jump-fade-time (seconds 0.25)
+       :charge-jump-height (meters 3.5)
+       :zap-duration (seconds 0.25)
+       :zap-reset-time (seconds 0.25)))
+
+(define-extern can-exit-duck? (function symbol :behavior target))
+
+;; Jak Living Sky: no board in Fire Canyon and Lava Tube (the Zoomer's: the heat)
+(defun board-banned-here? ()
+  (let ((lev (level-get-target-inside *level*)))
+    (and lev (case (-> lev name) (('firecanyon 'lavatube) #t) (else #f)))))
+
+(defbehavior want-to-board? target ()
+  (and (not (board-banned-here?)) (not (symbol-member? (-> self next-state name)
+                            '(target-wheel target-wheel-flip
+                                          target-hit-ground-hard
+                                          target-turn-around
+                                          target-look-around
+                                          target-billy-game
+                                          target-fishing)))
+       (or (and (cpad-pressed? (-> self control unknown-cpad-info00 number) r2)
+                (or (!= *cheat-mode* 'debug)
+                    (not (logtest? (-> *cpad-list* cpads (-> self control unknown-cpad-info00 number) button0-abs 0) (pad-buttons l2))))
+                (not *pause-lock*)
+                ; (time-elapsed? (-> self control time-of-last-debug-heal) (seconds 0.1))
+                ; (>= (-> self control unknown-dword11) (-> self control time-of-last-debug-float))
+                )
+           (or (-> self board latch?)))
+       (not (or (logtest? (-> self control root-prim prim-core action)
+                          (collide-action edgegrab-cam swingpole-active racer snowball tube flut))
+                (logtest? (-> self state-flags) (state-flags dying being-attacked grabbed board))))
+       (or (zero? (-> self board)) (time-elapsed? (-> self board board-time) (seconds 0.5)))
+       (< (-> self board board-time) (-> self control unknown-dword10))
+       (not (-> self board prevent-board?))
+       (can-exit-duck?)
+       (not (and (logtest? (-> self water flags) (water-flags wt12)) (not (logtest? (-> self water flags) (water-flags wt04)))))
+       (not *artist-fix-visible*)
+       (let ((cquery (new 'stack-no-clear 'collide-using-spheres-params))
+             (spheres (new 'stack-no-clear 'inline-array 'sphere 3)))
+         (dotimes (i 3)
+           ((method-of-type sphere new) (the symbol (-> spheres i)) sphere))
+         (let ((trans (new 'stack-no-clear 'vector)))
+           (vector-copy! trans (-> self control trans))
+           (if (logtest? (-> self control status) (cshape-moving-flags on-water)) (set! (-> trans y) (-> self water height)))
+           (vector-copy! (-> spheres 0) trans)
+           (+! (-> spheres 0 y) (meters 2))
+           (set! (-> spheres 0 r) (meters 0.7))
+           (vector-copy! (-> spheres 1) trans)
+           (+! (-> spheres 1 y) (meters 3))
+           (set! (-> spheres 1 r) (meters 0.7))
+           (vector-copy! (-> spheres 2) trans))
+         (+! (-> spheres 2 y) (meters 4))
+         (set! (-> spheres 2 r) (meters 0.7))
+         (set! (-> cquery spheres) spheres)
+         (set! (-> cquery num-spheres) (the uint 3))
+         (set! (-> cquery collide-with) (logclear (-> self control root-prim collide-with) (collide-kind projectile)))
+         (set! (-> cquery proc) #f)
+         (set! (-> cquery ignore-pat) (new 'static 'pat-surface :noentity #x1))
+         (true! (-> cquery solid-only))
+         (and (if (fill-and-probe-using-spheres *collide-cache* cquery) #f #t) (true! (-> self board latch?))))))
+
+(def-actor board
+  :bounds (0 0 0 3.5)
+  :art (board-idle-ja close-ja open-ja)
+  :joints (align prejoint main centerTip leftTip leftFin leftTail centerTail rightTail rightTip outerScale innerScale centerDome)
+  :texture-level 2
+  :sort 1)
+
+(def-actor jchar-board
+  :bounds (0 0 0 3.5)
+  :art
+  (jakb-board-air-turn-ja jakb-board-airwalk-ja
+                          jakb-board-airwalk-end-ja
+                          jakb-board-airwalk-loop-ja
+                          jakb-board-backgrab-ja
+                          jakb-board-backgrab-end-ja
+                          jakb-board-backgrab-loop-ja
+                          jakb-board-duck-turn-ja
+                          jakb-board-flip-backward-ja
+                          jakb-board-flip-backward-loop-ja
+                          jakb-board-flip-forward-ja
+                          jakb-board-flip-forward-loop-ja
+                          jakb-board-get-off-ja
+                          jakb-board-get-off-pre-ja
+                          jakb-board-get-on-ja
+                          jakb-board-get-on-land-ja
+                          jakb-board-grenade-ja
+                          jakb-board-hit-ja
+                          jakb-board-hit-elec-ja
+                          jakb-board-hit-forward-ja
+                          jakb-board-hit-get-off-ja
+                          jakb-board-jump-ja
+                          jakb-board-jump-high-ja
+                          jakb-board-jump-kick-ja
+                          jakb-board-jump-kickoff-ja
+                          jakb-board-jump-loop-ja
+                          jakb-board-kickflip-a-ja
+                          jakb-board-kickflip-b-ja
+                          jakb-board-kickflip-c-ja
+                          jakb-board-kickspin-a-ja
+                          jakb-board-kickspin-b-ja
+                          jakb-board-kickspin-c-ja
+                          jakb-board-method-ja
+                          jakb-board-method-cross-ja
+                          jakb-board-method-cross-end-ja
+                          jakb-board-method-cross-loop-ja
+                          jakb-board-method-end-ja
+                          jakb-board-method-loop-ja
+                          jakb-board-noseflip-ja
+                          jakb-board-nosegrab-ja
+                          jakb-board-nosegrab-end-ja
+                          jakb-board-nosegrab-loop-ja
+                          jakb-board-ride-turn-back-ja
+                          jakb-board-ride-turn-front-ja
+                          jakb-board-ride-turn-left-ja
+                          jakb-board-ride-turn-right-ja
+                          jakb-board-spin-ja
+                          jakb-board-stance-ja
+                          jakb-board-turn-ja
+                          jakb-board-turn-around-ja
+                          jakb-board-turn-down-ja
+                          jakb-board-turn-left-ja
+                          jakb-board-turn-right-ja
+                          jakb-board-turn-up-ja)
+  ; :joints ()
+  :texture-level 2
+  :sort 1)
+
+(def-actor sidekick-board
+  :bounds (0 0 0 3.5)
+  :art
+  (jakb-board-air-turn-ja daxter-board-airwalk-ja
+                          daxter-board-airwalk-end-ja
+                          daxter-board-airwalk-loop-ja
+                          daxter-board-backgrab-ja
+                          daxter-board-backgrab-end-ja
+                          daxter-board-backgrab-loop-ja
+                          daxter-board-duck-turn-ja
+                          daxter-board-flip-backward-ja
+                          daxter-board-flip-backward-loop-ja
+                          daxter-board-flip-forward-ja
+                          daxter-board-flip-forward-loop-ja
+                          daxter-board-get-off-ja
+                          daxter-board-get-off-pre-ja
+                          daxter-board-get-on-ja
+                          daxter-board-get-on-land-ja
+                          daxter-board-grenade-ja
+                          daxter-board-hit-ja
+                          daxter-board-hit-elec-ja
+                          daxter-board-hit-forward-ja
+                          daxter-board-hit-get-off-ja
+                          daxter-board-jump-ja
+                          daxter-board-jump-high-ja
+                          daxter-board-jump-kick-ja
+                          daxter-board-jump-kickoff-ja
+                          daxter-board-jump-loop-ja
+                          daxter-board-kickflip-a-ja
+                          daxter-board-kickflip-b-ja
+                          daxter-board-kickflip-c-ja
+                          daxter-board-kickspin-a-ja
+                          daxter-board-kickspin-b-ja
+                          daxter-board-kickspin-c-ja
+                          daxter-board-method-ja
+                          daxter-board-method-cross-ja
+                          daxter-board-method-cross-end-ja
+                          daxter-board-method-cross-loop-ja
+                          daxter-board-method-end-ja
+                          daxter-board-method-loop-ja
+                          daxter-board-noseflip-ja
+                          daxter-board-nosegrab-ja
+                          daxter-board-nosegrab-end-ja
+                          daxter-board-nosegrab-loop-ja
+                          daxter-board-ride-turn-back-ja
+                          daxter-board-ride-turn-front-ja
+                          daxter-board-ride-turn-left-ja
+                          daxter-board-ride-turn-right-ja
+                          daxter-board-spin-ja
+                          daxter-board-stance-ja
+                          daxter-board-turn-ja
+                          daxter-board-turn-around-ja
+                          daxter-board-turn-down-ja
+                          daxter-board-turn-left-ja
+                          daxter-board-turn-right-ja
+                          daxter-board-turn-up-ja)
+  ; :joints ()
+  :texture-level 2
+  :sort 1)
+
+(set! (-> *jchar-board-sg* art-group-name) "eichar-board+0")
+
+(set! (-> *sidekick-board-sg* art-group-name) "sidekick-board+0")
+
+(define *board-shadow-control*
+  (new 'static
+       'shadow-control
+       :settings
+       (new 'static
+            'shadow-settings
+            :center
+            (new 'static 'vector :w (the-as float #xa))
+            :shadow-dir
+            (new 'static 'vector :y -1.0 :w 614400.0)
+            :bot-plane
+            (new 'static 'plane :y 1.0 :w 81920.0)
+            :top-plane
+            (new 'static 'plane :y 1.0 :w 2048.0))))

@@ -2436,7 +2436,8 @@
 ;; a few pools of fixed size processes that are shared.
 (define *16k-dead-pool* (new 'global 'dead-pool 1 (* 16 1024) '*16k-dead-pool*))
 
-(define *8k-dead-pool* (new 'global 'dead-pool 1 (* 8 1024) '*8k-dead-pool*))
+;; og:j1-board changed
+(define *8k-dead-pool* (new 'global 'dead-pool 2 (* 8 1024) '*8k-dead-pool*))
 
 (define *4k-dead-pool* (new 'global 'dead-pool 4 (* 4 1024) '*4k-dead-pool*))
 

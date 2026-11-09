@@ -11,7 +11,11 @@
 (deftype matrix (structure)
   ((vector vector 4 :inline :offset 0)
    (quad   uint128 4 :overlay-at vector)
-   (data   float 16 :overlay-at vector))
+   (data   float 16 :overlay-at vector)
+   (rvec   vector :inline :overlay-at (-> data 0))
+   (uvec   vector :inline :overlay-at (-> data 4))
+   (fvec   vector :inline :overlay-at (-> data 8))
+   (trans  vector :inline :overlay-at (-> data 12)))
   (:methods
    (transform-vectors! (_type_ (inline-array vector) (inline-array vector) int) none)))
 

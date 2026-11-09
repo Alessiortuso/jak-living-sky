@@ -190,7 +190,8 @@
   :trans
     (behavior ()
       (when (and *target*
-                 (= (send-event *target* 'query 'mode) 'racer)
+                 ;; og:j1-board changed
+                 (or (= (send-event *target* 'query 'mode) 'racer) (= (send-event *target* 'query 'mode) 'board))
                  (< (vector-vector-distance (-> self root trans) (target-pos 0)) 225280.0))
         (sound-play "magma-rock")
         (let ((v1-8 (entity-actor-count (-> self entity) 'alt-actor)))

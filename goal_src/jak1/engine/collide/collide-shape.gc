@@ -655,6 +655,15 @@
                      (static-attack-info ((mode arg2) (vector (new 'static 'vector :y (meters 10) :w 1.0)) (shove-up (meters 10)) (angle 'up) (control 1.0))))))))
   (none))
 
+;; og:j1-board added
+(defun target-board-burn-attack? ((targ target))
+  (let ((lev (aif (level-get-target-inside *level*) (-> it name)))
+        (board? (logtest? (-> targ state-flags) (state-flags board))))
+    (case lev
+      (('firecanyon) (if board? (not (task-closed? (game-task firecanyon-assistant) (task-status need-reward-speech))) #t))
+      (('lavatube) (if board? (not (task-closed? (game-task lavatube-start) (task-status need-reward-speech))) #t))
+      (else #t))))
+
 (defmethod set-and-handle-pat! ((obj collide-shape-moving) (arg0 pat-surface))
   "Handle landing on the given pat-surface. This is likely target-specific."
   ;; set our pat
@@ -664,7 +673,12 @@
   (case (-> arg0 material)
     (((pat-material ice)) (set! (-> obj surf) *ice-surface*))
     (((pat-material quicksand)) (set! (-> obj surf) *quicksand-surface*))
-    (((pat-material tube)) (set! (-> obj surf) *no-walk-surface*))
+    (((pat-material tube))
+     (set! (-> obj surf)
+           ;; og:j1-board changed
+           (if (logtest? (-> (the target (-> obj process)) state-flags) (state-flags board))
+             *standard-ground-surface*
+             *no-walk-surface*)))
     (((pat-material rotate)) (set! (-> obj surf) *rotate-surface*))
     (else (set! (-> obj surf) *standard-ground-surface*)))
   ;; racer gets set whenever you get on the zoomer. If we are on the zoomer, just go to "race-track"
@@ -683,7 +697,9 @@
       (((pat-event burnup))
        ;; burnup (like fire canyon lava).
        ;; only send if we don't have racer (on zoomer)
-       (if (zero? (logand (-> (the-as target (-> obj process)) control root-prim prim-core action) (collide-action racer)))
+       ;; og:j1-board changed
+       (if (and (target-board-burn-attack? (the target (-> obj process)))
+                (zero? (logand (-> (the-as target (-> obj process)) control root-prim prim-core action) (collide-action racer))))
          (target-attack-up (the-as target (-> obj process)) 'attack-or-shove 'burnup)))
       (((pat-event melt))
        ;; just send melt
@@ -885,11 +901,14 @@
   ;; setup
   (logclear! (-> obj status)
              (cshape-moving-flags onsurf onground tsurf twall t-ceil t-act csmf06 csmf07 csmf09 on-water impact-surf t-bckgnd csmf13))
-  (set! (-> obj local-normal quad) (-> obj dynam gravity-normal quad))
-  (set! (-> obj surface-normal quad) (-> obj dynam gravity-normal quad))
-  (set! (-> obj poly-normal quad) (-> obj dynam gravity-normal quad))
-  (set! (-> obj coverage) 0.0)
-  (set! (-> obj touch-angle) 0.0)
+  ;; og:j1-board changed
+  (when (not (logtest? (-> obj root-prim prim-core action) (collide-action no-normal-reset)))
+    (let ((v1-13 (-> obj dynam gravity-normal)))
+      (vector-copy! (-> obj local-normal) v1-13)
+      (vector-copy! (-> obj surface-normal) v1-13)
+      (vector-copy! (-> obj poly-normal) v1-13))
+    (set! (-> obj coverage) 0.0)
+    (set! (-> obj touch-angle) 0.0))
   ;; we want to take a step of 1.0
   (let ((f30-0 1.0)
         (s4-0 0) ;; iterations
@@ -1007,11 +1026,14 @@
     (set! (-> obj prev-status) (-> obj status))
     (logclear! (-> obj status)
                (cshape-moving-flags onsurf onground tsurf twall t-ceil t-act csmf06 csmf07 csmf09 on-water impact-surf t-bckgnd csmf13))
-    (set! (-> obj local-normal quad) (-> obj dynam gravity-normal quad))
-    (set! (-> obj surface-normal quad) (-> obj dynam gravity-normal quad))
-    (set! (-> obj poly-normal quad) (-> obj dynam gravity-normal quad))
-    (set! (-> obj coverage) 0.0)
-    (set! (-> obj touch-angle) 0.0)
+    ;; og:j1-board changed
+    (when (not (logtest? (-> obj root-prim prim-core action) (collide-action no-normal-reset)))
+      (let ((v1-13 (-> obj dynam gravity-normal)))
+        (vector-copy! (-> obj local-normal) v1-13)
+        (vector-copy! (-> obj surface-normal) v1-13)
+        (vector-copy! (-> obj poly-normal) v1-13))
+      (set! (-> obj coverage) 0.0)
+      (set! (-> obj touch-angle) 0.0))
     (let* ((a0-12 obj)
            (t9-1 (method-of-object a0-12 move-by-vector!))
            (a1-1 (new 'stack-no-clear 'vector)))
@@ -1119,6 +1141,35 @@
     (add-frame (-> *display* frames (-> *display* on-screen) frame profile-bar 0) 'draw (new 'static 'rgba :g #xff :a #x80)))
   0
   (none))
+
+;; og:j1-board added
+(defmethod find-gspot ((this collide-shape-moving) (params find-gspot-params) (arg1 float) (arg2 float))
+  (vector-copy! (-> this gspot-pos) (-> this trans))
+  (vector-copy! (-> params start-pos) (-> this trans))
+  (vector-reset! (-> params move-dist))
+  (let ((yvel (-> this transv y)))
+    (if (< yvel 0.0) (set! arg1 (- arg1 (fmax (meters -10) (* yvel (seconds-per-frame)))))))
+  (+! (-> params start-pos y) arg1)
+  (set! (-> params move-dist y) (- (+ arg1 arg2)))
+  (set! (-> params ignore-pat) (-> this pat-ignore-mask))
+  (let* ((tri (new 'stack 'collide-tri-result))
+         (best-dist (fill-and-probe-using-line-sphere *collide-cache*
+                                                      (-> params start-pos)
+                                                      (-> params move-dist)
+                                                      (-> params sphere-radius)
+                                                      (-> params collide-with)
+                                                      (-> params ignore-proc)
+                                                      tri
+                                                      (-> params ignore-pat))))
+    (cond
+      ((>= best-dist 0.0)
+       (let ((pos (vector+float*! (new-stack-vector0) (-> params start-pos) (-> params move-dist) best-dist)))
+         (copy-tri! params tri)
+         (set! (-> this gspot-pos y) (- (-> pos y) (-> params sphere-radius)))
+         (vector-! (-> this gspot-normal) pos (-> tri intersect)))
+       (vector-normalize! (-> this gspot-normal) 1.0)
+       #t)
+      (else (set! (-> this gspot-pos y) -40959590.0) (vector-copy! (-> this gspot-normal) *y-vector*) #f))))
 
 (defmethod move-to-ground ((obj collide-shape-moving) (arg0 float) (arg1 float) (arg2 symbol) (arg3 collide-kind))
   "Move to the ground now."

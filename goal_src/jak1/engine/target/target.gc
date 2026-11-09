@@ -1160,6 +1160,8 @@
   :event target-walk-event-handler
   :enter
     (behavior ((arg0 symbol))
+      ;; og:j1-board added
+      (set! (-> self control turn-go-the-long-way) 0.0)
       (cond
         ((= arg0 'stuck))
         ((let ((v1-4 (ja-group))) (or (= v1-4 eichar-launch-jump-ja) (= v1-4 eichar-launch-jump-loop-ja)))
@@ -1570,6 +1572,8 @@
         (suspend)
         (ja :num! (seek! max 0.9))
         (compute-alignment! (-> self align))
+        ;; og:j1-board added
+        (set! (-> self control turn-go-the-long-way) 1.0)
         (let* ((gp-0 (-> self align))
                (s5-0 (method-of-object gp-0 align!))
                (a1-2 (cond

@@ -122,3 +122,23 @@ class BuildActor3Tool : public Tool {
  private:
   goos::Reader m_reader;
 };
+
+class BuildSbkTool : public Tool {
+ public:
+  BuildSbkTool();
+  bool run(const ToolInput& task, const PathMap& path_map) override;
+  bool needs_run(const ToolInput& task, const PathMap& path_map) override;
+
+ private:
+  goos::Reader m_reader;
+};
+
+class AppendSbkTool : public Tool {
+ public:
+  AppendSbkTool();
+  bool run(const ToolInput& task, const PathMap& path_map) override;
+  bool needs_run(const ToolInput& task, const PathMap& path_map) override;
+
+ private:
+  goos::Reader m_reader;
+};

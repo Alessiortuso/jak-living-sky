@@ -11,7 +11,8 @@ void extract(const std::string& name,
              const std::vector<gltf_util::NodeWithTransform>& all_nodes,
              u32 index_offset,
              u32 vertex_offset,
-             u32 tex_offset) {
+             u32 tex_offset,
+             int joint_offset) {
   ASSERT(out.new_vertices.empty());
 
   std::map<std::pair<int, int>, tfrag3::MercDraw> draw_by_material;
@@ -62,7 +63,8 @@ void extract(const std::string& name,
         ASSERT(out.new_colors.size() == out.new_vertices.size());
 
         if (prim.attributes.count("JOINTS_0") && prim.attributes.count("WEIGHTS_0")) {
-          auto joints_and_weights = gltf_util::extract_and_flatten_joints_and_weights(model, prim);
+          auto joints_and_weights =
+              gltf_util::extract_and_flatten_joints_and_weights(model, prim, joint_offset);
           ASSERT(joints_and_weights.size() == verts.vtx.size());
           out.joints_and_weights.insert(out.joints_and_weights.end(), joints_and_weights.begin(),
                                         joints_and_weights.end());

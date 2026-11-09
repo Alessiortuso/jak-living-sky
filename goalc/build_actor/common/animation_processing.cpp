@@ -76,7 +76,8 @@ UncompressedJointAnim extract_anim_from_gltf(const tinygltf::Model& model,
   lg::info("Processing animation {}", anim.name);
   const int max_joint = find_max_joint(anim, node_to_joint);
   lg::info("Max joint is {}", max_joint);
-  out.joints.resize(max_joint + 1);
+  // Need at least 2 slots for the two matrix joints (align and prejoint).
+  out.joints.resize(std::max(max_joint + 1, 2));
   out.master_art_group_name = master_art_group;
   out.master_art_group_index = master_art_group_index;
 
@@ -108,7 +109,7 @@ UncompressedJointAnim extract_anim_from_gltf(const tinygltf::Model& model,
   }
   lg::info("max frames is {}", max_frames);
 
-  // make up data for missing joints (like align, for example)
+  // fill in default data for joints that have no animation channels
   for (auto& joint : out.joints) {
     if (joint.quat_frames.size() < max_frames) {
       lg::warn("joint with {} / {} quat frames!", joint.quat_frames.size(), max_frames);

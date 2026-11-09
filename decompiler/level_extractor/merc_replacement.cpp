@@ -301,10 +301,10 @@ void extract(const std::string& name,
   std::map<int, tfrag3::MercDraw> draw_by_material;
   int mesh_count = 0;
   int prim_count = 0;
-  int joints = 3;
+  int joints = 1;
   auto skin_idx = find_single_skin(model, all_nodes);
   if (skin_idx) {
-    joints += get_joint_count(model, *skin_idx);
+    joints = get_joint_count(model, *skin_idx);
   }
 
   for (const auto& n : all_nodes) {

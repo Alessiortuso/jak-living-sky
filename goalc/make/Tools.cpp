@@ -4,16 +4,19 @@
 #include "common/util/DgoWriter.h"
 #include "common/util/FileUtil.h"
 
+#include "decompiler/data/extract_sbk.h"
 #include "goalc/build_actor/jak1/build_actor.h"
 #include "goalc/build_level/jak1/build_level.h"
 #include "goalc/build_level/jak2/build_level.h"
 #include "goalc/build_level/jak3/build_level.h"
+#include "goalc/build_sbk/build_sbk.h"
 #include "goalc/compiler/Compiler.h"
 #include "goalc/data_compiler/dir_tpages.h"
 #include "goalc/data_compiler/game_count.h"
 #include "goalc/data_compiler/game_text_common.h"
 
 #include "fmt/format.h"
+#include "third-party/json.hpp"
 
 CompilerTool::CompilerTool(Compiler* compiler) : Tool("goalc"), m_compiler(compiler) {}
 
@@ -456,4 +459,72 @@ bool BuildActor3Tool::run(const ToolInput& task, const PathMap& path_map) {
     params.joint_channel = std::stoi(task.input.at(7));
   }
   return jak3::run_build_actor(task.input.at(0), task.output.at(0), params);
+}
+
+BuildSbkTool::BuildSbkTool() : Tool("build-sbk") {}
+
+bool BuildSbkTool::needs_run(const ToolInput& task, const PathMap& path_map) {
+  if (task.input.empty())
+    throw std::runtime_error("[build-sbk] Expected at least 1 input (manifest path)");
+  bool force = task.input.size() > 1 && task.input.at(1) == "#t";
+  std::vector<std::string> deps{task.input.at(0)};
+  return force || Tool::needs_run({deps, deps, task.output, task.arg}, path_map);
+}
+
+bool BuildSbkTool::run(const ToolInput& task, const PathMap&) {
+  if (task.input.empty())
+    throw std::runtime_error("[build-sbk] Expected at least 1 input (manifest path)");
+
+  sbk::BuildOptions opts;
+  if (task.input.size() > 2)
+    opts.bank_id = std::stoi(task.input.at(2));
+  if (task.input.size() > 3)
+    opts.jak1_format = task.input.at(3) == "#t";
+
+  // std::vector<sbk::SoundSpec> specs;
+  // auto manifest = m_reader.read_from_string(task.input.at(4));
+  // if (!manifest.as_pair()->cdr.is_empty_list()) {
+  //   goos::for_each_in_list(manifest.as_pair()->cdr.as_pair()->car, [&](const goos::Object& o) {
+  //     std::vector<fs::path> wavs;
+  //     auto map = o.as_pair();
+  //     auto car = task.input.at(0) + "/" + std::string(map->car.as_symbol().name_ptr) + ".wav";
+  //     wavs.emplace_back(car);
+  //     if (!map->cdr.is_empty_list()) {
+  //       goos::for_each_in_list(map->cdr, [&](const goos::Object& obj) {
+  //         wavs.emplace_back(task.input.at(0) + "/" + std::string(obj.as_symbol().name_ptr) +
+  //                           ".wav");
+  //       });
+  //     }
+  //     specs.emplace_back(wavs);
+  //   });
+  // }
+
+  sbk::create_sbk_from_dir(file_util::get_file_path({task.input.at(0)}),
+                           file_util::get_file_path({task.output.at(0)}), opts);
+  return true;
+}
+
+AppendSbkTool::AppendSbkTool() : Tool("append-sbk") {}
+
+bool AppendSbkTool::needs_run(const ToolInput& task, const PathMap& path_map) {
+  if (task.input.size() < 2)
+    throw std::runtime_error("[append-sbk] Expected at least 2 inputs (base SBK + manifest)");
+  bool force = task.input.size() > 2 && task.input.at(2) == "#t";
+  std::vector<std::string> deps{task.input.at(0), task.input.at(1)};
+  return force || Tool::needs_run({deps, deps, task.output, task.arg}, path_map);
+}
+
+bool AppendSbkTool::run(const ToolInput& task, const PathMap&) {
+  if (task.input.size() < 2)
+    throw std::runtime_error("[append-sbk] Expected at least 2 inputs (base SBK + manifest)");
+
+  // auto specs = load_sbk_manifest(task.input.at(1));
+  // if (specs.empty()) {
+  //   lg::error("[append-sbk] Manifest '{}' contains no valid sounds", task.input.at(1));
+  //   return false;
+  // }
+
+  // sbk::append_sbk_from_dir(file_util::get_file_path({task.input.at(0)}), specs,
+  //                 file_util::get_file_path({task.output.at(0)}));
+  return true;
 }

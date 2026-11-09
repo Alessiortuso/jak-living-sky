@@ -453,10 +453,12 @@
        (case (-> self defense)
          (('iron)
           (case (-> arg3 param 1)
-            (('flop 'uppercut 'explode 'darkeco 'eco-yellow 'bonk 'racer 'tube 'flut-bonk 'flut-attack)
+            ;; og:j1-board changed
+            (('flop 'uppercut 'explode 'darkeco 'eco-yellow 'bonk 'racer 'board 'board-zap 'tube 'flut-bonk 'flut-attack)
              (if (and (logtest? (-> self fact options) (fact-options require-zoomer))
                       *target*
-                      (not (logtest? (-> *target* control root-prim prim-core action) (collide-action racer))))
+                      ;; og:j1-board changed
+                      (not (or (board?) (logtest? (-> *target* control root-prim prim-core action) (collide-action racer)))))
                (return #f))
              (increment-success-for-hint (text-id sidekick-hint-crate-iron))
              (increment-success-for-hint (text-id training-ironcrate))
@@ -478,7 +480,8 @@
              #f)))
          (('steel)
           (case (-> arg3 param 1)
-            (('explode 'darkeco 'eco-yellow 'bonk 'tube 'flut-bonk 'flut-attack 'racer)
+            ;; og:j1-board changed
+            (('explode 'darkeco 'eco-yellow 'bonk 'tube 'flut-bonk 'flut-attack 'racer 'board 'board-zap)
              (send-event arg0 'get-attack-count 1)
              (when (logtest? (-> self draw status) (draw-status was-drawn))
                (increment-success-for-hint (text-id sidekick-hint-crate-steel))
@@ -542,9 +545,12 @@
     (behavior ()
       (suspend)
       (update-transforms! (-> self root))
-      (logior! (-> self mask) (process-mask sleep))
-      (loop
-        (suspend)))
+      ; (logior! (-> self mask) (process-mask sleep))
+      ;; og:j1-board changed
+      (let ((offense (-> self root root-prim prim-core offense)))
+        (loop
+          (set! (-> self root root-prim prim-core offense) (if (board?) (collide-offense touch) offense))
+          (suspend))))
   :post ja-post)
 
 (defstate bounce-on (crate)
@@ -632,7 +638,8 @@
       (clear-collide-with-as (-> self root))
       (if (nonzero? (-> self sound)) (stop! (-> self sound)))
       (if (and *target*
-               (and (logtest? (-> *target* control root-prim prim-core action) (collide-action racer snowball tube flut))
+               ;; og:j1-board changed
+               (and (or (board?) (logtest? (-> *target* control root-prim prim-core action) (collide-action racer snowball tube flut)))
                     (!= (-> self fact pickup-type) 6)
                     (not arg0)))
         (logior! (-> self fact options) (fact-options instant-collect)))

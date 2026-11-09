@@ -133,6 +133,15 @@
   // whether or not to dump out music files to decompiler_out/<game>/audio/music
   "rip_music": false,
 
+  // whether or not to extract sound banks (.SBK files) to decompiler_out/<game>/audio/sfx (og:j1-board)
+  "rip_sound_banks": true,
+
+  // art groups that should always be possible to access, e.g. "common_art_groups": ["eichar-racer+0-ag", "racer-ag", "ef-plane-ag"]
+  "common_art_groups": [],
+
+  // tpages that should always be possible to access, e.g. "common_tpages": [1119],
+  "common_tpages": [],
+
   ////////////////////////////
   // PATCHING OPTIONS
   ////////////////////////////

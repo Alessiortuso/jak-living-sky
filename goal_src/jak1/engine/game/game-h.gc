@@ -61,7 +61,7 @@
   (prevent-duck) ;; can't duck or roll
   (remove-prevents) ;; when set, removes the previous 3 prevents on the next frame.
   (dying) ;; set during death anim
-  (sf16) ;; unused
+  (board) ;; unused
   (has-saved-position) ;; is there a saved position?
   (looking-at-enemy) ;; neck mod active to look at enemy
   (falling-into-pool-of-bad) ;; falling into lava, dark eco, or melt

@@ -57,7 +57,7 @@
               (f1-1 (- (-> a0-8 y) (-> self root trans y))))
          (if (and (>= 2048.0 (fabs f1-1))
                   (and (>= 13516.8 (vector-vector-distance a0-8 (-> self root trans)))
-                       (send-event arg0 'jump (-> self spring-height) (-> self spring-height) *spider-jump-mods*)))
+                       (send-event arg0 'jump (-> self spring-height) (-> self spring-height) (if (board?) #f *spider-jump-mods*))))
            (go spiderwebs-bounce)))))
     (('attack)
      (if (and (= (-> arg3 param 1) 'flop)

@@ -18,12 +18,20 @@
   :bounds (static-spherem 0 0 0 30))
 
 (defstate blocking-plane-idle (blocking-plane)
+  ;; og:j1-board added
+  :trans
+  (behavior ()
+    ;; disable blocking plane on jetboard if (-> racer condition) is 6 (rolling "racer-2")
+    (if (and (board?) (-> self parent) (= (field-deref (-> self parent 0) int32 188) 6))
+      (clear-collide-with-as (the collide-shape (-> self root)))
+      (restore-collide-with-as (the collide-shape (-> self root)))))
   :code
-    (behavior ()
-      (transform-post)
-      (loop
-        (logior! (-> self mask) (process-mask sleep))
-        (suspend))))
+  (behavior ()
+    (transform-post)
+    (loop
+      ;; og:j1-board changed
+      ; (logior! (-> self mask) (process-mask sleep))
+      (suspend))))
 
 (defbehavior blocking-plane-init-by-other blocking-plane ((arg0 curve-control) (arg1 int))
   (if (or (not arg0) (logtest? (-> arg0 flags) (path-control-flag not-found))) (deactivate self))

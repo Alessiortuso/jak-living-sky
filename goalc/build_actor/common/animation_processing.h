@@ -76,3 +76,4 @@ UncompressedJointAnim extract_anim_from_gltf(const tinygltf::Model& model,
 CompressedAnim compress_animation(const UncompressedJointAnim& in);
 
 }  // namespace anim
+

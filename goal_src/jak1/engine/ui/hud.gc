@@ -40,7 +40,10 @@
     (when (or (!= (-> this value) arg0)
               (!= (-> this value2) arg1)
               (-> this force-on-screen)
-              (or (and (cpad-hold? 0 l2) (not (-> this disable))) (and (not *cheat-mode*) (cpad-hold? 0 r2)) (-> this first-init)))
+              ;; og:j1-board changed
+              (or (and (cpad-hold? 0 l3) (not (-> this disable)))
+                  #| (and (not *cheat-mode*) (cpad-hold? 0 r2)) |#
+                  (-> this first-init)))
       ;; modified for pc port
       (cond
         ((cpad-hold? 0 up) (set! *hud-collectable-view* (hud-collectable-view game-totals)))

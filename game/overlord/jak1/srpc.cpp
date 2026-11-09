@@ -180,6 +180,15 @@ void* RPC_Player(unsigned int /*fno*/, void* data, int size) {
             UpdateVolume(sound);
             snd_SetSoundPitchModifier(sound->sound_handle, cmd->play.parms.pitch_mod);
             snd_SetSoundPitchBend(sound->sound_handle, cmd->play.parms.bend);
+            if ((sound->params.mask & 0x800) != 0) {
+              snd_SetSoundReg(sound->sound_handle, 0, sound->params.reg[0]);
+            }
+            if ((sound->params.mask & 0x1000) != 0) {
+              snd_SetSoundReg(sound->sound_handle, 1, sound->params.reg[1]);
+            }
+            if ((sound->params.mask & 0x2000) != 0) {
+              snd_SetSoundReg(sound->sound_handle, 2, sound->params.reg[2]);
+            }
             break;
           }
 
@@ -208,6 +217,16 @@ void* RPC_Player(unsigned int /*fno*/, void* data, int size) {
           sound->sound_handle = handle;
           if (sound->sound_handle) {
             sound->id = cmd->play.sound_id;
+
+            if ((sound->params.mask & 0x800) != 0) {
+              snd_SetSoundReg(sound->sound_handle, 0, sound->params.reg[0]);
+            }
+            if ((sound->params.mask & 0x1000) != 0) {
+              snd_SetSoundReg(sound->sound_handle, 1, sound->params.reg[1]);
+            }
+            if ((sound->params.mask & 0x2000) != 0) {
+              snd_SetSoundReg(sound->sound_handle, 2, sound->params.reg[2]);
+            }
           }
         } break;
         case Jak1SoundCommand::PAUSE_SOUND: {

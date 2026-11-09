@@ -113,7 +113,7 @@
 (defbehavior keg-event-handler keg ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
   (case arg2
     (('touch 'attack)
-     (when (send-event arg0 'attack (-> arg3 param 0) (new 'static 'attack-info))
+     (when (or (= (-> arg3 param 1) 'board-zap) (send-event arg0 'attack (-> arg3 param 0) (new 'static 'attack-info)))
        (sound-play "icrate-break")
        (process-spawn part-tracker
                       :init

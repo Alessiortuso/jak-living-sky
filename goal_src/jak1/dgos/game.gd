@@ -249,6 +249,7 @@
   "ambient.o"
   "assert.o"
   "generic-obs.o"
+  "board-h.o"
   "target-util.o"
   "target-part.o"
   "collide-reaction-target.o"
@@ -259,6 +260,10 @@
   "target.o"
   "target2.o"
   "target-death.o"
+  "board-util.o"
+  "target-board.o"
+  "board-part.o"
+  "board-states.o"
   "menu.o"
   "drawable.o"
   "drawable-group.o"
@@ -331,6 +336,10 @@
   "fuelcell-naked-ag.go"
   "eichar-ag.go"
   "sidekick-ag.go"
+  ;; og:j1-board (before Jak Living Sky's own: the board's animations take their fixed slots in eichar first)
+  "board-ag.go"
+  "eichar-board+0-ag.go"
+  "sidekick-board+0-ag.go"
   "jak-nap-ag.go" ;; Enhanced: the nap's animations (build-actor in game.gp)
   "darkjak-horns-ag.go" ;; Jak Living Sky: Dark Jak's horns and claws (build-actor in game.gp)
   "darkjak-claw-ag.go"
@@ -357,4 +366,5 @@
   "ropebridge.o"
   "ticky.o"
   "hud-classes-pc.o" ;; added
+  "board-overrides.o" ;; og:j1-board
  ))

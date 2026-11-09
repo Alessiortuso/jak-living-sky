@@ -12,7 +12,8 @@ void extract(const std::string& name,
              const std::vector<gltf_util::NodeWithTransform>& all_nodes,
              u32 index_offset,
              u32 vertex_offset,
-             u32 tex_offset);
+             u32 tex_offset,
+             int joint_offset = 2);
 void merc_convert(gltf_util::MercSwapData& out, const gltf_util::MercExtractData& in);
 gltf_util::MercSwapData load_merc_model(u32 current_idx_count,
                                         u32 current_vtx_count,

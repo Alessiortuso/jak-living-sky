@@ -141,6 +141,8 @@
   (set! (-> obj memcard-volume-dialog) 75.0)
   (set! (-> obj memcard-vibration?) #t)
   (set! (-> obj memcard-play-hints?) #t)
+  ;; og:j1-board added
+  (false! (-> obj skip-fuel-cell-anim?))
   0)
 
 (defmethod reset-extra ((obj pc-settings-jak1) (call-handlers symbol))

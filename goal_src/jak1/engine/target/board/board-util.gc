@@ -1,0 +1,150 @@
+;;-*-Lisp-*-
+(in-package goal)
+(defun matrix->transformq ((arg0 transformq) (arg1 matrix))
+  "Create a transformq from a matrix. Allowing scale, etc."
+  (rlet ((Q :class vf)
+         (vf0 :class vf)
+         (vf2 :class vf))
+    (init-vf0-vector)
+    (.lvf vf2 (&-> arg1 vector 3 quad))
+    (.div.vf Q vf0 vf2 :fsf #b11 :ftf #b11)
+    (.wait.vf)
+    (.mul.vf.xyz vf2 vf2 Q)
+    (.nop.vf)
+    (.nop.vf)
+    (.mov.vf.w vf2 vf0)
+    (.svf (&-> arg0 trans quad) vf2)
+    (let ((s4-0 (matrix-copy! (new 'stack-no-clear 'matrix) arg1)))
+      (vector-normalize! (-> s4-0 vector 0) 1.0)
+      (vector-normalize! (-> s4-0 vector 1) 1.0)
+      (vector-normalize! (-> s4-0 vector 2) 1.0)
+      (vector-cross! (-> s4-0 vector 2) (-> s4-0 vector 0) (-> s4-0 vector 1))
+      (vector-cross! (-> s4-0 vector 1) (-> s4-0 vector 2) (-> s4-0 vector 0))
+      (matrix->quaternion (-> arg0 quat) s4-0))
+    (set-vector! (-> arg0 scale)
+                 (vector-length (-> arg1 vector 0))
+                 (vector-length (-> arg1 vector 1))
+                 (vector-length (-> arg1 vector 2))
+                 1.0)
+    arg0))
+
+(defmethod relocate ((this board) (offset int))
+  (if (nonzero? (-> this main)) (&+! (-> this main) offset))
+  (call-parent-method this offset))
+
+(defbehavior board-post board ()
+  (let ((target (-> self parent 0)))
+    (vector-copy! (-> self root trans) (-> target board board-trans))
+    (quaternion-copy! (-> self root quat) (-> target board board-quat))
+    (vector-copy! (-> self root scale) (-> target board board-scale))
+    (set! (-> self draw light-index) (-> target draw light-index))
+    (vector-copy! (-> self draw color-mult) (-> target draw color-mult))
+    (vector-copy! (-> self draw color-emissive) (-> target draw color-emissive))
+    ; (set! (-> self draw force-fade) (-> target draw force-fade))
+    ; (set! (-> self draw global-effect) (-> target draw global-effect))
+    ; (set! (-> self draw death-vertex-skip) (-> target draw death-vertex-skip))
+    (set! (-> self draw death-effect) (-> target draw death-effect))
+    ; (set! (-> self draw death-timer) (-> target draw death-timer))
+    ; (set! (-> self draw death-timer-org) (-> target draw death-timer-org))
+    ; (set! (-> self draw death-draw-overlap) (-> target draw death-draw-overlap))
+    ; (vector-copy! (-> self draw shadow-ctrl settings shadow-dir) (-> target draw shadow-ctrl settings shadow-dir))
+    ;  (cond
+    ;    ((logtest? (-> target draw shadow-ctrl settings flags) (shadow-flags disable-draw))
+    ;     (logior! (-> (-> self draw shadow-ctrl) settings flags) (shadow-flags disable-draw)))
+    ;    (else (logclear! (-> (-> self draw shadow-ctrl) settings flags) (shadow-flags disable-draw))))
+    (if (or (logtest? (-> target draw status)
+                      (draw-status hidden
+                                   #| no-draw no-draw-temp no-draw-bounds no-draw-bounds2 |#
+                                   ))
+            (or
+              #| (logtest? (-> target target-effect) (target-effect te0)) |#
+              (zero? (-> target skel active-channels))))
+      (logior! (-> self draw status)
+               (draw-status hidden
+                            #| no-draw |#
+                            ))
+      (logclear! (-> self draw status)
+                 (draw-status hidden
+                              #| no-draw |#
+                              ))))
+  (ja-post)
+  (none))
+
+(defstate hidden (board)
+  :virtual #t
+  :trans
+    (behavior ()
+      (when (not (logtest? (-> self parent 0 state-flags) (state-flags first-person-mode)))
+        (logclear! (-> self draw status) (draw-status hidden))
+        (go-virtual idle #t)))
+  :code
+    (behavior ()
+      (logior! (-> self draw status) (draw-status hidden))
+      (ja-channel-set! 0)
+      (ja-post)
+      (logior! (-> self mask) (process-mask sleep-code))
+      (loop
+        (suspend))))
+
+(defstate idle (board)
+  :virtual #t
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (case message
+        (('open) (go-virtual use))))
+  :trans
+    (behavior ()
+      (cond
+        ((logtest? (-> self parent 0 state-flags) (state-flags first-person-mode))
+         (+! (-> self in-head-time) (- (current-time) (-> *display* old-real-frame-counter)))
+         (if (< (seconds 0.1) (-> self in-head-time)) (go-virtual hidden)))
+        (else (set! (-> self in-head-time) 0))))
+  :code
+    (behavior ((arg0 symbol))
+      (ja-channel-push! 1 (seconds 0.1))
+      (cond
+        (arg0 (ja :group! board-close-ja :num! max))
+        (else
+         (ja-no-eval :group! board-close-ja :num! (seek!) :frame-num 0.0)
+         (until (ja-done? 0)
+           (suspend)
+           (ja :num! (seek!)))))
+      (false! (-> self draw shadow))
+      (loop
+        (suspend)))
+  :post board-post)
+
+(defstate use (board)
+  :virtual #t
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (case message
+        (('close) (go-virtual idle #f))))
+  :trans
+    (behavior ()
+      (cond
+        ((logtest? (-> self parent 0 state-flags) (state-flags first-person-mode)) (go-virtual hidden))
+        ((not (logtest? (-> self parent 0 state-flags) (state-flags board))) (go-virtual idle #f))))
+  :code
+    (behavior ()
+      ; (set! (-> self draw shadow) (-> self shadow-backup))
+      (ja-channel-push! 1 (seconds 0.1))
+      (ja-no-eval :group! board-open-ja :num! (seek!) :frame-num 0.0)
+      (until (ja-done? 0)
+        (suspend)
+        (ja :num! (seek!)))
+      (loop
+        (suspend)))
+  :post board-post)
+
+(defbehavior board-init-by-other board ()
+  (set! (-> self root) (new 'process 'trsqv))
+  (initialize-skeleton self *board-sg* (the pair 0))
+  ; (logclear! (-> self mask) (process-mask movie))
+  ; (vector-copy! (-> *board-shadow-control* settings shadow-dir) (-> *target-shadow-control* settings shadow-dir))
+  (set! (-> self draw shadow-ctrl) *board-shadow-control*)
+  (set! (-> self shadow-backup) (-> self draw shadow))
+  (set! (-> self main)
+        (new 'process 'joint-mod (joint-mod-handler-mode flex-blend) self (joint-node-index board-lod0-jg main)))
+  (ja-channel-set! 0)
+  (go-virtual idle #t))

@@ -155,7 +155,9 @@
 (defun dark-plant-check-target ((arg0 dark-plant))
   (the-as symbol
           (and *target*
-               (and (< (vector-vector-distance (-> arg0 root trans) (target-pos 0)) 16384.0)
+               (and (< (vector-vector-distance (-> arg0 root trans) (target-pos 0))
+                       ;; og:j1-board changed
+                       (if (target-board-zap-attack-active?) (meters 8) (meters 4)))
                     (send-event *target* 'query 'powerup (pickup-type eco-green))))))
 
 (defun dark-plant-randomize ((arg0 dark-plant))

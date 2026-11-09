@@ -305,7 +305,9 @@
       (set! (-> cmd id) id)
       (set! (-> cmd name) (-> spec sound-name))
       (set! (-> cmd parms mask) (-> spec mask))
-      (set! (-> cmd parms group) (-> spec group))
+      ;; og:j1-board changed
+      ; (set! (-> cmd parms group) (-> spec group))
+      (set! (-> cmd parms group-and-reg) (-> spec group-and-reg))
       (set! (-> cmd parms volume) (-> spec volume))
       (set! (-> cmd parms pitch-mod) (-> spec pitch-mod))
       (set! (-> cmd parms bend) (-> spec bend))

@@ -272,7 +272,8 @@
   (rider-target 2) ;; used for target in rider/platform interactions
   (edgegrab-active 3) ;; set/cleared when entering/exiting edgegrab states
   (rider-plat 4) ;; used for platforms in rider/platform interactions
-  (unused 5) ;; totally unused?
+  ;; og:j1-board changed
+  (no-normal-reset 5) ;; totally unused?
   (edgegrab-possible 6) ;; used when edge grab checks should be done
   (edgegrab-cam 7) ;; set/cleared when entering/exiting edgegrab states
   (swingpole-active 8) ;; set/cleared when entering/exiting swingpole states
@@ -537,6 +538,21 @@
   (csrf30)
   (csrf31))
 
+;; og:j1-board added
+(deftype find-gspot-params (structure)
+  ((start-pos     vector :inline)
+   (move-dist     vector :inline)
+   (sphere-radius float)
+   (collide-with  collide-kind)
+   (ignore-pat    pat-surface)
+   (ignore-proc   process)
+   (tri           collide-tri-result :inline))
+  (:methods
+   (copy-tri! (_type_ collide-tri-result) object)))
+
+(defmethod copy-tri! ((this find-gspot-params) (tri collide-tri-result))
+  (mem-copy! (the pointer (-> this tri)) (the pointer tri) (size-of collide-tri-result)))
+
 ;; A collide-shape for independently moving objects
 (deftype collide-shape-moving (collide-shape)
   ((rider-time         time-frame)
@@ -563,7 +579,12 @@
    (touch-angle        float)
    (coverage           float)
    (dynam              dynamics)
-   (surf               surface))
+   (surf               surface)
+   ;; og:j1-board added
+   (gspot-pos          vector :inline)
+   (gspot-normal       vector :inline)
+   (trans-old-old      vector :overlay-at (-> trans-old 1))
+   (trans-old-old-old  vector :overlay-at (-> trans-old 2)))
   (:methods
    (set-and-handle-pat! (_type_ pat-surface) none)
    (integrate-no-collide! (_type_ vector) none)
@@ -573,7 +594,10 @@
    (move-to-ground-point! (_type_ vector vector vector) none)
    (compute-acc-due-to-gravity (_type_ vector float) vector)
    (step-collison! (_type_ vector vector float) float)
-   (move-to-tri! (_type_ collide-tri-result vector) none)))
+   (move-to-tri! (_type_ collide-tri-result vector) none)
+   ;; og:j1-board added
+   (find-gspot (_type_ find-gspot-params float float) symbol)
+   (move-to-ground-gspot (_type_ float float symbol collide-kind) symbol)))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;; Basic Methods

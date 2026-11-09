@@ -127,7 +127,9 @@
       (set-time! (-> self state-time))
       (process-entity-status! self (entity-perm-status bit-3) #t)
       (plat-button-camera-on)
-      (set-setting! 'allow-look-around #f 0.0 0))
+      (set-setting! 'allow-look-around #f 0.0 0)
+      ;; og:j1-board added
+      (if *target* (true! (-> *target* board prevent-board?))))
   :exit
     (behavior ()
       (plat-button-camera-off)
@@ -186,7 +188,9 @@
       (set-time! (-> self state-time))
       (process-entity-status! self (entity-perm-status bit-3) #t)
       (plat-button-camera-on)
-      (set-setting! 'allow-look-around #f 0.0 0))
+      (set-setting! 'allow-look-around #f 0.0 0)
+      ;; og:j1-board added
+      (if *target* (true! (-> *target* board prevent-board?))))
   :exit
     (behavior ()
       (plat-button-camera-off)
@@ -232,6 +236,8 @@
       (if (-> self allow-auto-kill) (process-entity-status! self (entity-perm-status bit-3) #f))
       (sound-stop (-> self sound-id))
       (sound-play "elev-land")
+      ;; og:j1-board added
+      (if *target* (false! (-> *target* board prevent-board?)))
       (loop
         (if (or (not *target*) (< 268435460.0 (vector-vector-xz-distance-squared (-> self root trans) (target-pos 0))))
           (go-virtual plat-button-idle))

@@ -555,6 +555,8 @@
 
 (defbehavior can-play-stance-amibent? target ()
   (and (time-elapsed? (-> self state-time) (seconds 30))
+       ;; og:j1-board added
+       (not (board?))
        (not (-> *setting-control* current talking))
        (not (-> *setting-control* current spooling))
        (not (-> *setting-control* current movie))
@@ -786,7 +788,13 @@
 (defun target-pos ((arg0 int))
   (let ((a1-0 *target*))
     (cond
-      (a1-0 (if (zero? arg0) (-> a1-0 control trans) (vector<-cspace! (new 'static 'vector) (-> a1-0 node-list data arg0))))
+      (a1-0
+       ;; og:j1-board changed
+       (if (board?)
+         (if (zero? arg0)
+           (-> a1-0 control trans)
+           (vector<-cspace! (new 'static 'vector) (-> a1-0 board-node-list data (min arg0 (1- (-> a1-0 board-node-list length))))))
+         (if (zero? arg0) (-> a1-0 control trans) (vector<-cspace! (new 'static 'vector) (-> a1-0 node-list data arg0)))))
       (else (camera-pos)))))
 
 (defun target-cam-pos ()

@@ -445,6 +445,8 @@
        (go target-load-wait)))
     (('change-mode)
      (case (-> arg3 param 0)
+       ;; og:j1-board added
+       (('board) (go target-board-start (process->handle (the process (-> arg3 param 1)))))
        (('grab) (go target-grab))
        (('look-around) (go target-look-around))
        (('billy) (go target-billy-game))
