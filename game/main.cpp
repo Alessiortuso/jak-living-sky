@@ -33,6 +33,11 @@
 // to be matched with the log's "[c-func]" trampolines and "link and exec" files), what it touched, and the
 // addresses into GOAL's memory on the stack (the GOAL code that called it)
 static LONG WINAPI jls_crash_filter(EXCEPTION_POINTERS* e) {
+  // (first chance, before anyone else's handler: an access violation, said once)
+  static volatile LONG said = 0;
+  if (e->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || InterlockedExchange(&said, 1)) {
+    return EXCEPTION_CONTINUE_SEARCH;
+  }
   const u64 base = (u64)g_ee_main_mem;
   const u64 base_x = (u64)g_ee_main_mem_exec;
   auto goal = [&](u64 a) -> s64 {
@@ -56,7 +61,6 @@ static LONG WINAPI jls_crash_filter(EXCEPTION_POINTERS* e) {
     const s64 g = goal(sp[i]);
     if (g >= 0) lg::error("[crash] stack +{}: GOAL #x{:x}", i * 8, g);
   }
-  lg::finish();
   return EXCEPTION_CONTINUE_SEARCH;
 }
 #endif
@@ -127,7 +131,7 @@ std::string game_arg_documentation() {
 int main(int argc, char** argv) {
   ArgumentGuard u8_guard(argc, argv);
 #ifdef _WIN32
-  SetUnhandledExceptionFilter(jls_crash_filter);
+  AddVectoredExceptionHandler(1, jls_crash_filter);
 #endif
 
   // CLI flags
