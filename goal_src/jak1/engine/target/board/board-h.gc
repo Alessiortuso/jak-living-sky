@@ -4,25 +4,25 @@
 
 (define-extern target-board-joint-points (function none :behavior target))
 
-(defconstant group-board-land-straight (-> *part-group-id-table* 710))
+(defconstant group-board-land-straight (-> *part-group-id-table* 4000))
 
-(defconstant group-board-quick-jump (-> *part-group-id-table* 711))
+(defconstant group-board-quick-jump (-> *part-group-id-table* 4001))
 
-(defconstant group-board-launch (-> *part-group-id-table* 712))
+(defconstant group-board-launch (-> *part-group-id-table* 4002))
 
-(defconstant group-target-board-duck-charge (-> *part-group-id-table* 713))
+(defconstant group-target-board-duck-charge (-> *part-group-id-table* 4003))
 
-(defconstant group-target-board (-> *part-group-id-table* 714))
+(defconstant group-target-board (-> *part-group-id-table* 4004))
 
-(defconstant group-board-spin-attack (-> *part-group-id-table* 715))
+(defconstant group-board-spin-attack (-> *part-group-id-table* 4005))
 
-(defconstant group-board-zap-attack (-> *part-group-id-table* 716))
+(defconstant group-board-zap-attack (-> *part-group-id-table* 4006))
 
-(defconstant group-board-green-eco-zap-attack (-> *part-group-id-table* 717))
+(defconstant group-board-green-eco-zap-attack (-> *part-group-id-table* 4007))
 
-(defconstant group-board-red-eco-zap-attack (-> *part-group-id-table* 718))
+(defconstant group-board-red-eco-zap-attack (-> *part-group-id-table* 4008))
 
-(defconstant group-board-yellow-eco-zap-attack (-> *part-group-id-table* 719))
+(defconstant group-board-yellow-eco-zap-attack (-> *part-group-id-table* 4009))
 
 (defconstant BOARD_MAX_SPEED (meters 35))
 

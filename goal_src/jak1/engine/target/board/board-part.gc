@@ -4,6 +4,8 @@
 ;; name: board-part.gc
 ;; name in dgo: board-part
 ;; dgos: GAME
+;; Jak Living Sky: its particles renumbered 4000-4014 and groups 4000-4009 (the mod's 3000-3014 and 710-719 were
+;; Dark Jak's, the white eco's and its HUD's, Mountain Range's)
 
 ;; DECOMP BEGINS
 
@@ -58,42 +60,42 @@
 ; 674 -> (stone 23)
 
 ; (defpartgroup group-board-land-straight
-;   :id 710
+;   :id 4000
 ;   :duration (seconds 0.035)
 ;   :linger-duration (seconds 1.5)
 ;   :bounds (static-bspherem 0 0 0 2)
 ;   :parts ((sp-item 249)))
 
 ; (defpartgroup group-board-quick-jump
-;   :id 711
+;   :id 4001
 ;   :duration (seconds 0.035)
 ;   :linger-duration (seconds 1.5)
 ;   :bounds (static-bspherem 0 0 0 2)
 ;   :parts ((sp-item 249)))
 
 (defpartgroup group-board-launch
-  :id 712
+  :id 4002
   :duration (seconds 0.035)
   :linger-duration (seconds 1.5)
   :bounds (static-bspherem 0 0 0 2)
   :parts
-  ((sp-item 3002
+  ((sp-item 4002
             :flags
             (launch-asap
               #| sp3 |#
               ))
-   (sp-item 3001
+   (sp-item 4001
             :flags
             (launch-asap
               #| sp3 |#
               ))
-   (sp-item 3000
+   (sp-item 4000
             :flags
             (launch-asap
               #| sp3 sp7 |#
               ))))
 
-(defpart 3000
+(defpart 4000
   :init-specs
   ((:texture (starflash effects))
    (:num 1.0)
@@ -115,7 +117,7 @@
           ))
    (:userdata 409600.0)))
 
-(defpart 3001
+(defpart 4001
   :init-specs
   ((:texture (middot effects))
    (:num 100.0)
@@ -137,7 +139,7 @@
    (:conerot-x (degrees 80) (degrees 20))
    (:rotate-y (degrees 0) (degrees 3600))))
 
-(defpart 3002
+(defpart 4002
   :init-specs
   ((:texture
     (bigpuff
@@ -164,16 +166,16 @@
    (:rotate-y (degrees 0) (degrees 3600))))
 
 (defpartgroup group-target-board-duck-charge
-  :id 713
+  :id 4003
   :bounds (static-bspherem 0 0 0 15)
   :parts
-  ((sp-item 3003
+  ((sp-item 4003
             :flags
             (is-3d
               #| sp7 |#
               ))))
 
-(defpart 3003
+(defpart 4003
   :init-specs
   ((:texture
     (starflash
@@ -230,15 +232,15 @@
 ;    (:conerot-y (degrees 0) (degrees 360))))
 
 (defpartgroup group-target-board
-  :id 714
+  :id 4004
   :bounds (static-bspherem 0 0 0 15)
   :parts
-  ((sp-item 3004)
-   (sp-item 3005 :flags (is-3d))
-   #| (sp-item 3006) |#
+  ((sp-item 4004)
+   (sp-item 4005 :flags (is-3d))
+   #| (sp-item 4006) |#
    ))
 
-(defpart 3004
+(defpart 4004
   :init-specs
   ((:num 3.0)
    (:y (meters 0.25))
@@ -259,7 +261,7 @@
    (:conerot-y (degrees 0) (degrees 360))
    (:conerot-radius (meters 0) (meters 0.5))))
 
-(defpart 3005
+(defpart 4005
   :init-specs
   ((:texture (hotdot effects))
    (:birth-func 'birth-func-target-orient)
@@ -280,7 +282,7 @@
    (:timer (seconds 0.535))
    (:flags (bit2 bit13))))
 
-(defpart 3006
+(defpart 4006
   :init-specs
   ((:texture
     (bigpuff-half
@@ -308,7 +310,7 @@
    (:conerot-y (degrees 0) (degrees 360))
    (:conerot-radius (meters 0) (meters 0.5))))
 
-(defpart 3012
+(defpart 4012
   :init-specs
   ((:texture (bigpuff effects))
    (:num 0.0)
@@ -334,31 +336,31 @@
    (:conerot-y (degrees 0) (degrees 360))))
 
 ; (defpartgroup group-board-spin-attack
-;   :id 715
+;   :id 4005
 ;   :duration (seconds 1)
 ;   :flags (sp0 sp6)
 ;   :bounds (static-bspherem 0 0 0 2)
 ;   :rotate ((degrees 90) (degrees 180) (degrees 90))
 ;   :parts
-;   ((sp-item 3009
+;   ((sp-item 4009
 ;             :flags
 ;             (is-3d launch-asap
 ;                    bit6
 ;                    #| sp3 sp6 sp7 |#
 ;                    ))
-;    (sp-item 3008
+;    (sp-item 4008
 ;             :flags
 ;             (is-3d launch-asap
 ;                    bit6
 ;                    #| sp3 sp6 sp7 |#
 ;                    ))
-;    (sp-item 3007
+;    (sp-item 4007
 ;             :flags
 ;             (launch-asap bit6
 ;                          #| sp3 sp6 |#
 ;                          ))))
 
-; (defpart 3007
+; (defpart 4007
 ;   :init-specs
 ;   ((:texture (glow-soft effects))
 ;    (:num 1.0)
@@ -378,7 +380,7 @@
 ;    (:userdata 12288.0)
 ;    (:func 'sparticle-track-root)))
 
-; (defpart 3008
+; (defpart 4008
 ;   :init-specs
 ;   ((:texture (hotdot effects))
 ;    (:num 1.0)
@@ -405,7 +407,7 @@
 ;    (:func 'sparticle-track-root)
 ;    (:rotate-y (degrees 0))))
 
-; (defpart 3009
+; (defpart 4009
 ;   :init-specs
 ;   ((:texture (splash-foam effects))
 ;    (:num 1.0)
@@ -434,28 +436,28 @@
 ;    (:rotate-y (degrees 0))))
 
 (defpartgroup group-board-zap-attack
-  :id 716
+  :id 4006
   :flags (use-local-clock)
   :bounds (static-bspherem 0 0 0 2)
-  :parts ((sp-item 3010 :flags (is-3d) :period (seconds 20) :length (seconds 0.335))))
+  :parts ((sp-item 4010 :flags (is-3d) :period (seconds 20) :length (seconds 0.335))))
 
 (defpartgroup group-board-green-eco-zap-attack
-  :id 717
+  :id 4007
   :flags (use-local-clock)
   :bounds (static-bspherem 0 0 0 2)
-  :parts ((sp-item 3011 :flags (is-3d) :period (seconds 20) :length (seconds 0.335))))
+  :parts ((sp-item 4011 :flags (is-3d) :period (seconds 20) :length (seconds 0.335))))
 
 (defpartgroup group-board-red-eco-zap-attack
-  :id 718
+  :id 4008
   :flags (use-local-clock)
   :bounds (static-bspherem 0 0 0 2)
-  :parts ((sp-item 3013 :flags (is-3d) :period (seconds 20) :length (seconds 0.335))))
+  :parts ((sp-item 4013 :flags (is-3d) :period (seconds 20) :length (seconds 0.335))))
 
 (defpartgroup group-board-yellow-eco-zap-attack
-  :id 719
+  :id 4009
   :flags (use-local-clock)
   :bounds (static-bspherem 0 0 0 2)
-  :parts ((sp-item 3014 :flags (is-3d) :period (seconds 20) :length (seconds 0.335))))
+  :parts ((sp-item 4014 :flags (is-3d) :period (seconds 20) :length (seconds 0.335))))
 
 (defun board-charge-track ((arg0 sparticle-system) (arg1 sparticle-cpuinfo) (arg2 vector))
   (when *target*
@@ -474,7 +476,7 @@
     (set! (-> arg2 z) (-> pos z)))
   (none))
 
-(defpart 3010
+(defpart 4010
   :init-specs
   ((:texture (water-ring effects))
    (:num 0.25)
@@ -496,7 +498,7 @@
    (:func 'board-zap-track)
    (:rotate-y (degrees 0))))
 
-(defpart 3011
+(defpart 4011
   :init-specs
   ((:texture (water-ring effects))
    (:num 0.25)
@@ -518,7 +520,7 @@
    (:func 'board-zap-track)
    (:rotate-y (degrees 0))))
 
-(defpart 3013
+(defpart 4013
   :init-specs
   ((:texture (water-ring effects))
    (:num 0.25)
@@ -540,7 +542,7 @@
    (:func 'board-zap-track)
    (:rotate-y (degrees 0))))
 
-(defpart 3014
+(defpart 4014
   :init-specs
   ((:texture (water-ring effects))
    (:num 0.25)
