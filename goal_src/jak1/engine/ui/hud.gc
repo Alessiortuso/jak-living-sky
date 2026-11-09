@@ -40,9 +40,12 @@
     (when (or (!= (-> this value) arg0)
               (!= (-> this value2) arg1)
               (-> this force-on-screen)
-              ;; og:j1-board changed
+              ;; Jak Living Sky: R2 and L2 as in the game (the board's on R3), L2 not while on the board (its spins), L3
+              ;; too (the board mod's)
               (or (and (cpad-hold? 0 l3) (not (-> this disable)))
-                  #| (and (not *cheat-mode*) (cpad-hold? 0 r2)) |#
+                  (and (cpad-hold? 0 l2) (not (-> this disable))
+                       (not (and *target* (logtest? (-> *target* state-flags) (state-flags board)))))
+                  (and (not *cheat-mode*) (cpad-hold? 0 r2))
                   (-> this first-init)))
       ;; modified for pc port
       (cond

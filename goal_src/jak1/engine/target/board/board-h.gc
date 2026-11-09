@@ -420,7 +420,8 @@
                                           target-look-around
                                           target-billy-game
                                           target-fishing)))
-       (or (and (cpad-pressed? (-> self control unknown-cpad-info00 number) r2)
+       ;; Jak Living Sky: on and off with R3 (R2 shows the collectables, as in the game)
+       (or (and (cpad-pressed? (-> self control unknown-cpad-info00 number) r3)
                 (or (!= *cheat-mode* 'debug)
                     (not (logtest? (-> *cpad-list* cpads (-> self control unknown-cpad-info00 number) button0-abs 0) (pad-buttons l2))))
                 (not *pause-lock*)
