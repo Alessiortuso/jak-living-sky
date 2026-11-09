@@ -404,10 +404,12 @@
 
 (define-extern can-exit-duck? (function symbol :behavior target))
 
-;; Jak Living Sky: no board in Fire Canyon and Lava Tube (the Zoomer's: the heat)
+;; Jak Living Sky: no board in Fire Canyon and Lava Tube (the Zoomer's: the heat), Precursor Basin, Mountain Pass
+;; (rolling, ogre) and Brume's Mountain Range (mount); and not for Dark Jak
 (defun board-banned-here? ()
-  (let ((lev (level-get-target-inside *level*)))
-    (and lev (case (-> lev name) (('firecanyon 'lavatube) #t) (else #f)))))
+  (or *dark-jak*
+      (let ((lev (level-get-target-inside *level*)))
+        (and lev (case (-> lev name) (('firecanyon 'lavatube 'rolling 'ogre 'mount) #t) (else #f))))))
 
 (defbehavior want-to-board? target ()
   (and (not (board-banned-here?)) (not (symbol-member? (-> self next-state name)
