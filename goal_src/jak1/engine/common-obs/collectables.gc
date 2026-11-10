@@ -1716,7 +1716,7 @@
 
 ;; (the merchant's lines on a purchase: after him, below)
 (define-extern merchant-buy-line (function int none))
-(define-extern merchant-poor-line (function none))
+(define-extern merchant-deny-line (function symbol none))
 
 ;; buying one (not enough eco, or at the most: a sound of its own)
 (defun soul-shop-buy ((i int))
@@ -1730,8 +1730,9 @@
      ;; Jak Living Sky: what's bought kept at once (the auto save, as for a power cell)
      (auto-save-command 'auto-save 0 0 *default-pool*))
     ;; Jak Living Sky: not enough eco: the merchant's answer (the denied sound while he's talking)
-    ((< (soul-item-have i) (soul-item-most i)) (merchant-poor-line))
-    (else (pc-enhanced-denied)))
+    ((< (soul-item-have i) (soul-item-most i)) (merchant-deny-line 'poor))
+    ;; and at the most already: his line on that
+    (else (merchant-deny-line 'max)))
   (none))
 
 ;; Jak Living Sky: rows for all on sale at once (the JET-Board, last, seen without scrolling), one to spare
@@ -2411,6 +2412,7 @@
 (define *mline-buy-dark* (new 'static 'boxed-array :type int32 #x466c 1818))
 (define *mline-poor-1* (new 'static 'boxed-array :type int32 #x466d 1097))
 (define *mline-poor-2* (new 'static 'boxed-array :type int32 #x466e 1144))
+(define *mline-max-1* (new 'static 'boxed-array :type int32 #x466f 1700))
 ;; a group's lines said ("first": all, in order; the others: one at random)
 (defun merchant-group-say ((group symbol))
   (case group
@@ -2442,14 +2444,19 @@
        ((0) (merchant-say "voice/merchant-poor-1.mp3" *mline-poor-1*))
        (else (merchant-say "voice/merchant-poor-2.mp3" *mline-poor-2*)))
      )
+    (('max)
+     (case (rand-vu-int-count 1)
+       (else (merchant-say "voice/merchant-max-1.mp3" *mline-max-1*)))
+     )
     )
   (none))
 ;; ==end merchant lines==
 
-;; not enough eco: his line on it, unless another's being said (then the denied sound)
-(defun merchant-poor-line ()
+;; a purchase refused (not enough eco: 'poor; at the most already: 'max): his line on it, unless another's being
+;; said (then the denied sound)
+(defun merchant-deny-line ((why symbol))
   (if (>= (quest-now) *daxter-talk-until*)
-    (merchant-group-say 'poor)
+    (merchant-group-say why)
     (pc-enhanced-denied))
   (none))
 

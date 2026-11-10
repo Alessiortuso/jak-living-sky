@@ -35,6 +35,8 @@ LINES = [  # group, file, id, it, en
      "WITH THAT PITTANCE? COME BACK WHEN YOU HAVE SOMETHING TO OFFER."),
     ('poor', 'merchant-poor-2', 0x466e, "IL CREDITO NON LO FACCIO. NEANCHE ALLE FACCE SIMPATICHE.",
      "I DON'T GIVE CREDIT. NOT EVEN TO NICE FACES."),
+    ('max', 'merchant-max-1', 0x466f, "NE HAI GIÀ ABBASTANZA. ANCHE L'AVIDITÀ HA UN LIMITE. LA MIA NO, LA TUA SÌ.",
+     "YOU HAVE ENOUGH ALREADY. EVEN GREED HAS A LIMIT. MINE DOESN'T, YOURS DOES."),
 ]
 
 BEGIN = ';; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)=='
