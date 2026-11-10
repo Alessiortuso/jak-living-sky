@@ -2383,6 +2383,32 @@
               (< (-> v z) (meters 5.0))
               (< (fabs (-> v y)) (meters 4))))))
 
+;; his voice (custom_assets/jak1/audio/voice/merchant-*.mp3): each line's subtitle and length (ticks, 300 a second),
+;; made once (quest-line would make them anew every time)
+(define-extern quest-line2 (function string string (array int32) time-frame))
+(define-extern *daxter-talk-until* time-frame)
+(define *mline-first-1* (new 'static 'boxed-array :type int32 #x4664 1440))
+(define *mline-first-2* (new 'static 'boxed-array :type int32 #x4665 1710))
+(define *mline-hello-1* (new 'static 'boxed-array :type int32 #x4666 1290))
+(define *mline-hello-4* (new 'static 'boxed-array :type int32 #x4667 1120))
+(defun merchant-say ((file string) (parts (array int32)))
+  (quest-line2 "MERCANTE" file parts)
+  (none))
+
+;; coming back to him (after the first time): one of his greetings, at random, now and then (not within 45 s of the
+;; last, nor over another line)
+(define *merchant-was-near* #f)
+(define *merchant-hello-time* (the-as time-frame 0))
+(defun merchant-hello ()
+  (when (and (>= *merchant-met* 1.0)
+             (time-elapsed? *merchant-hello-time* (seconds 45))
+             (>= (quest-now) *daxter-talk-until*))
+    (set! *merchant-hello-time* (current-time))
+    (case (rand-vu-int-count 2)
+      ((0) (merchant-say "voice/merchant-hello-1.mp3" *mline-hello-1*))
+      (else (merchant-say "voice/merchant-hello-4.mp3" *mline-hello-4*))))
+  (none))
+
 ;; his idle, a loop
 (defbehavior merchant-anim-step merchant ()
   (if (ja-done? 0)
@@ -2393,12 +2419,17 @@
 (defstate merchant-idle (merchant)
   :trans
     (behavior ()
+      ;; Jak just come near: a greeting
+      (let ((near (merchant-near? self)))
+        (if (and near (not *merchant-was-near*)) (merchant-hello))
+        (set! *merchant-was-near* (the-as symbol near)))
       (when (merchant-near? self)
         ;; the first time Jak comes to any of them, in a game: his first words
         (when (< *merchant-met* 1.0)
           (set! *merchant-met* 1.0)
-          (quest-line "MERCANTE" "voice/merchant-first-1.mp3" #x4664 (seconds 4.8))
-          (quest-line "MERCANTE" "voice/merchant-first-2.mp3" #x4665 (seconds 5.7)))
+          (set! *merchant-hello-time* (current-time))
+          (merchant-say "voice/merchant-first-1.mp3" *mline-first-1*)
+          (merchant-say "voice/merchant-first-2.mp3" *mline-first-2*))
         (hide-hud)
         (when (and (hud-hidden?) (can-grab-display? self))
           (let ((font (new 'stack 'font-context *font-default-matrix* 32 140 0.0 (font-color default) (font-flags shadow kerning))))
