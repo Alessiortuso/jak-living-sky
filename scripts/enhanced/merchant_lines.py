@@ -49,6 +49,8 @@ LINES = [  # group, file, id, it, en
      "TRY THAT AGAIN AND PRICES DOUBLE."),
     ('hit', 'merchant-hit-1', 0x4675, "AHI. QUESTO TE LO METTO SUL CONTO.",
      "OUCH. I'LL PUT THAT ON YOUR TAB."),
+    ('bye-nothing', 'merchant-bye-nothing-1', 0x4676, "TUTTO QUI? UNO SGUARDO E VIA...",
+     "THAT'S IT? ONE LOOK AND OFF YOU GO..."),
 ]
 
 BEGIN = ';; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)=='
