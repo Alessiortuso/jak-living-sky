@@ -2390,16 +2390,38 @@
   (none))
 
 (defstate merchant-idle (merchant)
-  :event
-    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
-      (case message
-        (('shop) (if (and *target* (process-grab? *target*)) (go merchant-shop)))))
+  :trans
+    (behavior ()
+      (when (merchant-near? self)
+        (hide-hud)
+        (when (and (hud-hidden?) (can-grab-display? self))
+          (let ((font (new 'stack 'font-context *font-default-matrix* 32 140 0.0 (font-color default) (font-flags shadow kerning))))
+            (set-width! font 440)
+            (set-height! font 60)
+            (set-scale! font 0.9)
+            (set! (-> font flags) (font-flags shadow kerning middle-vert large))
+            (print-game-text "PREMI ~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H PER IL NEGOZIO" font #f 128 22))
+          (when (and (cpad-pressed? 0 circle) (process-grab? *target*))
+            (logclear! (-> *cpad-list* cpads 0 button0-abs 0) (pad-buttons circle))
+            (logclear! (-> *cpad-list* cpads 0 button0-rel 0) (pad-buttons circle))
+            (go merchant-shop)))))
   :code
     (behavior ()
       (ja-no-eval :group! (-> self draw art-group data 2) :num! (seek!) :frame-num 0.0)
       (loop
         (suspend)
-        (merchant-anim-step)))
+        (merchant-anim-step)
+        ;; being moved: the help
+        (when (and *merchant-moving* (not *progress-process*))
+          (hide-hud)
+          (when (and (hud-hidden?) (can-grab-display? self))
+            (let ((font (new 'stack 'font-context *font-default-matrix* 32 140 0.0 (font-color default) (font-flags shadow kerning))))
+              (set-width! font 440)
+              (set-height! font 80)
+              (set-scale! font 0.7)
+              (set! (-> font flags) (font-flags shadow kerning middle-vert large))
+              (print-game-text "LEVETTA SINISTRA SPOSTA, L1 R1 RUOTA, SU GIU ALZA E ABBASSA, ~Y~22L<~Z~Y~27L*~Z~Y~1L>~Z~Y~23L[~Z~+26H CONFERMA"
+                               font #f 128 22))))))
   :post ja-post)
 
 (defstate merchant-shop (merchant)
@@ -2482,21 +2504,6 @@
 ;; him there while Jak's in his village, once placed
 (define-extern merchant-move-update (function none))
 
-;; near him: the prompt, and Circle for the shop
-(defun merchant-prompt-update ()
-  (let ((proc (the-as merchant (handle->process (-> *merchant-handle* 0)))))
-    (when (and proc (merchant-near? proc))
-      (let ((font (new 'stack 'font-context *font-default-matrix* 6 300 0.0 (font-color default) (font-flags shadow kerning))))
-        (set-scale! font 0.7)
-        (set-width! font 500)
-        (set-height! font 30)
-        (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
-        (print-game-text "PREMI ~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H PER IL NEGOZIO" font #f 128 22))
-      (when (cpad-pressed? 0 circle)
-        (cpad-clear! 0 circle)
-        (send-event proc 'shop))))
-  (none))
-
 (defun merchant-update ()
   (let* ((proc (handle->process (-> *merchant-handle* 0)))
          (lev (the-as level (and *target* (level-get-target-inside *level*))))
@@ -2515,7 +2522,6 @@
        (set! *merchant-at* -1)
        (set! *merchant-moving* #f))))
   (merchant-move-update)
-  (merchant-prompt-update)
   (none))
 
 ;; the mod options' "move the merchant": in his village, put 4.5 m in front of Jak if not there yet, then moved with
@@ -2575,13 +2581,6 @@
          (quaternion-axis-angle! (-> proc root quat) 0.0 1.0 0.0 (-> *merchant-yaw* i))
          ;; (his collision moved with him)
          (update-transforms! (-> proc root))
-         (let ((font (new 'stack 'font-context *font-default-matrix* 6 290 0.0 (font-color default) (font-flags shadow kerning))))
-           (set-scale! font 0.6)
-           (set-width! font 500)
-           (set-height! font 40)
-           (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
-           (print-game-text "LEVETTA SINISTRA SPOSTA   L1 R1 RUOTA   SU GIU ALZA ABBASSA   ~Y~22L<~Z~Y~27L*~Z~Y~1L>~Z~Y~23L[~Z~+26H CONFERMA"
-                            font #f 128 22))
          (when (cpad-pressed? 0 x)
            (cpad-clear! 0 x)
            (sound-play "start-options")
