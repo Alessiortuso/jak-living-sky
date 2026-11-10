@@ -2391,6 +2391,7 @@
 (define *mline-first-2* (new 'static 'boxed-array :type int32 #x4665 1710))
 (define *mline-hello-1* (new 'static 'boxed-array :type int32 #x4666 1290))
 (define *mline-hello-4* (new 'static 'boxed-array :type int32 #x4667 1120))
+(define *mline-open-1* (new 'static 'boxed-array :type int32 #x4668 980))
 (defun merchant-say ((file string) (parts (array int32)))
   (quest-line2 "MERCANTE" file parts)
   (none))
@@ -2407,6 +2408,15 @@
     (case (rand-vu-int-count 2)
       ((0) (merchant-say "voice/merchant-hello-1.mp3" *mline-hello-1*))
       (else (merchant-say "voice/merchant-hello-4.mp3" *mline-hello-4*))))
+  (none))
+
+;; the shop opened: a line, at random, now and then (not within 30 s of the last, nor over another)
+(define *merchant-open-time* (the-as time-frame 0))
+(defun merchant-open-line ()
+  (when (and (time-elapsed? *merchant-open-time* (seconds 30)) (>= (quest-now) *daxter-talk-until*))
+    (set! *merchant-open-time* (current-time))
+    (case (rand-vu-int-count 1)
+      (else (merchant-say "voice/merchant-open-1.mp3" *mline-open-1*))))
   (none))
 
 ;; his idle, a loop
@@ -2466,7 +2476,8 @@
     (behavior ()
       (sound-play "start-options")
       (set! *soul-shop-cursor* 0)
-      (set! *soul-shop-open* #t))
+      (set! *soul-shop-open* #t)
+      (merchant-open-line))
   :exit
     (behavior ()
       (set! *soul-shop-open* #f)
