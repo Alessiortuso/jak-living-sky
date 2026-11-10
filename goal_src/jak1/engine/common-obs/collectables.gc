@@ -2569,7 +2569,7 @@
         ;; Jak lingering, staring, not buying: his line on it, once
         (when (and near
                    (not *merchant-idle-said*)
-                   (time-elapsed? *merchant-near-since* (seconds 18))
+                   (time-elapsed? *merchant-near-since* (seconds 10))
                    (merchant-quiet?))
           (set! *merchant-idle-said* #t)
           (merchant-group-say 'idle))
