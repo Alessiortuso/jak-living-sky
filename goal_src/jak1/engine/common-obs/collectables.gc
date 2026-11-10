@@ -1716,6 +1716,7 @@
 
 ;; (the merchant's lines on a purchase: after him, below)
 (define-extern merchant-buy-line (function int none))
+(define-extern merchant-poor-line (function none))
 
 ;; buying one (not enough eco, or at the most: a sound of its own)
 (defun soul-shop-buy ((i int))
@@ -1728,6 +1729,8 @@
      (merchant-buy-line i)
      ;; Jak Living Sky: what's bought kept at once (the auto save, as for a power cell)
      (auto-save-command 'auto-save 0 0 *default-pool*))
+    ;; Jak Living Sky: not enough eco: the merchant's answer (the denied sound while he's talking)
+    ((< (soul-item-have i) (soul-item-most i)) (merchant-poor-line))
     (else (pc-enhanced-denied)))
   (none))
 
@@ -2440,6 +2443,13 @@
     )
   (none))
 ;; ==end merchant lines==
+
+;; not enough eco: his line on it, unless another's being said (then the denied sound)
+(defun merchant-poor-line ()
+  (if (>= (quest-now) *daxter-talk-until*)
+    (merchant-group-say 'poor)
+    (pc-enhanced-denied))
+  (none))
 
 ;; a purchase: one of his lines on it, unless another's being said
 (defun merchant-buy-line ((i int))
