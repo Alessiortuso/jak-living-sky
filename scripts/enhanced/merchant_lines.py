@@ -33,6 +33,8 @@ LINES = [  # group, file, id, it, en
      "DARK ECO, EH?... I KNEW YOU WERE ONE OF THOSE... I DON'T JUDGE. I CASH IN."),
     ('poor', 'merchant-poor-1', 0x466d, "CON QUELLA MISERIA? TORNA QUANDO AVRAI QUALCOSA DA OFFRIRE.",
      "WITH THAT PITTANCE? COME BACK WHEN YOU HAVE SOMETHING TO OFFER."),
+    ('poor', 'merchant-poor-2', 0x466e, "IL CREDITO NON LO FACCIO. NEANCHE ALLE FACCE SIMPATICHE.",
+     "I DON'T GIVE CREDIT. NOT EVEN TO NICE FACES."),
 ]
 
 BEGIN = ';; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)=='
