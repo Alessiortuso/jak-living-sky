@@ -2339,7 +2339,7 @@
 ;; Jak Living Sky: the white eco merchant, the shop's own place: a fat little trader in a patched hood, only his eyes
 ;; to be seen, on his tall stool, his little legs swinging, his stall beside him, in each village (made with Higgsfield:
 ;; scripts/enhanced/merchant_import.py). Up to him and Circle: the shop
-(def-actor merchant :bounds (-1.3 1.3 -0.3 3.4))
+(def-actor merchant :bounds (-2.0 2.0 -0.4 5.2))
 
 ;; his place in each village: village1, village2, village3, brume (game units; w: 1 placed), and which way he faces
 (define *merchant-spots* (new 'static 'inline-array vector 4
@@ -2362,7 +2362,7 @@
 ;; Jak close enough and free to talk
 (defbehavior merchant-near? merchant ()
   (and *target*
-       (< (vector-vector-distance (-> self root trans) (-> *target* control trans)) (meters 3.2))
+       (< (vector-vector-distance (-> self root trans) (-> *target* control trans)) (meters 4.5))
        (not *progress-process*)
        (logtest? (-> *target* control status) (cshape-moving-flags onsurf))
        (not (logtest? (-> *target* state-flags) (state-flags dangerous being-attacked grabbed dying board)))))
@@ -2436,7 +2436,7 @@
       (set! (-> prim prim-core action) (collide-action solid))
       (set! (-> prim prim-core offense) (collide-offense indestructible))
       ;; (him on his stool and his stall to his right)
-      (set-vector! (-> prim local-sphere) (meters -1.2) (meters 1.2) (meters -0.3) (meters 2.1))
+      (set-vector! (-> prim local-sphere) (meters -1.85) (meters 1.6) (meters -0.45) (meters 3.1))
       (set-root-prim! cs prim))
     (backup-collide-with-as cs)
     (set! (-> self root) cs))
@@ -2477,7 +2477,7 @@
        (set! *merchant-at* -1))))
   (none))
 
-;; the mod options' "place the merchant here": 3 m in front of Jak, facing him, told in the log to be written into
+;; the mod options' "place the merchant here": 4.5 m in front of Jak, facing him, told in the log to be written into
 ;; *merchant-spots*
 (defun merchant-place-here ()
   (let* ((lev (the-as level (and *target* (level-get-target-inside *level*))))
@@ -2487,8 +2487,8 @@
       (else
        (let ((yaw (y-angle (-> *target* control))))
          (set! (-> *merchant-spots* i quad) (-> *target* control trans quad))
-         (+! (-> *merchant-spots* i x) (* (meters 3) (sin yaw)))
-         (+! (-> *merchant-spots* i z) (* (meters 3) (cos yaw)))
+         (+! (-> *merchant-spots* i x) (* (meters 4.5) (sin yaw)))
+         (+! (-> *merchant-spots* i z) (* (meters 4.5) (cos yaw)))
          (set! (-> *merchant-yaw* i) (+ yaw 32768.0)))
        (set! (-> *merchant-spots* i w) 1.0)
        (format 0

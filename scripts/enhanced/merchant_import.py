@@ -2,7 +2,7 @@
 # mercante-concept/seduto-1.png and banchetto.png): him on his tall stool, his stall beside him. Made ready for
 # build-actor (game.gp) and the extractor (the same glb as custom_levels/merchant.glb and common/merchant-lod0.glb):
 #
-# - scaled to Jak's world (him 2.6 m on his stool, the stall 2.6 m high), standing on y 0, facing +Z, his stall to his
+# - scaled to Jak's world (him 4 m on his stool, seated as tall as Jak; the stall 3.8 m high), standing on y 0, facing +Z, his stall to his
 #   left (-X), his stool at the origin;
 # - the textures down from 2048 to 512, named for the renderer's looks ("merchant-cloth": cloth; the stall's wood);
 # - a skeleton: align and prejoint first (as the game's own and the JET-Board's: without them build-actor and the
@@ -95,11 +95,11 @@ for sgn in (1, -1):
 print('eyes', [(e[0].round(3), (e[2] - e[1]).round(3)) for e in eyes])
 
 # --- to the game: metres, on the ground ---
-MS = 2.6 / (mV[:, 1].max() - mV[:, 1].min())
+MS = 4.0 / (mV[:, 1].max() - mV[:, 1].min())  # (seated, his head as high as Jak's)
 m_off = np.array([0.0, -mV[:, 1].min() * MS, 0.0])
-SS = 2.6 / (sV[:, 1].max() - sV[:, 1].min())
+SS = 3.8 / (sV[:, 1].max() - sV[:, 1].min())
 stall_w = (sV[:, 0].max() - sV[:, 0].min()) * SS
-s_off = np.array([-(stall_w / 2 + 0.75), -sV[:, 1].min() * SS, -0.35])
+s_off = np.array([-(stall_w / 2 + 1.15), -sV[:, 1].min() * SS, -0.5])
 
 
 def M(p):
