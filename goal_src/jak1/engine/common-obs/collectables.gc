@@ -1726,7 +1726,8 @@
     (else (pc-enhanced-denied)))
   (none))
 
-(defconstant SOUL-SHOP-ROWS 5)
+;; Jak Living Sky: rows for all on sale at once (the JET-Board, last, seen without scrolling), one to spare
+(defconstant SOUL-SHOP-ROWS 7)
 
 ;; Jak Living Sky: the white eco's shop, a screen of the warp gate's menu: a list that scrolls
 (defun soul-shop-screen ()
@@ -1759,13 +1760,6 @@
     (format (clear *temp-string*) "ECO BIANCO ~D" (the int *soul-eco*))
     (print-game-text *temp-string* font #f 128 22)
     (+! (-> font origin y) 28.0)
-    ;; Jak Living Sky: more above the rows shown (scrolled down): said over them, small, in yellow
-    (when (> first 0)
-      (set-scale! font 0.5)
-      (set! (-> font color) (font-color progress-yellow))
-      (-! (-> font origin y) 13.0)
-      (print-game-text "ALTRI OGGETTI SOPRA" font #f 128 22)
-      (+! (-> font origin y) 13.0))
     (set-scale! font 0.7)
     (dotimes (row SOUL-SHOP-ROWS)
       (let ((i (+ first row)))
@@ -1774,20 +1768,8 @@
           (if (< (soul-item-have i) (soul-item-most i))
             (format (clear *temp-string*) "~S   COSTO ~D" (soul-item-name i) (soul-item-cost i))
             (format (clear *temp-string*) "~S   AL MASSIMO" (soul-item-name i)))
-          (print-game-text *temp-string* font #f 128 22)))
-      (+! (-> font origin y) 18.0))
-    ;; and more below them (as the JET-Board, last): said under them, so it isn't missed
-    (when (< (+ first SOUL-SHOP-ROWS) (soul-shop-items))
-      (set-scale! font 0.5)
-      (set! (-> font color) (font-color progress-yellow))
-      (-! (-> font origin y) 4.0)
-      (let ((more (- (soul-shop-items) (+ first SOUL-SHOP-ROWS))))
-        (if (= more 1)
-          (format (clear *temp-string*) "UN ALTRO OGGETTO SOTTO, SCORRI CON LA CROCE")
-          (format (clear *temp-string*) "ALTRI ~D OGGETTI SOTTO, SCORRI CON LA CROCE" more)))
-      (print-game-text *temp-string* font #f 128 22)
-      (+! (-> font origin y) 14.0)
-      (set-scale! font 0.7))
+          (print-game-text *temp-string* font #f 128 22)
+          (+! (-> font origin y) 18.0))))
     (set! (-> font color) (font-color default))
     (+! (-> font origin y) 8.0)
     (print-game-text "~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H COMPRA    ~Y~22L<~Z~Y~26L;~Z~Y~1L>~Z~Y~23L[~Z~+26H ESCI" font #f 128 22))
