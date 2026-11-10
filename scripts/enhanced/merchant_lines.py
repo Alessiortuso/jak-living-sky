@@ -29,6 +29,8 @@ LINES = [  # group, file, id, it, en
      "GREAT CHOICE. I SAY IT TO EVERYONE, BUT WITH YOU I MEAN IT."),
     ('buy', 'merchant-buy-1', 0x466b, "AFFARE FATTO. PER ME, ALMENO.",
      "DEAL. FOR ME, AT LEAST."),
+    ('buy-dark', 'merchant-buy-dark', 0x466c, "ECO OSCURO, EH?... LO SAPEVO CHE ERI UNO DI QUELLI... NON GIUDICO. INCASSO.",
+     "DARK ECO, EH?... I KNEW YOU WERE ONE OF THOSE... I DON'T JUDGE. I CASH IN."),
 ]
 
 BEGIN = ';; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)=='

@@ -2405,6 +2405,7 @@
 (define *mline-open-3* (new 'static 'boxed-array :type int32 #x4669 1528))
 (define *mline-buy-2* (new 'static 'boxed-array :type int32 #x466a 1340))
 (define *mline-buy-1* (new 'static 'boxed-array :type int32 #x466b 713))
+(define *mline-buy-dark* (new 'static 'boxed-array :type int32 #x466c 1818))
 ;; a group's lines said ("first": all, in order; the others: one at random)
 (defun merchant-group-say ((group symbol))
   (case group
@@ -2427,13 +2428,21 @@
        ((0) (merchant-say "voice/merchant-buy-2.mp3" *mline-buy-2*))
        (else (merchant-say "voice/merchant-buy-1.mp3" *mline-buy-1*)))
      )
+    (('buy-dark)
+     (case (rand-vu-int-count 1)
+       (else (merchant-say "voice/merchant-buy-dark.mp3" *mline-buy-dark*)))
+     )
     )
   (none))
 ;; ==end merchant lines==
 
 ;; a purchase: one of his lines on it, unless another's being said
 (defun merchant-buy-line ((i int))
-  (if (>= (quest-now) *daxter-talk-until*) (merchant-group-say 'buy))
+  ;; (Dark Jak's things, 3 and 4: the dark eco's line)
+  (if (>= (quest-now) *daxter-talk-until*)
+    (merchant-group-say (case i
+                          ((3 4) 'buy-dark)
+                          (else 'buy))))
   (none))
 
 ;; coming back to him (after the first time): one of his greetings, at random, now and then (not within 45 s of the
