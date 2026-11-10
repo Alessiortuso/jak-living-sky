@@ -2399,6 +2399,10 @@
 (defun merchant-say ((file string) (parts (array int32)))
   (quest-line2 "MERCANTE" file parts)
   (none))
+;; no one talking: no line of ours (Daxter's, Keira's, his) being said, and none of the game's own hints (Daxter's
+;; voice in the levels, the radio): his lines never over another
+(defun merchant-quiet? ()
+  (and (>= (quest-now) *daxter-talk-until*) (not (ppointer->process *hint-semaphore*))))
 
 ;; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)==
 (define *mline-first-1* (new 'static 'boxed-array :type int32 #x4664 1457))
@@ -2481,7 +2485,7 @@
 ;; a purchase refused (not enough eco: 'poor; at the most already: 'max): his line on it, unless another's being
 ;; said (then the denied sound)
 (defun merchant-deny-line ((why symbol))
-  (if (>= (quest-now) *daxter-talk-until*)
+  (if (merchant-quiet?)
     (merchant-group-say why)
     (pc-enhanced-denied))
   (none))
@@ -2493,7 +2497,7 @@
 (defun merchant-buy-line ((i int))
   (set! *merchant-bought* #t)
   ;; (Dark Jak's things, 3 and 4: the dark eco's line)
-  (if (>= (quest-now) *daxter-talk-until*)
+  (if (merchant-quiet?)
     (merchant-group-say (case i
                           ((3 4) 'buy-dark)
                           (else 'buy))))
@@ -2509,7 +2513,7 @@
 (defun merchant-hello ()
   (when (and (>= *merchant-met* 1.0)
              (time-elapsed? *merchant-hello-time* (seconds 45))
-             (>= (quest-now) *daxter-talk-until*))
+             (merchant-quiet?))
     (set! *merchant-hello-time* (current-time))
     (merchant-group-say 'hello))
   (none))
@@ -2517,7 +2521,7 @@
 ;; the shop opened: a line, at random, now and then (not within 30 s of the last, nor over another)
 (define *merchant-open-time* (the-as time-frame 0))
 (defun merchant-open-line ()
-  (when (and (time-elapsed? *merchant-open-time* (seconds 30)) (>= (quest-now) *daxter-talk-until*))
+  (when (and (time-elapsed? *merchant-open-time* (seconds 30)) (merchant-quiet?))
     (set! *merchant-open-time* (current-time))
     (merchant-group-say 'open))
   (none))
@@ -2537,7 +2541,7 @@
       (case message
         (('attack)
          ;; struck: his answer (not more than one each 2 s, nor over another line)
-         (when (and (time-elapsed? *merchant-hit-time* (seconds 2)) (>= (quest-now) *daxter-talk-until*))
+         (when (and (time-elapsed? *merchant-hit-time* (seconds 2)) (merchant-quiet?))
            (set-time! *merchant-hit-time*)
            (merchant-group-say 'hit))
          #t)))
@@ -2553,13 +2557,15 @@
         (when (and near
                    (not *merchant-idle-said*)
                    (time-elapsed? *merchant-near-since* (seconds 18))
-                   (>= (quest-now) *daxter-talk-until*))
+                   (merchant-quiet?))
           (set! *merchant-idle-said* #t)
           (merchant-group-say 'idle))
         (set! *merchant-was-near* (the-as symbol near)))
       (when (merchant-near? self)
+        ;; (no hint of the game's starting near him: as the game's characters do)
+        (level-hint-surpress!)
         ;; the first time Jak comes to any of them, in a game: his first words
-        (when (< *merchant-met* 1.0)
+        (when (and (< *merchant-met* 1.0) (merchant-quiet?))
           (set! *merchant-met* 1.0)
           (set! *merchant-hello-time* (current-time))
           (merchant-group-say 'first))
@@ -2605,7 +2611,7 @@
   :exit
     (behavior ()
       ;; his goodbye: after a purchase or not (unless another line's being said)
-      (if (>= (quest-now) *daxter-talk-until*)
+      (if (merchant-quiet?)
         (merchant-group-say (if *merchant-bought* 'bye 'bye-nothing)))
       (set! *soul-shop-open* #f)
       ;; (back from the shop: the lingering counted afresh)
