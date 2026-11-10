@@ -2416,6 +2416,7 @@
 (define *mline-bye-nothing-2* (new 'static 'boxed-array :type int32 #x4670 807))
 (define *mline-bye-1* (new 'static 'boxed-array :type int32 #x4671 932))
 (define *mline-bye-2* (new 'static 'boxed-array :type int32 #x4672 1097))
+(define *mline-idle-1* (new 'static 'boxed-array :type int32 #x4673 932))
 ;; a group's lines said ("first": all, in order; the others: one at random)
 (defun merchant-group-say ((group symbol))
   (case group
@@ -2460,6 +2461,10 @@
        ((0) (merchant-say "voice/merchant-bye-1.mp3" *mline-bye-1*))
        (else (merchant-say "voice/merchant-bye-2.mp3" *mline-bye-2*)))
      )
+    (('idle)
+     (case (rand-vu-int-count 1)
+       (else (merchant-say "voice/merchant-idle-1.mp3" *mline-idle-1*)))
+     )
     )
   (none))
 ;; ==end merchant lines==
@@ -2488,6 +2493,9 @@
 ;; coming back to him (after the first time): one of his greetings, at random, now and then (not within 45 s of the
 ;; last, nor over another line)
 (define *merchant-was-near* #f)
+;; since when Jak's been near without opening the shop, and his line on it said (once each time he comes)
+(define *merchant-near-since* (the-as time-frame 0))
+(define *merchant-idle-said* #f)
 (define *merchant-hello-time* (the-as time-frame 0))
 (defun merchant-hello ()
   (when (and (>= *merchant-met* 1.0)
@@ -2517,7 +2525,17 @@
     (behavior ()
       ;; Jak just come near: a greeting
       (let ((near (merchant-near? self)))
-        (if (and near (not *merchant-was-near*)) (merchant-hello))
+        (when (and near (not *merchant-was-near*))
+          (set! *merchant-near-since* (current-time))
+          (set! *merchant-idle-said* #f)
+          (merchant-hello))
+        ;; Jak lingering, staring, not buying: his line on it, once
+        (when (and near
+                   (not *merchant-idle-said*)
+                   (time-elapsed? *merchant-near-since* (seconds 18))
+                   (>= (quest-now) *daxter-talk-until*))
+          (set! *merchant-idle-said* #t)
+          (merchant-group-say 'idle))
         (set! *merchant-was-near* (the-as symbol near)))
       (when (merchant-near? self)
         ;; the first time Jak comes to any of them, in a game: his first words
@@ -2570,6 +2588,8 @@
       (if (>= (quest-now) *daxter-talk-until*)
         (merchant-group-say (if *merchant-bought* 'bye 'bye-nothing)))
       (set! *soul-shop-open* #f)
+      ;; (back from the shop: the lingering counted afresh)
+      (set! *merchant-near-since* (current-time))
       (if *target* (process-release? *target*)))
   :trans
     (behavior ()
