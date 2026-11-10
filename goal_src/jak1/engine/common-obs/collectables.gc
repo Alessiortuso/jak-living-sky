@@ -1714,6 +1714,9 @@
       (if (zero? (-> perms data i task)) (update-perm! (-> perms data i) 'life (the-as entity-perm-status 623)))))
   (none))
 
+;; (the merchant's lines on a purchase: after him, below)
+(define-extern merchant-buy-line (function int none))
+
 ;; buying one (not enough eco, or at the most: a sound of its own)
 (defun soul-shop-buy ((i int))
   (cond
@@ -1721,6 +1724,8 @@
      (set! *soul-eco* (- *soul-eco* (the float (soul-item-cost i))))
      (soul-item-give i)
      (sound-play "cursor-options" :pitch -1.0)
+     ;; Jak Living Sky: the merchant says something of it
+     (merchant-buy-line i)
      ;; Jak Living Sky: what's bought kept at once (the auto save, as for a power cell)
      (auto-save-command 'auto-save 0 0 *default-pool*))
     (else (pc-enhanced-denied)))
@@ -2387,13 +2392,48 @@
 ;; made once (quest-line would make them anew every time)
 (define-extern quest-line2 (function string string (array int32) time-frame))
 (define-extern *daxter-talk-until* time-frame)
-(define *mline-first-1* (new 'static 'boxed-array :type int32 #x4664 1440))
-(define *mline-first-2* (new 'static 'boxed-array :type int32 #x4665 1710))
-(define *mline-hello-1* (new 'static 'boxed-array :type int32 #x4666 1290))
-(define *mline-hello-4* (new 'static 'boxed-array :type int32 #x4667 1120))
-(define *mline-open-1* (new 'static 'boxed-array :type int32 #x4668 980))
 (defun merchant-say ((file string) (parts (array int32)))
   (quest-line2 "MERCANTE" file parts)
+  (none))
+
+;; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)==
+(define *mline-first-1* (new 'static 'boxed-array :type int32 #x4664 1457))
+(define *mline-first-2* (new 'static 'boxed-array :type int32 #x4665 1724))
+(define *mline-hello-1* (new 'static 'boxed-array :type int32 #x4666 1316))
+(define *mline-hello-4* (new 'static 'boxed-array :type int32 #x4667 1144))
+(define *mline-open-1* (new 'static 'boxed-array :type int32 #x4668 1003))
+(define *mline-open-3* (new 'static 'boxed-array :type int32 #x4669 1528))
+(define *mline-buy-2* (new 'static 'boxed-array :type int32 #x466a 1340))
+(define *mline-buy-1* (new 'static 'boxed-array :type int32 #x466b 713))
+;; a group's lines said ("first": all, in order; the others: one at random)
+(defun merchant-group-say ((group symbol))
+  (case group
+    (('first)
+     (merchant-say "voice/merchant-first-1.mp3" *mline-first-1*)
+     (merchant-say "voice/merchant-first-2.mp3" *mline-first-2*)
+     )
+    (('hello)
+     (case (rand-vu-int-count 2)
+       ((0) (merchant-say "voice/merchant-hello-1.mp3" *mline-hello-1*))
+       (else (merchant-say "voice/merchant-hello-4.mp3" *mline-hello-4*)))
+     )
+    (('open)
+     (case (rand-vu-int-count 2)
+       ((0) (merchant-say "voice/merchant-open-1.mp3" *mline-open-1*))
+       (else (merchant-say "voice/merchant-open-3.mp3" *mline-open-3*)))
+     )
+    (('buy)
+     (case (rand-vu-int-count 2)
+       ((0) (merchant-say "voice/merchant-buy-2.mp3" *mline-buy-2*))
+       (else (merchant-say "voice/merchant-buy-1.mp3" *mline-buy-1*)))
+     )
+    )
+  (none))
+;; ==end merchant lines==
+
+;; a purchase: one of his lines on it, unless another's being said
+(defun merchant-buy-line ((i int))
+  (if (>= (quest-now) *daxter-talk-until*) (merchant-group-say 'buy))
   (none))
 
 ;; coming back to him (after the first time): one of his greetings, at random, now and then (not within 45 s of the
@@ -2405,9 +2445,7 @@
              (time-elapsed? *merchant-hello-time* (seconds 45))
              (>= (quest-now) *daxter-talk-until*))
     (set! *merchant-hello-time* (current-time))
-    (case (rand-vu-int-count 2)
-      ((0) (merchant-say "voice/merchant-hello-1.mp3" *mline-hello-1*))
-      (else (merchant-say "voice/merchant-hello-4.mp3" *mline-hello-4*))))
+    (merchant-group-say 'hello))
   (none))
 
 ;; the shop opened: a line, at random, now and then (not within 30 s of the last, nor over another)
@@ -2415,8 +2453,7 @@
 (defun merchant-open-line ()
   (when (and (time-elapsed? *merchant-open-time* (seconds 30)) (>= (quest-now) *daxter-talk-until*))
     (set! *merchant-open-time* (current-time))
-    (case (rand-vu-int-count 1)
-      (else (merchant-say "voice/merchant-open-1.mp3" *mline-open-1*))))
+    (merchant-group-say 'open))
   (none))
 
 ;; his idle, a loop
@@ -2438,8 +2475,7 @@
         (when (< *merchant-met* 1.0)
           (set! *merchant-met* 1.0)
           (set! *merchant-hello-time* (current-time))
-          (merchant-say "voice/merchant-first-1.mp3" *mline-first-1*)
-          (merchant-say "voice/merchant-first-2.mp3" *mline-first-2*))
+          (merchant-group-say 'first))
         (hide-hud)
         (when (and (hud-hidden?) (can-grab-display? self))
           (let ((font (new 'stack 'font-context *font-default-matrix* 32 140 0.0 (font-color default) (font-flags shadow kerning))))
