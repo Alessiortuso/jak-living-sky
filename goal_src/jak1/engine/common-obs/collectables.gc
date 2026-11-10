@@ -2394,6 +2394,11 @@
   :trans
     (behavior ()
       (when (merchant-near? self)
+        ;; the first time Jak comes to any of them, in a game: his first words
+        (when (< *merchant-met* 1.0)
+          (set! *merchant-met* 1.0)
+          (quest-line "MERCANTE" "voice/merchant-first-1.mp3" #x4664 (seconds 4.8))
+          (quest-line "MERCANTE" "voice/merchant-first-2.mp3" #x4665 (seconds 5.7)))
         (hide-hud)
         (when (and (hud-hidden?) (can-grab-display? self))
           (let ((font (new 'stack 'font-context *font-default-matrix* 32 140 0.0 (font-color default) (font-flags shadow kerning))))
