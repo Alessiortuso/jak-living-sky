@@ -2349,10 +2349,8 @@
                               (new 'static 'vector :x 1172267.25 :y 38512.035 :z -6757252.0 :w 1.0)
                               (new 'static 'vector)
                               (new 'static 'vector)
-                              (new 'static 'vector)))
-(define *merchant-yaw* (new 'static 'array float 5 0.0 925.1523 0.0 0.0 0.0))
-;; (Jak near him, in his own metres: told in the log now and then, to see where the prompt's area is)
-(define *merchant-near-log* (the-as time-frame 0))
+                              (new 'static 'vector :x 11509454.0 :y -162424.88 :z -18331868.0 :w 1.0)))
+(define *merchant-yaw* (new 'static 'array float 5 0.0 925.1523 0.0 0.0 56286.082))
 ;; (a handle in a 64-bit slot, as the pump's)
 (define *merchant-handle* (new 'static 'array handle 1))
 (set! (-> *merchant-handle* 0) (the-as handle #f))
@@ -2367,26 +2365,22 @@
     merchant-idle
     merchant-shop))
 
-;; Jak close enough and free to talk
-(defbehavior merchant-near? merchant ()
+;; Jak close enough and free to talk: in a box round him and his stall, 2.5 m out all round (in his own frame, x to his
+;; left, z his front; his stall from 1.3 to 7.8 m to his right, 2.6 m deep)
+(defun merchant-near? ((this merchant))
   (and *target*
-       ;; (Jak in a box round him and his stall, 2.5 m out all round: in his own frame, x to his left, z his front;
-       ;; his stall from 1.3 to 7.8 m to his right, 2.6 m deep)
-       (let ((v (vector-! (new 'stack-no-clear 'vector) (-> *target* control trans) (-> self root trans)))
-             (q (quaternion-conjugate! (new 'stack-no-clear 'quaternion) (-> self root quat))))
+       (not *progress-process*)
+       (not *merchant-moving*)
+       (not *soul-shop-open*)
+       (not (logtest? (-> *target* state-flags) (state-flags dangerous being-attacked grabbed dying board)))
+       (let ((v (vector-! (new 'stack-no-clear 'vector) (-> *target* control trans) (-> this root trans)))
+             (q (quaternion-conjugate! (new 'stack-no-clear 'quaternion) (-> this root quat))))
          (vector-orient-by-quat! v v q)
-         (when (and (time-elapsed? *merchant-near-log* (seconds 2)) (< (vector-length v) (meters 12)))
-           (set! *merchant-near-log* (current-time))
-           (format 0 "[merchant] Jak at ~,,2M ~,,2M ~,,2M from him~%" (-> v x) (-> v y) (-> v z)))
          (and (< (meters -10.3) (-> v x))
               (< (-> v x) (meters 4.2))
               (< (meters -5.1) (-> v z))
               (< (-> v z) (meters 5.0))
-              (< (fabs (-> v y)) (meters 4))))
-       (not *progress-process*)
-       (not *merchant-moving*)
-       (logtest? (-> *target* control status) (cshape-moving-flags onsurf))
-       (not (logtest? (-> *target* state-flags) (state-flags dangerous being-attacked grabbed dying board)))))
+              (< (fabs (-> v y)) (meters 4))))))
 
 ;; his idle, a loop
 (defbehavior merchant-anim-step merchant ()
@@ -2396,18 +2390,10 @@
   (none))
 
 (defstate merchant-idle (merchant)
-  :trans
-    (behavior ()
-      (when (merchant-near?)
-        (let ((font (new 'stack 'font-context *font-default-matrix* 6 300 0.0 (font-color default) (font-flags shadow kerning))))
-          (set-scale! font 0.7)
-          (set-width! font 500)
-          (set-height! font 30)
-          (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
-          (print-game-text "PREMI ~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H PER IL NEGOZIO" font #f 128 22))
-        (when (cpad-pressed? 0 circle)
-          (cpad-clear! 0 circle)
-          (if (process-grab? *target*) (go merchant-shop)))))
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (case message
+        (('shop) (if (and *target* (process-grab? *target*)) (go merchant-shop)))))
   :code
     (behavior ()
       (ja-no-eval :group! (-> self draw art-group data 2) :num! (seek!) :frame-num 0.0)
@@ -2496,6 +2482,21 @@
 ;; him there while Jak's in his village, once placed
 (define-extern merchant-move-update (function none))
 
+;; near him: the prompt, and Circle for the shop
+(defun merchant-prompt-update ()
+  (let ((proc (the-as merchant (handle->process (-> *merchant-handle* 0)))))
+    (when (and proc (merchant-near? proc))
+      (let ((font (new 'stack 'font-context *font-default-matrix* 6 300 0.0 (font-color default) (font-flags shadow kerning))))
+        (set-scale! font 0.7)
+        (set-width! font 500)
+        (set-height! font 30)
+        (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
+        (print-game-text "PREMI ~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H PER IL NEGOZIO" font #f 128 22))
+      (when (cpad-pressed? 0 circle)
+        (cpad-clear! 0 circle)
+        (send-event proc 'shop))))
+  (none))
+
 (defun merchant-update ()
   (let* ((proc (handle->process (-> *merchant-handle* 0)))
          (lev (the-as level (and *target* (level-get-target-inside *level*))))
@@ -2514,6 +2515,7 @@
        (set! *merchant-at* -1)
        (set! *merchant-moving* #f))))
   (merchant-move-update)
+  (merchant-prompt-update)
   (none))
 
 ;; the mod options' "move the merchant": in his village, put 4.5 m in front of Jak if not there yet, then moved with
