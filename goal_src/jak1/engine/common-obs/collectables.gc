@@ -2352,6 +2352,9 @@
 (define *merchant-handle* (new 'static 'array handle 1))
 (set! (-> *merchant-handle* 0) (the-as handle #f))
 (define *merchant-at* -1) ;; (the village he's spawned for)
+;; moved about by the pad (the mod options' "move the merchant"), Jak held still meanwhile
+(define *merchant-moving* #f)
+(define *merchant-grabbed* #f)
 
 (deftype merchant (process-drawable)
   ((root collide-shape :override))
@@ -2364,6 +2367,7 @@
   (and *target*
        (< (vector-vector-distance (-> self root trans) (-> *target* control trans)) (meters 4.5))
        (not *progress-process*)
+       (not *merchant-moving*)
        (logtest? (-> *target* control status) (cshape-moving-flags onsurf))
        (not (logtest? (-> *target* state-flags) (state-flags dangerous being-attacked grabbed dying board)))))
 
@@ -2459,6 +2463,8 @@
     (else -1)))
 
 ;; him there while Jak's in his village, once placed
+(define-extern merchant-move-update (function none))
+
 (defun merchant-update ()
   (let* ((proc (handle->process (-> *merchant-handle* 0)))
          (lev (the-as level (and *target* (level-get-target-inside *level*))))
@@ -2474,34 +2480,86 @@
       ((and proc (< i 0) (not *soul-shop-open*))
        (deactivate proc)
        (set! (-> *merchant-handle* 0) (the-as handle #f))
-       (set! *merchant-at* -1))))
+       (set! *merchant-at* -1)
+       (set! *merchant-moving* #f))))
+  (merchant-move-update)
   (none))
 
-;; the mod options' "place the merchant here": 4.5 m in front of Jak, facing him, told in the log to be written into
-;; *merchant-spots*
+;; the mod options' "move the merchant": in his village, put 4.5 m in front of Jak if not there yet, then moved with
+;; the pad once the menu's closed (merchant-move-update)
 (defun merchant-place-here ()
   (let* ((lev (the-as level (and *target* (level-get-target-inside *level*))))
          (i (if lev (merchant-index (-> lev name)) -1)))
     (cond
       ((< i 0) (format 0 "[merchant] not in one of his villages~%"))
       (else
-       (let ((yaw (y-angle (-> *target* control))))
-         (set! (-> *merchant-spots* i quad) (-> *target* control trans quad))
-         (+! (-> *merchant-spots* i x) (* (meters 4.5) (sin yaw)))
-         (+! (-> *merchant-spots* i z) (* (meters 4.5) (cos yaw)))
-         (set! (-> *merchant-yaw* i) (+ yaw 32768.0)))
-       (set! (-> *merchant-spots* i w) 1.0)
-       (format 0
-               "[merchant] ~A spot ~f ~f ~f yaw ~f~%"
-               (-> lev name)
-               (-> *merchant-spots* i x)
-               (-> *merchant-spots* i y)
-               (-> *merchant-spots* i z)
-               (-> *merchant-yaw* i))
-       (let ((proc (handle->process (-> *merchant-handle* 0))))
-         (when proc
-           (deactivate proc)
-           (set! (-> *merchant-handle* 0) (the-as handle #f)))))))
+       (when (>= 0.5 (-> *merchant-spots* i w))
+         (let ((yaw (y-angle (-> *target* control))))
+           (set! (-> *merchant-spots* i quad) (-> *target* control trans quad))
+           (+! (-> *merchant-spots* i x) (* (meters 4.5) (sin yaw)))
+           (+! (-> *merchant-spots* i z) (* (meters 4.5) (cos yaw)))
+           (set! (-> *merchant-yaw* i) (+ yaw 32768.0)))
+         (set! (-> *merchant-spots* i w) 1.0))
+       (set! *merchant-moving* #t))))
+  (none))
+
+;; moving him: the left stick along the ground (as the camera looks), L1 and R1 turn him, the D-pad up and down
+;; raise and lower him, X leaves him there (told in the log, to be written into *merchant-spots*)
+(defun merchant-move-update ()
+  (let ((proc (the-as merchant (handle->process (-> *merchant-handle* 0))))
+        (i *merchant-at*))
+    (cond
+      ((or (not *merchant-moving*) (not proc) (< i 0) (not *target*))
+       (when *merchant-grabbed*
+         (if *target* (process-release? *target*))
+         (set! *merchant-grabbed* #f)))
+      ((not *progress-process*)
+       (when (not *merchant-grabbed*)
+         (process-grab? *target*)
+         (set! *merchant-grabbed* #t))
+       (let* ((pad (-> *cpad-list* cpads 0))
+              (sx (* 0.0078125 (+ -128.0 (the float (-> pad leftx)))))
+              (sy (* -0.0078125 (+ -128.0 (the float (-> pad lefty)))))
+              (fwd (vector-copy! (new 'stack-no-clear 'vector) (-> *math-camera* inv-camera-rot vector 2)))
+              (right (vector-copy! (new 'stack-no-clear 'vector) (-> *math-camera* inv-camera-rot vector 0)))
+              (step (* (meters 4.0) (seconds-per-frame)))
+              (spot (-> *merchant-spots* i)))
+         (if (< (fabs sx) 0.2) (set! sx 0.0))
+         (if (< (fabs sy) 0.2) (set! sy 0.0))
+         (set! (-> fwd y) 0.0)
+         (set! (-> right y) 0.0)
+         (vector-normalize! fwd 1.0)
+         (vector-normalize! right 1.0)
+         (+! (-> spot x) (* step (+ (* sx (-> right x)) (* sy (-> fwd x)))))
+         (+! (-> spot z) (* step (+ (* sx (-> right z)) (* sy (-> fwd z)))))
+         (if (cpad-hold? 0 up) (+! (-> spot y) (* (meters 1.0) (seconds-per-frame))))
+         (if (cpad-hold? 0 down) (-! (-> spot y) (* (meters 1.0) (seconds-per-frame))))
+         (if (cpad-hold? 0 l1) (+! (-> *merchant-yaw* i) (* 16384.0 (seconds-per-frame))))
+         (if (cpad-hold? 0 r1) (-! (-> *merchant-yaw* i) (* 16384.0 (seconds-per-frame))))
+         (set! (-> proc root trans x) (-> spot x))
+         (set! (-> proc root trans y) (-> spot y))
+         (set! (-> proc root trans z) (-> spot z))
+         (quaternion-axis-angle! (-> proc root quat) 0.0 1.0 0.0 (-> *merchant-yaw* i))
+         (let ((font (new 'stack 'font-context *font-default-matrix* 6 290 0.0 (font-color default) (font-flags shadow kerning))))
+           (set-scale! font 0.6)
+           (set-width! font 500)
+           (set-height! font 40)
+           (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
+           (print-game-text "LEVETTA SINISTRA SPOSTA   L1 R1 RUOTA   SU GIU ALZA ABBASSA   ~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H CONFERMA"
+                            font #f 128 22))
+         (when (cpad-pressed? 0 x)
+           (cpad-clear! 0 x)
+           (sound-play "start-options")
+           (format 0
+                   "[merchant] ~A spot ~f ~f ~f yaw ~f~%"
+                   (-> (level-get-target-inside *level*) name)
+                   (-> spot x)
+                   (-> spot y)
+                   (-> spot z)
+                   (-> *merchant-yaw* i))
+           (set! *merchant-moving* #f)
+           (process-release? *target*)
+           (set! *merchant-grabbed* #f))))))
   (none))
 
 (defun soul-pile-update ()
