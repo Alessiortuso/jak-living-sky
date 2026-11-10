@@ -230,12 +230,7 @@
                 (hide-hud)
                 (suspend))
               (remove-setting! 'bg-a-speed))
-            ;; Jak Living Sky: the white eco's shop, at every warp gate
-            (when (and *soul-on* (cpad-pressed? 0 square))
-              (cpad-clear! 0 square)
-              (sound-play "start-options")
-              (set! *soul-shop-cursor* 0)
-              (set! *soul-shop-open* #t))
+            ;; Jak Living Sky: (the white eco's shop was here; now at the merchant's stall in each village)
             (let ((s1-3 (new 'stack 'font-context *font-default-matrix* 6 (if *soul-on* 95 110) 0.0 (font-color default) (font-flags shadow kerning))))
               ;; Jak Living Sky: (all a line higher with the shop and the rest under it, so the last isn't cut off)
               (set-scale! s1-3 0.7)
@@ -272,8 +267,6 @@
               (+! (-> s1-3 origin y) 15.0)
               (print-game-text (lookup-text! *common-text* (text-id press-to-exit) #f) s1-3 #f 128 22)
               (when *soul-on*
-                (+! (-> s1-3 origin y) 15.0)
-                (print-game-text "PREMI ~Y~22L<~Z~Y~24L#~Z~Y~1L>~Z~Y~23L[~Z~+26H PER IL NEGOZIO" s1-3 #f 128 22)
                 (+! (-> s1-3 origin y) 15.0)
                 (print-game-text "PREMI ~Y~22L<~Z~Y~27L*~Z~Y~1L>~Z~Y~23L[~Z~+26H PER RIPOSARE" s1-3 #f 128 22)))
             (suspend))))))
