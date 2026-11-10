@@ -45,17 +45,20 @@ GREENPOT = (0.30, 0.55, 0.48)
 FRUIT = (0.98, 0.72, 0.15)
 GLOW = (1.0, 1.0, 1.0)
 
-# joints: name, parent, bind position (world)
+# joints: name, parent, bind position (world). "align" and "prejoint" first, as the game's own skeletons (and the
+# board's): without them build-actor and the extractor number the joints one apart, each part on its neighbour's
 JOINTS = [
-    ('main', -1, (0, 0, 0)),
-    ('body', 0, (0, 0.45, 0)),
-    ('head', 1, (0, 1.38, 0.02)),
-    ('lid_l', 2, (0.12, 1.60, 0.40)),
-    ('lid_r', 2, (-0.12, 1.60, 0.40)),
-    ('ear_l', 2, (0.30, 1.62, 0.02)),
-    ('ear_r', 2, (-0.30, 1.62, 0.02)),
-    ('arm_l', 1, (0.52, 1.20, 0.05)),
-    ('arm_r', 1, (-0.52, 1.20, 0.05)),
+    ('align', -1, (0, 0, 0)),
+    ('prejoint', 0, (0, 0, 0)),
+    ('main', 1, (0, 0, 0)),
+    ('body', 2, (0, 0.45, 0)),
+    ('head', 3, (0, 1.38, 0.02)),
+    ('lid_l', 4, (0.12, 1.60, 0.40)),
+    ('lid_r', 4, (-0.12, 1.60, 0.40)),
+    ('ear_l', 4, (0.30, 1.62, 0.02)),
+    ('ear_r', 4, (-0.30, 1.62, 0.02)),
+    ('arm_l', 3, (0.52, 1.20, 0.05)),
+    ('arm_r', 3, (-0.52, 1.20, 0.05)),
 ]
 J = {n: i for i, (n, _, _) in enumerate(JOINTS)}
 
