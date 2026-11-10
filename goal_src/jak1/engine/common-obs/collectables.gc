@@ -2406,6 +2406,7 @@
 (define *mline-buy-2* (new 'static 'boxed-array :type int32 #x466a 1340))
 (define *mline-buy-1* (new 'static 'boxed-array :type int32 #x466b 713))
 (define *mline-buy-dark* (new 'static 'boxed-array :type int32 #x466c 1818))
+(define *mline-poor-1* (new 'static 'boxed-array :type int32 #x466d 1097))
 ;; a group's lines said ("first": all, in order; the others: one at random)
 (defun merchant-group-say ((group symbol))
   (case group
@@ -2431,6 +2432,10 @@
     (('buy-dark)
      (case (rand-vu-int-count 1)
        (else (merchant-say "voice/merchant-buy-dark.mp3" *mline-buy-dark*)))
+     )
+    (('poor)
+     (case (rand-vu-int-count 1)
+       (else (merchant-say "voice/merchant-poor-1.mp3" *mline-poor-1*)))
      )
     )
   (none))
