@@ -2339,7 +2339,7 @@
 ;; Jak Living Sky: the white eco merchant, the shop's own place: a fat little trader in a patched hood, only his eyes
 ;; to be seen, on his tall stool, his little legs swinging, his stall beside him, in each village (made with Higgsfield:
 ;; scripts/enhanced/merchant_import.py). Up to him and Circle: the shop
-(def-actor merchant :bounds (-2.0 2.0 -0.4 5.2))
+(def-actor merchant :bounds (-2.8 2.6 -0.6 6.6))
 
 ;; his place in each village: village1, village2, village3, brume (game units; w: 1 placed), and which way he faces
 (define *merchant-spots* (new 'static 'inline-array vector 4
@@ -2436,7 +2436,7 @@
       (set! (-> prim prim-core action) (collide-action solid))
       (set! (-> prim prim-core offense) (collide-offense indestructible))
       ;; (him on his stool and his stall to his right)
-      (set-vector! (-> prim local-sphere) (meters -1.85) (meters 1.6) (meters -0.45) (meters 3.1))
+      (set-vector! (-> prim local-sphere) (meters -2.6) (meters 1.8) (meters -0.7) (meters 3.6))
       (set-root-prim! cs prim))
     (backup-collide-with-as cs)
     (set! (-> self root) cs))
