@@ -2417,6 +2417,7 @@
 (define *mline-bye-1* (new 'static 'boxed-array :type int32 #x4671 932))
 (define *mline-bye-2* (new 'static 'boxed-array :type int32 #x4672 1097))
 (define *mline-idle-1* (new 'static 'boxed-array :type int32 #x4673 932))
+(define *mline-hit-2* (new 'static 'boxed-array :type int32 #x4674 736))
 ;; a group's lines said ("first": all, in order; the others: one at random)
 (defun merchant-group-say ((group symbol))
   (case group
@@ -2464,6 +2465,10 @@
     (('idle)
      (case (rand-vu-int-count 1)
        (else (merchant-say "voice/merchant-idle-1.mp3" *mline-idle-1*)))
+     )
+    (('hit)
+     (case (rand-vu-int-count 1)
+       (else (merchant-say "voice/merchant-hit-2.mp3" *mline-hit-2*)))
      )
     )
   (none))
@@ -2520,7 +2525,18 @@
     (ja :num! (seek!)))
   (none))
 
+(define *merchant-hit-time* (the-as time-frame 0))
+
 (defstate merchant-idle (merchant)
+  :event
+    (behavior ((proc process) (argc int) (message symbol) (block event-message-block))
+      (case message
+        (('attack)
+         ;; struck: his answer (not more than one each 2 s, nor over another line)
+         (when (and (time-elapsed? *merchant-hit-time* (seconds 2)) (>= (quest-now) *daxter-talk-until*))
+           (set-time! *merchant-hit-time*)
+           (merchant-group-say 'hit))
+         #t)))
   :trans
     (behavior ()
       ;; Jak just come near: a greeting
@@ -2618,8 +2634,8 @@
   (let ((cs (new 'process 'collide-shape self (collide-list-enum hit-by-player))))
     ;; (his stall's counter, four spheres along it, its front as the counter's; his body; his stool's legs: in his
     ;; own metres, on his main joint, turning with him)
-    (let ((group (new 'process 'collide-shape-prim-group cs (the-as uint 6) 0)))
-      (set! (-> group prim-core collide-as) (collide-kind ground-object))
+    (let ((group (new 'process 'collide-shape-prim-group cs (the-as uint 7) 0)))
+      (set! (-> group prim-core collide-as) (collide-kind ground-object enemy))
       (set! (-> group collide-with) (collide-kind target))
       (set! (-> group prim-core action) (collide-action solid))
       (set! (-> group prim-core offense) (collide-offense indestructible))
@@ -2636,7 +2652,16 @@
             ((0 1 2 3) (set-vector! (-> s local-sphere) (meters (+ -2.4 (* -1.5 (the float k)))) (meters 1.1) (meters -1.25) (meters 1.4)))
             ((4) (set-vector! (-> s local-sphere) 0.0 (meters 2.7) 0.0 (meters 1.15)))
             (else (set-vector! (-> s local-sphere) 0.0 (meters 0.8) 0.0 (meters 0.8))))
-          (append-prim group s))))
+          (append-prim group s)))
+      ;; and one his body that Jak's blows reach (as an enemy's: 'attack), him not hurt by it
+      (let ((s (new 'process 'collide-shape-prim-sphere cs (the-as uint 0))))
+        (set! (-> s prim-core collide-as) (collide-kind enemy))
+        (set! (-> s collide-with) (collide-kind target))
+        (set! (-> s prim-core action) (collide-action solid))
+        (set! (-> s prim-core offense) (collide-offense indestructible))
+        (set! (-> s transform-index) 0)
+        (set-vector! (-> s local-sphere) 0.0 (meters 2.6) 0.0 (meters 1.3))
+        (append-prim group s)))
     (backup-collide-with-as cs)
     (set! (-> self root) cs))
   (set! (-> self root trans quad) (-> *merchant-spots* i quad))
