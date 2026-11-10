@@ -1569,6 +1569,7 @@
     soul-orb-fly))
 
 (define-extern daxter-dark-eco-line (function none))
+(define-extern daxter-white-eco-line (function none))
 (define-extern dark-jak-end-line (function none))
 
 (defstate soul-orb-fly (soul-orb)
@@ -1588,7 +1589,9 @@
                (if (-> *hud-parts* power) (send-event (ppointer->process (-> *hud-parts* power)) 'show)))
               (else
                (+! *soul-eco* (-> self value))
-               (sound-play "get-green-eco")))
+               (sound-play "get-green-eco")
+               ;; the first time: Daxter on it (and on who'd buy it)
+               (if (zero? *daxter-white-seen*) (daxter-white-eco-line))))
             (deactivate self))
           (let* ((k (fmax u 0.0))
                  (arc (sin (* 32768.0 k)))
@@ -2403,6 +2406,16 @@
 ;; voice in the levels, the radio): his lines never over another
 (defun merchant-quiet? ()
   (and (>= (quest-now) *daxter-talk-until*) (not (ppointer->process *hint-semaphore*))))
+
+;; Daxter, the first white eco from an enemy: "Hey, that thing left some white eco! I bet someone would buy it...
+;; maybe that hooded guy in the village." (daxter-white-eco.mp3, 7.0 s). Only when no one's talking: else at the
+;; next one taken
+(define *dline-white* (new 'static 'boxed-array :type int32 #x4677 2130))
+(defun daxter-white-eco-line ()
+  (when (merchant-quiet?)
+    (set! *daxter-white-seen* 1.0)
+    (quest-line2 "DAXTER" "voice/daxter-white-eco.mp3" *dline-white*))
+  (none))
 
 ;; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)==
 (define *mline-first-1* (new 'static 'boxed-array :type int32 #x4664 1457))
