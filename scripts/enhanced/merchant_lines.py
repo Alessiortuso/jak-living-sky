@@ -37,6 +37,8 @@ LINES = [  # group, file, id, it, en
      "I DON'T GIVE CREDIT. NOT EVEN TO NICE FACES."),
     ('max', 'merchant-max-1', 0x466f, "NE HAI GIÀ ABBASTANZA. ANCHE L'AVIDITÀ HA UN LIMITE. LA MIA NO, LA TUA SÌ.",
      "YOU HAVE ENOUGH ALREADY. EVEN GREED HAS A LIMIT. MINE DOESN'T, YOURS DOES."),
+    ('bye-nothing', 'merchant-bye-nothing-2', 0x4670, "TORNERAI. TORNANO SEMPRE.",
+     "YOU'LL BE BACK. THEY ALWAYS COME BACK."),
 ]
 
 BEGIN = ';; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)=='

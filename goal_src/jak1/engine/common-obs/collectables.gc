@@ -2413,6 +2413,7 @@
 (define *mline-poor-1* (new 'static 'boxed-array :type int32 #x466d 1097))
 (define *mline-poor-2* (new 'static 'boxed-array :type int32 #x466e 1144))
 (define *mline-max-1* (new 'static 'boxed-array :type int32 #x466f 1700))
+(define *mline-bye-nothing-2* (new 'static 'boxed-array :type int32 #x4670 807))
 ;; a group's lines said ("first": all, in order; the others: one at random)
 (defun merchant-group-say ((group symbol))
   (case group
@@ -2448,6 +2449,10 @@
      (case (rand-vu-int-count 1)
        (else (merchant-say "voice/merchant-max-1.mp3" *mline-max-1*)))
      )
+    (('bye-nothing)
+     (case (rand-vu-int-count 1)
+       (else (merchant-say "voice/merchant-bye-nothing-2.mp3" *mline-bye-nothing-2*)))
+     )
     )
   (none))
 ;; ==end merchant lines==
@@ -2460,8 +2465,12 @@
     (pc-enhanced-denied))
   (none))
 
+;; something bought at this visit to his shop (for his goodbye)
+(define *merchant-bought* #f)
+
 ;; a purchase: one of his lines on it, unless another's being said
 (defun merchant-buy-line ((i int))
+  (set! *merchant-bought* #t)
   ;; (Dark Jak's things, 3 and 4: the dark eco's line)
   (if (>= (quest-now) *daxter-talk-until*)
     (merchant-group-say (case i
@@ -2546,9 +2555,13 @@
       (sound-play "start-options")
       (set! *soul-shop-cursor* 0)
       (set! *soul-shop-open* #t)
+      (set! *merchant-bought* #f)
       (merchant-open-line))
   :exit
     (behavior ()
+      ;; his goodbye: after a purchase or not (unless another line's being said)
+      (if (>= (quest-now) *daxter-talk-until*)
+        (merchant-group-say (if *merchant-bought* 'bye 'bye-nothing)))
       (set! *soul-shop-open* #f)
       (if *target* (process-release? *target*)))
   :trans
