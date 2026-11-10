@@ -860,6 +860,8 @@
   (give-orbs #x2007)
   (give-white-eco #x2008)
   (place-merchant #x2009)
+  (warp-to-citadel #x200a)
+  (warp-to-village3 #x200b)
   (save-and-load-game #x3000)
   ;; GAME-TEXT-ID ENUM ENDS
 
