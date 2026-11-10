@@ -41,6 +41,8 @@ LINES = [  # group, file, id, it, en
      "YOU'LL BE BACK. THEY ALWAYS COME BACK."),
     ('bye', 'merchant-bye-1', 0x4671, "ALLA PROSSIMA. SE CI SARÀ UNA PROSSIMA.",
      "UNTIL NEXT TIME. IF THERE IS A NEXT TIME."),
+    ('bye', 'merchant-bye-2', 0x4672, "VAI PURE. IO RESTO QUI. RESTO SEMPRE QUI.",
+     "GO ON. I STAY HERE. I ALWAYS STAY HERE."),
 ]
 
 BEGIN = ';; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)=='
