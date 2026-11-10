@@ -9,6 +9,8 @@
 #   extractor number the joints one apart), main (the stool and the stall), body (breathing), head, the ears, the
 #   lids (two small dark lids over his painted eyes, closing down when he blinks), his two short legs (swinging);
 #   every vertex on one joint, parts told apart by where they are;
+# - shading painted into the vertices (ambient occlusion: the folds, the hood, under the belly and the awning darker),
+#   the textures' colours toned (the generator's loud orange to an ochre, a little more contrast);
 # - one animation, "idle": a 4.8 s loop: the little legs swinging, breathing, two blinks, the head tilting, an ear
 #   twitching.
 #
@@ -172,6 +174,90 @@ prims = [
     ('merchant-stall', sVw, sN, sUV, sI, np.full(len(sVw), J['main']), sTex),
 ]
 
+
+# --- shading painted into the vertices: ambient occlusion (the folds of the cloth, the hood's inside, under the
+# scarf and the belly, between the planks, under the awning darker: what Jak's own textures have painted in) ---
+def bake_ao(prims, cell=0.03, dirs_n=40, reach=0.55):
+    """each vertex: how much of the sky over it (the hemisphere round its normal) the model leaves open. Its
+    surfaces sampled into a grid of cells; rays marched from just off each vertex"""
+    pts = []
+    bary = np.array([(a, b2, 1 - a - b2) for a in np.linspace(0, 1, 5) for b2 in np.linspace(0, 1, 5) if a + b2 <= 1])
+    for _, V, _, _, I, _, _ in prims:
+        T_ = V[I.reshape(-1, 3)]
+        pts.append(np.einsum('kj,tjc->tkc', bary, T_).reshape(-1, 3))
+    pts = np.vstack(pts)
+    lo = pts.min(0) - 0.6
+    dims = np.ceil((pts.max(0) + 0.6 - lo) / cell).astype(int) + 1
+    occ = np.zeros(dims, bool)
+    c = ((pts - lo) / cell).astype(int)
+    occ[c[:, 0], c[:, 1], c[:, 2]] = True
+    rng = np.random.default_rng(7)
+    # directions: a fixed spread over the sphere, kept to each vertex's hemisphere (cosine weighted)
+    d = rng.normal(size=(dirs_n * 2, 3))
+    d /= np.linalg.norm(d, axis=1)[:, None]
+    steps = np.arange(2.5, reach / cell) * cell
+    out = []
+    for _, V, N, _, _, _, _ in prims:
+        Nn = N / np.maximum(np.linalg.norm(N, axis=1), 1e-6)[:, None]
+        ao = np.zeros(len(V))
+        for s in range(0, len(V), 2000):
+            v = V[s:s + 2000]
+            n_ = Nn[s:s + 2000]
+            cos = n_ @ d.T  # (n, dirs)
+            w = np.clip(cos, 0, None)
+            hit = np.zeros_like(w)
+            for st in steps:
+                p = v[:, None, :] + n_[:, None, :] * (cell * 1.5) + d[None, :, :] * st
+                q = ((p - lo) / cell).astype(int)
+                q = np.clip(q, 0, dims - 1)
+                o = occ[q[..., 0], q[..., 1], q[..., 2]]
+                # nearer things shade more
+                hit = np.maximum(hit, o * (1 - st / reach) ** 0.6)
+            ao[s:s + 2000] = 1 - (hit * w).sum(1) / np.maximum(w.sum(1), 1e-6)
+        out.append(ao)
+    return out
+
+
+AO = bake_ao(prims)
+SHADE = []
+for (mat, V, N, UV, I, Jn, tex), ao in zip(prims, AO):
+    s = 0.42 + 0.58 * np.clip(ao, 0, 1) ** 1.3
+    # worn: a soft mottling over it all (sun-faded, dusty, grimy in places), from smooth noise in space (so no seams
+    # where the texture's islands meet)
+    ph = np.array([[1.7, 0.3, 2.9], [3.1, 1.9, 0.7], [0.5, 2.3, 1.3]])
+    mot = sum(np.sin(V @ (np.array(f_) * k_) + k_) for k_, f_ in zip((2.3, 4.1, 7.3), ph)) / 3.0
+    s *= 0.93 + 0.08 * mot
+    if mat == 'merchant-cloth':
+        # a touch lighter toward his head, as lit from above; his hem dusty; his lids as dark as the hood anyway
+        h = (V[:, 1] - V[:, 1].min()) / (V[:, 1].max() - V[:, 1].min())
+        s *= 0.9 + 0.14 * h
+        s[len(mV):] = 1.0
+    else:
+        # the stall's foot darker (the ground's dirt and shade)
+        s *= 0.82 + 0.18 * np.clip(V[:, 1] / 0.8, 0, 1)
+    SHADE.append(np.clip(s, 0, 1.1))
+    print(mat, 'shade', round(float(s.min()), 2), round(float(s.mean()), 2), round(float(s.max()), 2))
+
+
+def grade(img):
+    """the colours less flat and loud than the generator's: its orange toned to an ochre, a little more contrast,
+    a little less saturation"""
+    from PIL import ImageEnhance
+    a = np.asarray(img).astype(np.float32) / 255.0
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    # the loud oranges (red high, green half, blue low) toward a warm ochre, a little browner
+    orange = np.clip((r - b - 0.35) * 3, 0, 1) * np.clip(1 - np.abs(g / np.maximum(r, 1e-3) - 0.6) * 2.5, 0, 1)
+    a[..., 0] = r * (1 - 0.15 * orange)
+    a[..., 1] = g * (1 - 0.05 * orange)
+    a[..., 2] = b + (0.06 + 0.12 * b) * orange
+    img = Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
+    img = ImageEnhance.Color(img).enhance(0.84)
+    img = ImageEnhance.Contrast(img).enhance(1.15)
+    return img
+
+
+prims = [(mat, V, N, UV, I, Jn, grade(tex)) for (mat, V, N, UV, I, Jn, tex) in prims]
+
 # --- the idle: 4.8 s ---
 FPS = 30
 T = 4.8
@@ -258,8 +344,8 @@ def write_glb(path, name):
         V = V.astype(np.float32)
         N = N.astype(np.float32)
         N /= np.maximum(np.linalg.norm(N, axis=1), 1e-6)[:, None]
-        C4 = np.full((len(V), 4), 0.5, np.float32)  # (merc doubles them: white)
-        C4[:, 3] = 1.0
+        C4 = np.ones((len(V), 4), np.float32)
+        C4[:, :3] = 0.5 * SHADE[k][:, None]  # (merc doubles them: 0.5 is the texture as it is)
         J4 = np.zeros((len(V), 4), np.uint8)
         J4[:, 0] = Jn
         W4 = np.zeros((len(V), 4), np.float32)
