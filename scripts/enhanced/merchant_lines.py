@@ -39,6 +39,8 @@ LINES = [  # group, file, id, it, en
      "YOU HAVE ENOUGH ALREADY. EVEN GREED HAS A LIMIT. MINE DOESN'T, YOURS DOES."),
     ('bye-nothing', 'merchant-bye-nothing-2', 0x4670, "TORNERAI. TORNANO SEMPRE.",
      "YOU'LL BE BACK. THEY ALWAYS COME BACK."),
+    ('bye', 'merchant-bye-1', 0x4671, "ALLA PROSSIMA. SE CI SARÀ UNA PROSSIMA.",
+     "UNTIL NEXT TIME. IF THERE IS A NEXT TIME."),
 ]
 
 BEGIN = ';; ==merchant lines (scripts/enhanced/merchant_lines.py: edit there)=='

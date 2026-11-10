@@ -2414,6 +2414,7 @@
 (define *mline-poor-2* (new 'static 'boxed-array :type int32 #x466e 1144))
 (define *mline-max-1* (new 'static 'boxed-array :type int32 #x466f 1700))
 (define *mline-bye-nothing-2* (new 'static 'boxed-array :type int32 #x4670 807))
+(define *mline-bye-1* (new 'static 'boxed-array :type int32 #x4671 932))
 ;; a group's lines said ("first": all, in order; the others: one at random)
 (defun merchant-group-say ((group symbol))
   (case group
@@ -2452,6 +2453,10 @@
     (('bye-nothing)
      (case (rand-vu-int-count 1)
        (else (merchant-say "voice/merchant-bye-nothing-2.mp3" *mline-bye-nothing-2*)))
+     )
+    (('bye)
+     (case (rand-vu-int-count 1)
+       (else (merchant-say "voice/merchant-bye-1.mp3" *mline-bye-1*)))
      )
     )
   (none))
