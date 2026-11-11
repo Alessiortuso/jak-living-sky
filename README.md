@@ -10,6 +10,8 @@ follows.
 The **JET-Board** is from [The JET-Board Legacy](https://github.com/Hat-Kid/og-j1-board) by Hat Kid (with Matt
 Dallmeyer's speedometer), ISC license. Here it can't be used in Fire Canyon, Lava Tube, Precursor Basin, Mountain Pass or the Mountain Range, nor by Dark Jak, and it's bought in the white eco merchant's shop once won in his arena fight (on offer after the warrior has put back Rock Village's pontoons). On and off with R3 (R2 still shows the collectables).
 
+The merchant's arena fight for the JET-Board, **the PDS sentinel**, is the final boss of [The Forgotten Lands](https://github.com/Kuitar5/the-forgotten-lands) by Kuitar5, used with their permission: its code and models, fought on Misty Island's arena against Misty's own enemies.
+
 ---
 
 # Jak Enhanced Trilogy

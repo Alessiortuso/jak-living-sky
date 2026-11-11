@@ -298,7 +298,8 @@
                                (else "lavatube-end"))))
              ;; Jak Living Sky: the merchant's gate to his arena (Jak warps in where he arrives; dying after, he's
              ;; back at misty-silo, the same spot, as an ordinary continue)
-             ((string= (-> arg0 name) "misty-arena")
+             ;; (and to his third fight, the sentinel's: dying there, the fight's lost, Jak back at misty-silo)
+             ((or (string= (-> arg0 name) "misty-arena") (string= (-> arg0 name) "misty-pds"))
               (set! (-> s5-6 quad) (-> arg0 trans quad))
               (+! (-> s5-6 y) (meters 1))
               (set-continue! *game-info* "misty-silo"))
@@ -309,7 +310,7 @@
               (runs-on-jak-spawn)))
            ;; Jak Living Sky: arriving by the merchant's gates: his gate there made before Jak warps in onto it (else
            ;; it's made a moment after, and he'd sink into its stone)
-           (when (or (string= (-> arg0 name) "misty-arena") (string-suffix-merchant? (-> arg0 name)))
+           (when (or (string= (-> arg0 name) "misty-arena") (string= (-> arg0 name) "misty-pds") (string-suffix-merchant? (-> arg0 name)))
              (dotimes (k 4)
                (merchant-update)
                (suspend)))

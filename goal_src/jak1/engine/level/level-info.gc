@@ -561,6 +561,40 @@
              :disp0 'display
              :lev1 'village1
              :disp1 'special)
+        ;; Jak Living Sky: the merchant's third fight, the PDS sentinel (The Forgotten Lands, by Kuitar5): the same
+        ;; spot, its level beside Misty
+        (new 'static
+             'continue-point
+             :name "misty-pds"
+             :level 'misty
+             :flags (continue-flags warp)
+             :trans
+             ;; (on the merchant's gate there, made before he warps in: target-death.gc; facing the arena's door)
+             (new 'static 'vector :x -624083.5 :y 84801.6 :z 3688228.5 :w 1.0)
+             :quat
+             (new 'static 'quaternion :y -0.5218 :w 0.8531)
+             :camera-trans
+             (new 'static 'vector :x -598565.5 :y 97089.6 :z 3675182.5 :w 1.0)
+             :camera-rot
+             (new 'static 'array float 9 0.4552 0.0 0.8904 -0.2446 0.9612 0.125 -0.8558 -0.2747 0.4375)
+             :load-commands
+             '((special "med-res-level-1" #t)
+              (special "med-res-level-2" #t)
+              (special "med-res-level-4" #t)
+              (special "med-res-level-6" #t)
+              (special "med-res-level-7" #t)
+              (special "med-res-level-8" #t)
+              (special "med-res-level-9" #t)
+              (special "med-res-level-11" #t)
+              (special "med-res-level-14" #t)
+              (special "med-res-level-22" #t)
+              (special "med-res-level-23" #t)
+              (special "fishermans-boat-2" #t))
+             :vis-nick 'mis
+             :lev0 'misty
+             :disp0 'display
+             :lev1 'pdsarena
+             :disp1 'display)
         (new 'static
              'continue-point
              :name "misty-bike"
@@ -3083,6 +3117,47 @@
        '()
        :wait-for-load #t))
 
+
+;; Jak Living Sky: the PDS sentinel's fight (from The Forgotten Lands, by Kuitar5, with permission): its actors only,
+;; loaded beside Misty for the merchant's third arena fight (continue "misty-pds"). No ground of its own (a tiny mesh
+;; far below): Jak stays in Misty, its look and sounds.
+(define pdsarena
+  (new 'static
+       'level-load-info
+       :index 27
+       :name 'pdsarena
+       :visname 'pdsarena-vis
+       :nickname 'pds
+       :packages
+       '()
+       :sound-banks
+       '()
+       :music-bank #f
+       :ambient-sounds
+       '()
+       :mood '*misty-mood*
+       :mood-func 'update-mood-misty
+       :ocean '*ocean-map-village1*
+       :sky #t
+       :sun-fade 0.25
+       :continues
+       '()
+       :tasks
+       '()
+       :priority 100
+       :load-commands
+       '()
+       :alt-load-commands
+       '()
+       :bsp-mask #xffffffffffffffff
+       :bsphere
+       (new 'static 'sphere :x (meters -197.28) :y (meters 28.0) :z (meters 958.28) :w (meters 120.0))
+       :bottom-height (meters -20)
+       :run-packages
+       '()
+       :wait-for-load #t))
+
+(cons! *level-load-list* 'pdsarena)
 
 (define test-zone
   (new 'static

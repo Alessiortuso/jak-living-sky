@@ -1,0 +1,86 @@
+;;-*-Lisp-*-
+(in-package goal)
+
+;; Jak Living Sky: what the PDS sentinel's code (The Forgotten Lands, by Kuitar5, with permission) takes from the
+;; rest of that mod: its small helper macros and constants, brought here so the engine stays as it is.
+
+(defmacro set-part! (&key (proc self) &key (id 1) &key (part part))
+  `(set! (-> ,proc ,part) (create-launch-control (-> *part-group-id-table* ,id) ,proc)))
+
+(defmacro hide! (proc)
+  `(logior! (-> ,proc draw status) (draw-status hidden)))
+
+(defmacro show! (proc)
+  `(logclear! (-> ,proc draw status) (draw-status hidden)))
+
+(defmacro get-init-spec-by-id (part id)
+  `(let ((i 0)
+         (spec (the sp-field-init-spec #f)))
+     (while (!= (-> *part-id-table* ,part init-specs i field) (sp-field-id spt-end))
+       (let ((init-spec (-> *part-id-table* ,part init-specs i)))
+         (if (= (-> init-spec field) (sp-field-id ,(string->symbol-format "spt-{}" (symbol->string id)))) (set! spec init-spec)))
+       (1+! i))
+     spec))
+
+(defmacro relocate-fields (&rest fields)
+  `(begin
+     ,@(apply (lambda (x) `(if (nonzero? (-> this ,x)) (&+! (-> this ,x) offset))) fields)))
+
+(defmacro defpost (type &rest body)
+  "a type's post behavior, <type>-post"
+  `(defbehavior ,(string->symbol-format "{}-post" (symbol->string type)) ,type () ,@body))
+
+(defmacro defevent (type &rest body)
+  "a type's event handler, <type>-event-handler"
+  `(defbehavior ,(string->symbol-format "{}-event-handler" (symbol->string type))
+                ,type ((proc process) (argc int) (message symbol) (block event-message-block)) ,@body))
+
+(defmacro true? (thing)
+  `(eq? ,thing #t))
+
+(defmacro static-exploder-params (name &key (jgeo #f) joints)
+  `(define ,(string->symbol-format "*{}-exploder-params*" name)
+    (new 'static
+         'joint-exploder-static-params
+         :joints
+         (new 'static
+              'boxed-array
+              :type
+              joint-exploder-static-joint-params
+              ,@(apply (lambda (x)
+                       `(new 'static
+                            'joint-exploder-static-joint-params
+                            :joint-index
+                            (joint-node-index ,(if jgeo (string->symbol-format "{}-lod0-jg" jgeo) (string->symbol-format "{}-lod0-jg" name))
+                                              ,(if (pair? x) (car x) x))
+                            :parent-joint-index
+                            ,(if (pair? x) (joint-node-index (cadr x)) -1)))
+                     joints)))))
+
+(defglobalconstant DEFAULT_RES_TIME -1000000000.0)
+
+(defconstant DEFAULT_PATH_FLAGS (path-control-flag display draw-line draw-point draw-text))
+
+;; the mod's music player isn't here: its messages go nowhere
+(define *tfl-music-player* (the-as process #f))
+
+(defun pds-reset-part ()
+  (set! (-> (get-init-spec-by-id 4133 scale-x) initial-valuef) (meters 4.0))
+  (set! (-> (get-init-spec-by-id 4133 scale-x) random-rangef) (meters 3.5))
+  (set! (-> (get-init-spec-by-id 4133 r) initial-valuef) 64.0)
+  (set! (-> (get-init-spec-by-id 4133 g) initial-valuef) 256.0)
+  (set! (-> (get-init-spec-by-id 4133 b) initial-valuef) 64.0)
+  (set! (-> (get-init-spec-by-id 4133 num) initial-valuef) 0.6)
+  (set! (-> (get-init-spec-by-id 4170 num) initial-valuef) 0.2))
+
+;; the merchant's third fight won (*arena-won* bit 2: the JET-Board on sale), saved at once
+(defun pds-arena-won ()
+  (set! *arena-won* (the float (logior (the int *arena-won*) 4)))
+  (auto-save-command 'auto-save 0 0 *default-pool*)
+  (none))
+
+;; (the mod's kernel helper) a handle's process, if still there, stopped
+(defun deactivate-handle ((h handle))
+  (let ((p (handle->process h)))
+    (if p (deactivate p)))
+  (none))

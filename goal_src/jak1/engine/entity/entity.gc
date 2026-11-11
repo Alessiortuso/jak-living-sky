@@ -802,7 +802,17 @@
 (defmacro this-etype? (&rest types)
   `(or ,@(apply (lambda (x) `(begin (define-extern ,x type) (type-type? (-> this etype) ,x))) types)))
 
+;; Jak Living Sky: the PDS sentinel fight's nav mesh (levels/pdsarena/pds-nav.gc, set while that level is loaded)
+(define *pds-arena-nav* (the-as nav-mesh #f))
+
 (defun custom-nav-mesh-check-and-setup ((this entity-actor))
+  (when (and *pds-arena-nav* (= (res-lump-struct this 'custom-nav symbol) 'pds-arena))
+    ;; (static, so its spheres are cleared here, as the mod does: they'd outlive a reset)
+    (set! (-> *pds-arena-nav* static-sphere) (the (inline-array nav-sphere) 0))
+    (set! (-> *pds-arena-nav* static-sphere-count) 0)
+    (set! (-> this nav-mesh) *pds-arena-nav*)
+    (entity-nav-login this)
+    (return #f))
   (case (-> this aid)
     ((40000) ;; test-babak
      (set! (-> this nav-mesh)

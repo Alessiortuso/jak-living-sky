@@ -1,0 +1,2337 @@
+// Jak Living Sky: the PDS sentinel fight (from The Forgotten Lands, by Kuitar5, with permission) on Misty's arena.
+// Made by scripts/enhanced/build_pdsarena.py from the mod's valley.jsonc: edit there.
+{
+  "long_name": "pdsarena",
+  "iso_name": "PDSARENA",
+  "nickname": "pds",
+  "gltf_file": "custom_assets/jak1/levels/pdsarena/pdsarena.glb",
+  "automatic_wall_detection": true,
+  "automatic_wall_angle": 45.0,
+  "double_sided_collide": false,
+  "base_id": 60100,
+  "art_groups": [],
+  "custom_models": [
+    "pds-sentinel",
+    "pds-gem-green",
+    "pds-gem-yellow",
+    "pds-gem-blue",
+    "pds-trap-central",
+    "pds-trap-inner",
+    "pds-trap-mid-left",
+    "pds-trap-mid-right",
+    "pds-trap-out-left",
+    "pds-trap-out-right",
+    "pds-plat-circle",
+    "pds-plat-square",
+    "pds-plat-rectangle",
+    "pds-swingpole",
+    "pds-cam"
+  ],
+  "textures": [],
+  "ambients": [],
+  "actors": [
+    {
+      "trans": [
+        -197.274,
+        28.0,
+        958.272
+      ],
+      "etype": "pds-master",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.3255,
+        0.0,
+        0.9454
+      ],
+      "bsphere": [
+        -197.274,
+        28.0,
+        958.272,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-master-01",
+        "movie-pos": [
+          "movie-pos",
+          [
+            -197.274,
+            28.0,
+            958.272,
+            52.0
+          ]
+        ],
+        "custom-nav": [
+          "symbol",
+          "pds-arena"
+        ],
+        "path": [
+          "vector3m",
+          [
+            -213.084,
+            28.0,
+            977.81
+          ],
+          [
+            -223.067,
+            28.0,
+            954.301
+          ],
+          [
+            -206.972,
+            28.0,
+            933.424
+          ],
+          [
+            -182.083,
+            28.0,
+            938.39
+          ],
+          [
+            -172.408,
+            28.0,
+            961.253
+          ],
+          [
+            -188.11,
+            28.0,
+            981.611
+          ]
+        ],
+        "gems": [
+          "string",
+          "pdsarena-pds-gem-01",
+          "pdsarena-pds-gem-02",
+          "pdsarena-pds-gem-03"
+        ],
+        "traps": [
+          "string",
+          "pdsarena-pds-trap-central-01",
+          "pdsarena-pds-trap-inner-01",
+          "pdsarena-pds-trap-inner-02",
+          "pdsarena-pds-trap-inner-03",
+          "pdsarena-pds-trap-inner-04",
+          "pdsarena-pds-trap-inner-05",
+          "pdsarena-pds-trap-inner-06",
+          "pdsarena-pds-trap-mid-left-01",
+          "pdsarena-pds-trap-mid-left-02",
+          "pdsarena-pds-trap-mid-left-03",
+          "pdsarena-pds-trap-mid-left-04",
+          "pdsarena-pds-trap-mid-left-05",
+          "pdsarena-pds-trap-mid-left-06",
+          "pdsarena-pds-trap-mid-right-01",
+          "pdsarena-pds-trap-mid-right-02",
+          "pdsarena-pds-trap-mid-right-03",
+          "pdsarena-pds-trap-mid-right-04",
+          "pdsarena-pds-trap-mid-right-05",
+          "pdsarena-pds-trap-mid-right-06",
+          "pdsarena-pds-trap-out-left-01",
+          "pdsarena-pds-trap-out-left-02",
+          "pdsarena-pds-trap-out-left-03",
+          "pdsarena-pds-trap-out-left-04",
+          "pdsarena-pds-trap-out-left-05",
+          "pdsarena-pds-trap-out-left-06",
+          "pdsarena-pds-trap-out-right-01",
+          "pdsarena-pds-trap-out-right-02",
+          "pdsarena-pds-trap-out-right-03",
+          "pdsarena-pds-trap-out-right-04",
+          "pdsarena-pds-trap-out-right-05",
+          "pdsarena-pds-trap-out-right-06"
+        ],
+        "traps-outer": [
+          "string",
+          "pdsarena-pds-trap-out-left-01",
+          "pdsarena-pds-trap-out-left-02",
+          "pdsarena-pds-trap-out-left-03",
+          "pdsarena-pds-trap-out-left-04",
+          "pdsarena-pds-trap-out-left-05",
+          "pdsarena-pds-trap-out-left-06",
+          "pdsarena-pds-trap-out-right-01",
+          "pdsarena-pds-trap-out-right-02",
+          "pdsarena-pds-trap-out-right-03",
+          "pdsarena-pds-trap-out-right-04",
+          "pdsarena-pds-trap-out-right-05",
+          "pdsarena-pds-trap-out-right-06"
+        ],
+        "traps-mid": [
+          "string",
+          "pdsarena-pds-trap-mid-left-01",
+          "pdsarena-pds-trap-mid-left-02",
+          "pdsarena-pds-trap-mid-left-03",
+          "pdsarena-pds-trap-mid-left-04",
+          "pdsarena-pds-trap-mid-left-05",
+          "pdsarena-pds-trap-mid-left-06",
+          "pdsarena-pds-trap-mid-right-01",
+          "pdsarena-pds-trap-mid-right-02",
+          "pdsarena-pds-trap-mid-right-03",
+          "pdsarena-pds-trap-mid-right-04",
+          "pdsarena-pds-trap-mid-right-05",
+          "pdsarena-pds-trap-mid-right-06"
+        ],
+        "traps-inner": [
+          "string",
+          "pdsarena-pds-trap-inner-01",
+          "pdsarena-pds-trap-inner-02",
+          "pdsarena-pds-trap-inner-03",
+          "pdsarena-pds-trap-inner-04",
+          "pdsarena-pds-trap-inner-05",
+          "pdsarena-pds-trap-inner-06"
+        ],
+        "poles": [
+          "string",
+          "pdsarena-pds-swingpole-01",
+          "pdsarena-pds-swingpole-02",
+          "pdsarena-pds-swingpole-03",
+          "pdsarena-pds-swingpole-04"
+        ],
+        "poles-2": [
+          "string",
+          "pdsarena-pds-swingpole-01",
+          "pdsarena-pds-swingpole-02",
+          "pdsarena-pds-swingpole-03"
+        ],
+        "poles-3": [
+          "string",
+          "pdsarena-pds-swingpole-04"
+        ],
+        "plats": [
+          "string",
+          "pdsarena-pds-plat-circle-01",
+          "pdsarena-pds-plat-circle-02",
+          "pdsarena-pds-plat-circle-03",
+          "pdsarena-pds-plat-circle-04",
+          "pdsarena-pds-plat-circle-05",
+          "pdsarena-pds-plat-circle-06",
+          "pdsarena-pds-plat-circle-07",
+          "pdsarena-pds-plat-rectangle-01",
+          "pdsarena-pds-plat-rectangle-02",
+          "pdsarena-pds-plat-rectangle-03",
+          "pdsarena-pds-plat-rectangle-04",
+          "pdsarena-pds-plat-rectangle-05",
+          "pdsarena-pds-plat-rectangle-06",
+          "pdsarena-pds-plat-square-01",
+          "pdsarena-pds-plat-square-02",
+          "pdsarena-pds-plat-square-03",
+          "pdsarena-pds-plat-square-04",
+          "pdsarena-pds-plat-square-05"
+        ],
+        "plats-1": [
+          "string",
+          "pdsarena-pds-plat-circle-01",
+          "pdsarena-pds-plat-rectangle-01",
+          "pdsarena-pds-plat-rectangle-02",
+          "pdsarena-pds-plat-square-01",
+          "pdsarena-pds-plat-square-02"
+        ],
+        "plats-2": [
+          "string",
+          "pdsarena-pds-swingpole-01",
+          "pdsarena-pds-swingpole-02",
+          "pdsarena-pds-swingpole-03",
+          "pdsarena-pds-plat-circle-02",
+          "pdsarena-pds-plat-circle-03",
+          "pdsarena-pds-plat-rectangle-03",
+          "pdsarena-pds-plat-rectangle-04",
+          "pdsarena-pds-plat-square-03"
+        ],
+        "plats-3": [
+          "string",
+          "pdsarena-pds-swingpole-04",
+          "pdsarena-pds-plat-circle-04",
+          "pdsarena-pds-plat-circle-05",
+          "pdsarena-pds-plat-circle-06",
+          "pdsarena-pds-plat-circle-07",
+          "pdsarena-pds-plat-rectangle-05",
+          "pdsarena-pds-plat-rectangle-06",
+          "pdsarena-pds-plat-square-04",
+          "pdsarena-pds-plat-square-05"
+        ],
+        "alt-actor": [
+          "string",
+          "pdsarena-pds-sentinel-01",
+          "pdsarena-pds-gem-01",
+          "pdsarena-pds-gem-02",
+          "pdsarena-pds-gem-03",
+          "pdsarena-pds-trap-central-01",
+          "pdsarena-pds-trap-inner-01",
+          "pdsarena-pds-trap-mid-left-01",
+          "pdsarena-pds-trap-mid-right-01",
+          "pdsarena-pds-trap-out-left-01",
+          "pdsarena-pds-trap-out-right-01"
+        ]
+      }
+    },
+    {
+      "trans": [
+        -194.017,
+        51.16,
+        934.028
+      ],
+      "etype": "pds-sentinel",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -194.017,
+        51.16,
+        934.028,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-sentinel-01",
+        "path": [
+          "vector3m",
+          [
+            -225.531,
+            39.27,
+            995.645
+          ],
+          [
+            -237.417,
+            39.27,
+            974.429
+          ],
+          [
+            -244.906,
+            39.27,
+            952.099
+          ],
+          [
+            -232.784,
+            39.27,
+            931.661
+          ],
+          [
+            -216.381,
+            39.27,
+            915.135
+          ],
+          [
+            -192.684,
+            39.27,
+            915.696
+          ],
+          [
+            -168.947,
+            39.27,
+            922.152
+          ],
+          [
+            -157.825,
+            39.27,
+            942.105
+          ],
+          [
+            -150.423,
+            39.27,
+            965.104
+          ],
+          [
+            -163.866,
+            39.27,
+            984.937
+          ],
+          [
+            -179.747,
+            39.27,
+            1002.58
+          ],
+          [
+            -203.359,
+            39.27,
+            1001.295
+          ],
+          [
+            -225.531,
+            39.27,
+            995.645
+          ]
+        ],
+        "nav-mesh-actor": "pdsarena-pds-master-01",
+        "movie-pos": [
+          "movie-pos",
+          [
+            -197.274,
+            28.0,
+            958.272,
+            -8.0
+          ]
+        ]
+      }
+    },
+    {
+      "trans": [
+        -232.592,
+        63.38,
+        930.678
+      ],
+      "etype": "pds-gem",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -232.592,
+        63.38,
+        930.678,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-gem-01",
+        "gem-type": "'green"
+      }
+    },
+    {
+      "trans": [
+        -155.715,
+        63.38,
+        941.479
+      ],
+      "etype": "pds-gem",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.5592,
+        0.0,
+        0.829
+      ],
+      "bsphere": [
+        -155.715,
+        63.38,
+        941.479,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-gem-02",
+        "gem-type": "'blue"
+      }
+    },
+    {
+      "trans": [
+        -203.515,
+        63.38,
+        1002.66
+      ],
+      "etype": "pds-gem",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.9975,
+        0.0,
+        -0.0698
+      ],
+      "bsphere": [
+        -203.515,
+        63.38,
+        1002.66,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-gem-03",
+        "gem-type": "'yellow"
+      }
+    },
+    {
+      "trans": [
+        -201.416,
+        26.35,
+        952.853
+      ],
+      "etype": "pds-plat-circle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -201.416,
+        26.35,
+        952.853,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-circle-01",
+        "sync": [
+          "float",
+          3.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -201.416,
+            32.35,
+            952.853
+          ]
+        ],
+        "next-actor": "pdsarena-pds-plat-rectangle-01"
+      }
+    },
+    {
+      "trans": [
+        -210.821,
+        26.35,
+        955.048
+      ],
+      "etype": "pds-plat-rectangle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.6847,
+        0.0,
+        0.7286
+      ],
+      "bsphere": [
+        -210.821,
+        26.35,
+        955.048,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-rectangle-01",
+        "sync": [
+          "float",
+          3.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -210.821,
+            36.83,
+            955.048
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-circle-01",
+        "next-actor": "pdsarena-pds-plat-square-01"
+      }
+    },
+    {
+      "trans": [
+        -206.322,
+        26.35,
+        942.257
+      ],
+      "etype": "pds-plat-square",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -206.322,
+        26.35,
+        942.257,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-square-01",
+        "sync": [
+          "float",
+          4.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -206.322,
+            40.27,
+            942.257
+          ],
+          [
+            -206.322,
+            44.27,
+            942.257
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-rectangle-01",
+        "next-actor": "pdsarena-pds-plat-square-02"
+      }
+    },
+    {
+      "trans": [
+        -218.475,
+        26.35,
+        947.368
+      ],
+      "etype": "pds-plat-square",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -218.475,
+        26.35,
+        947.368,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-square-02",
+        "sync": [
+          "float",
+          4.0,
+          0.5
+        ],
+        "path": [
+          "vector3m",
+          [
+            -218.475,
+            45.03,
+            947.368
+          ],
+          [
+            -218.475,
+            49.03,
+            947.368
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-square-01",
+        "next-actor": "pdsarena-pds-plat-rectangle-02"
+      }
+    },
+    {
+      "trans": [
+        -222.729,
+        26.35,
+        938.308
+      ],
+      "etype": "pds-plat-rectangle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.9454,
+        0.0,
+        0.3255
+      ],
+      "bsphere": [
+        -222.729,
+        26.35,
+        938.308,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-rectangle-02",
+        "sync": [
+          "float",
+          4.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -222.729,
+            51.7,
+            938.308
+          ],
+          [
+            -225.881,
+            51.7,
+            935.846
+          ],
+          [
+            -229.033,
+            53.7,
+            933.383
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-square-02"
+      }
+    },
+    {
+      "trans": [
+        -189.129,
+        26.35,
+        955.448
+      ],
+      "etype": "pds-swingpole",
+      "game_task": 0,
+      "quat": [
+        0.6941,
+        0.1349,
+        -0.1349,
+        0.6941
+      ],
+      "bsphere": [
+        -189.129,
+        26.35,
+        955.448,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-swingpole-01",
+        "sync": [
+          "float",
+          4.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -189.129,
+            35.3,
+            955.448
+          ]
+        ],
+        "next-actor": "pdsarena-pds-plat-rectangle-03"
+      }
+    },
+    {
+      "trans": [
+        -176.683,
+        26.35,
+        949.931
+      ],
+      "etype": "pds-plat-rectangle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.8322,
+        0.0,
+        0.5543
+      ],
+      "bsphere": [
+        -176.683,
+        26.35,
+        949.931,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-rectangle-03",
+        "sync": [
+          "float",
+          4.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -176.683,
+            39.13,
+            949.931
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-swingpole-01",
+        "next-actor": "pdsarena-pds-plat-circle-02"
+      }
+    },
+    {
+      "trans": [
+        -173.279,
+        26.35,
+        958.453
+      ],
+      "etype": "pds-plat-circle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -173.279,
+        26.35,
+        958.453,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-circle-02",
+        "sync": [
+          "float",
+          5.5,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -173.279,
+            39.58,
+            958.453
+          ],
+          [
+            -159.77,
+            47.58,
+            967.688
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-rectangle-03",
+        "next-actor": "pdsarena-pds-plat-circle-03"
+      }
+    },
+    {
+      "trans": [
+        -179.969,
+        26.35,
+        941.45
+      ],
+      "etype": "pds-plat-circle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -179.969,
+        26.35,
+        941.45,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-circle-03",
+        "sync": [
+          "float",
+          5.5,
+          0.5
+        ],
+        "path": [
+          "vector3m",
+          [
+            -179.969,
+            39.58,
+            941.45
+          ],
+          [
+            -176.645,
+            47.58,
+            926.281
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-circle-02",
+        "next-actor": "pdsarena-pds-swingpole-02"
+      }
+    },
+    {
+      "trans": [
+        -162.184,
+        26.35,
+        959.634
+      ],
+      "etype": "pds-swingpole",
+      "game_task": 0,
+      "quat": [
+        0.3949,
+        0.5865,
+        -0.5865,
+        0.3949
+      ],
+      "bsphere": [
+        -162.184,
+        26.35,
+        959.634,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-swingpole-02",
+        "sync": [
+          "float",
+          4.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -162.184,
+            52.42,
+            959.634
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-circle-03",
+        "next-actor": "pdsarena-pds-swingpole-03"
+      }
+    },
+    {
+      "trans": [
+        -173.062,
+        26.35,
+        933.357
+      ],
+      "etype": "pds-swingpole",
+      "game_task": 0,
+      "quat": [
+        0.3949,
+        0.5865,
+        -0.5865,
+        0.3949
+      ],
+      "bsphere": [
+        -173.062,
+        26.35,
+        933.357,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-swingpole-03",
+        "sync": [
+          "float",
+          4.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -173.062,
+            52.42,
+            933.357
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-swingpole-02",
+        "next-actor": "pdsarena-pds-plat-rectangle-04"
+      }
+    },
+    {
+      "trans": [
+        -167.568,
+        26.35,
+        946.19
+      ],
+      "etype": "pds-plat-rectangle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.8322,
+        0.0,
+        0.5543
+      ],
+      "bsphere": [
+        -167.568,
+        26.35,
+        946.19,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-rectangle-04",
+        "sync": [
+          "float",
+          4.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -167.568,
+            54.47,
+            946.19
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-swingpole-03",
+        "next-actor": "pdsarena-pds-plat-square-03"
+      }
+    },
+    {
+      "trans": [
+        -159.542,
+        26.35,
+        942.917
+      ],
+      "etype": "pds-plat-square",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.1907,
+        0.0,
+        0.9818
+      ],
+      "bsphere": [
+        -159.542,
+        26.35,
+        942.917,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-square-03",
+        "sync": [
+          "float",
+          3.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -159.542,
+            53.26,
+            942.917
+          ],
+          [
+            -159.542,
+            57.26,
+            942.917
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-rectangle-04"
+      }
+    },
+    {
+      "trans": [
+        -196.012,
+        26.35,
+        949.867
+      ],
+      "etype": "pds-plat-circle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -196.012,
+        26.35,
+        949.867,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-circle-04",
+        "sync": [
+          "float",
+          5.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -196.012,
+            32.07,
+            949.867
+          ],
+          [
+            -194.768,
+            41.12,
+            940.154
+          ]
+        ],
+        "next-actor": "pdsarena-pds-plat-circle-05"
+      }
+    },
+    {
+      "trans": [
+        -193.698,
+        26.35,
+        931.523
+      ],
+      "etype": "pds-plat-circle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -193.698,
+        26.35,
+        931.523,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-circle-05",
+        "sync": [
+          "float",
+          15.0,
+          0.0
+        ],
+        "options": [
+          "enum-int32",
+          "(fact-options wrap-phase)"
+        ],
+        "path": [
+          "vector3m",
+          [
+            -175.832,
+            41.12,
+            975.024
+          ],
+          [
+            -192.59,
+            41.12,
+            996.474
+          ],
+          [
+            -214.048,
+            41.12,
+            979.709
+          ],
+          [
+            -235.498,
+            41.12,
+            962.951
+          ],
+          [
+            -218.739,
+            41.12,
+            941.502
+          ],
+          [
+            -201.981,
+            41.12,
+            920.052
+          ],
+          [
+            -180.531,
+            41.12,
+            936.81
+          ],
+          [
+            -159.074,
+            41.12,
+            953.575
+          ],
+          [
+            -175.832,
+            41.12,
+            975.024
+          ],
+          [
+            -192.59,
+            41.12,
+            996.474
+          ],
+          [
+            -214.048,
+            41.12,
+            979.709
+          ]
+        ],
+        "path-k": [
+          "float",
+          0.0,
+          -2.0,
+          -1.0,
+          0.0,
+          1.0,
+          2.0,
+          3.0,
+          4.0,
+          5.0,
+          6.0,
+          7.0,
+          8.0,
+          9.0,
+          10.0,
+          8.0
+        ],
+        "prev-actor": "pdsarena-pds-plat-circle-04",
+        "next-actor": "pdsarena-pds-plat-circle-06"
+      }
+    },
+    {
+      "trans": [
+        -222.535,
+        26.35,
+        968.434
+      ],
+      "etype": "pds-plat-circle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -222.535,
+        26.35,
+        968.434,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-circle-06",
+        "sync": [
+          "float",
+          15.0,
+          0.333
+        ],
+        "options": [
+          "enum-int32",
+          "(fact-options wrap-phase)"
+        ],
+        "path-actor": "pdsarena-pds-plat-circle-05",
+        "prev-actor": "pdsarena-pds-plat-circle-05",
+        "next-actor": "pdsarena-pds-plat-circle-07"
+      }
+    },
+    {
+      "trans": [
+        -175.81,
+        26.35,
+        975.029
+      ],
+      "etype": "pds-plat-circle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -175.81,
+        26.35,
+        975.029,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-circle-07",
+        "sync": [
+          "float",
+          15.0,
+          0.666
+        ],
+        "options": [
+          "enum-int32",
+          "(fact-options wrap-phase)"
+        ],
+        "path-actor": "pdsarena-pds-plat-circle-05",
+        "prev-actor": "pdsarena-pds-plat-circle-06",
+        "next-actor": "pdsarena-pds-plat-square-04"
+      }
+    },
+    {
+      "trans": [
+        -182.833,
+        26.35,
+        969.301
+      ],
+      "etype": "pds-plat-square",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.6563,
+        0.0,
+        0.7547
+      ],
+      "bsphere": [
+        -182.833,
+        26.35,
+        969.301,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-square-04",
+        "sync": [
+          "float",
+          5.0,
+          0.35
+        ],
+        "path": [
+          "vector3m",
+          [
+            -182.833,
+            41.12,
+            969.301
+          ],
+          [
+            -184.124,
+            54.42,
+            978.571
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-circle-07",
+        "next-actor": "pdsarena-pds-plat-square-05"
+      }
+    },
+    {
+      "trans": [
+        -214.041,
+        26.35,
+        965.261
+      ],
+      "etype": "pds-plat-square",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.7547,
+        0.0,
+        0.6563
+      ],
+      "bsphere": [
+        -214.041,
+        26.35,
+        965.261,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-square-05",
+        "sync": [
+          "float",
+          5.0,
+          0.35
+        ],
+        "path": [
+          "vector3m",
+          [
+            -214.041,
+            41.12,
+            965.261
+          ],
+          [
+            -215.07,
+            54.42,
+            974.05
+          ]
+        ],
+        "next-actor": "pdsarena-pds-plat-rectangle-05"
+      }
+    },
+    {
+      "trans": [
+        -185.445,
+        26.35,
+        987.767
+      ],
+      "etype": "pds-plat-rectangle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.6563,
+        0.0,
+        0.7547
+      ],
+      "bsphere": [
+        -185.445,
+        26.35,
+        987.767,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-rectangle-05",
+        "sync": [
+          "float",
+          1.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -185.445,
+            54.52,
+            987.767
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-square-05",
+        "next-actor": "pdsarena-pds-plat-rectangle-06"
+      }
+    },
+    {
+      "trans": [
+        -216.132,
+        26.35,
+        983.449
+      ],
+      "etype": "pds-plat-rectangle",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.6563,
+        0.0,
+        0.7547
+      ],
+      "bsphere": [
+        -216.132,
+        26.35,
+        983.449,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-plat-rectangle-06",
+        "sync": [
+          "float",
+          1.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -216.056,
+            54.52,
+            982.15
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-rectangle-05",
+        "next-actor": "pdsarena-pds-swingpole-04"
+      }
+    },
+    {
+      "trans": [
+        -201.869,
+        26.35,
+        993.374
+      ],
+      "etype": "pds-swingpole",
+      "game_task": 0,
+      "quat": [
+        0.4639,
+        -0.5337,
+        0.5337,
+        0.4639
+      ],
+      "bsphere": [
+        -201.869,
+        26.35,
+        993.374,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-swingpole-04",
+        "sync": [
+          "float",
+          8.0,
+          0.0
+        ],
+        "path": [
+          "vector3m",
+          [
+            -217.129,
+            61.57,
+            991.173
+          ],
+          [
+            -201.869,
+            61.57,
+            993.374
+          ],
+          [
+            -186.616,
+            61.57,
+            995.584
+          ]
+        ],
+        "prev-actor": "pdsarena-pds-plat-rectangle-06"
+      }
+    },
+    {
+      "trans": [
+        -197.274,
+        28.0,
+        958.272
+      ],
+      "etype": "pds-trap-central",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -197.274,
+        28.0,
+        958.272,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-central-01",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -207.762,
+        28.0,
+        950.078
+      ],
+      "etype": "pds-trap-inner",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -207.762,
+        28.0,
+        950.078,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-inner-01",
+        "next-actor": "pdsarena-pds-trap-inner-02",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -221.138,
+        28.0,
+        948.6
+      ],
+      "etype": "pds-trap-mid-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -221.138,
+        28.0,
+        948.6,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-left-01",
+        "next-actor": "pdsarena-pds-trap-mid-left-02",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -212.426,
+        28.0,
+        937.449
+      ],
+      "etype": "pds-trap-mid-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -212.426,
+        28.0,
+        937.449,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-right-01",
+        "next-actor": "pdsarena-pds-trap-mid-right-02",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -233.967,
+        28.0,
+        943.45
+      ],
+      "etype": "pds-trap-out-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -233.967,
+        28.0,
+        943.45,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-left-01",
+        "next-actor": "pdsarena-pds-trap-out-left-02",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -220.533,
+        28.0,
+        926.255
+      ],
+      "etype": "pds-trap-out-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        0.4384,
+        0.0,
+        0.8988
+      ],
+      "bsphere": [
+        -220.533,
+        28.0,
+        926.255,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-right-01",
+        "next-actor": "pdsarena-pds-trap-out-right-02",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -195.416,
+        28.0,
+        945.092
+      ],
+      "etype": "pds-trap-inner",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.0698,
+        0.0,
+        0.9975
+      ],
+      "bsphere": [
+        -195.416,
+        28.0,
+        945.092,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-inner-02",
+        "prev-actor": "pdsarena-pds-trap-inner-01",
+        "next-actor": "pdsarena-pds-trap-inner-03",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -200.833,
+        28.0,
+        932.763
+      ],
+      "etype": "pds-trap-mid-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.0698,
+        0.0,
+        0.9975
+      ],
+      "bsphere": [
+        -200.833,
+        28.0,
+        932.763,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-left-02",
+        "prev-actor": "pdsarena-pds-trap-mid-left-01",
+        "next-actor": "pdsarena-pds-trap-mid-left-03",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -186.814,
+        28.0,
+        934.732
+      ],
+      "etype": "pds-trap-mid-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.0698,
+        0.0,
+        0.9975
+      ],
+      "bsphere": [
+        -186.814,
+        28.0,
+        934.732,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-right-02",
+        "prev-actor": "pdsarena-pds-trap-mid-right-01",
+        "next-actor": "pdsarena-pds-trap-mid-right-03",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -202.784,
+        28.0,
+        919.082
+      ],
+      "etype": "pds-trap-out-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.0698,
+        0.0,
+        0.9975
+      ],
+      "bsphere": [
+        -202.784,
+        28.0,
+        919.082,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-left-02",
+        "prev-actor": "pdsarena-pds-trap-out-left-01",
+        "next-actor": "pdsarena-pds-trap-out-left-03",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -181.174,
+        28.0,
+        922.121
+      ],
+      "etype": "pds-trap-out-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.0698,
+        0.0,
+        0.9975
+      ],
+      "bsphere": [
+        -181.174,
+        28.0,
+        922.121,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-right-02",
+        "prev-actor": "pdsarena-pds-trap-out-right-01",
+        "next-actor": "pdsarena-pds-trap-out-right-03",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -184.927,
+        28.0,
+        953.287
+      ],
+      "etype": "pds-trap-inner",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.5592,
+        0.0,
+        0.829
+      ],
+      "bsphere": [
+        -184.927,
+        28.0,
+        953.287,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-inner-03",
+        "prev-actor": "pdsarena-pds-trap-inner-02",
+        "next-actor": "pdsarena-pds-trap-inner-04",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -176.956,
+        28.0,
+        942.434
+      ],
+      "etype": "pds-trap-mid-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.5592,
+        0.0,
+        0.829
+      ],
+      "bsphere": [
+        -176.956,
+        28.0,
+        942.434,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-left-03",
+        "prev-actor": "pdsarena-pds-trap-mid-left-02",
+        "next-actor": "pdsarena-pds-trap-mid-left-04",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -171.661,
+        28.0,
+        955.555
+      ],
+      "etype": "pds-trap-mid-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.5592,
+        0.0,
+        0.829
+      ],
+      "bsphere": [
+        -171.661,
+        28.0,
+        955.555,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-right-03",
+        "prev-actor": "pdsarena-pds-trap-mid-right-02",
+        "next-actor": "pdsarena-pds-trap-mid-right-04",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -166.083,
+        28.0,
+        933.911
+      ],
+      "etype": "pds-trap-out-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.5592,
+        0.0,
+        0.829
+      ],
+      "bsphere": [
+        -166.083,
+        28.0,
+        933.911,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-left-03",
+        "prev-actor": "pdsarena-pds-trap-out-left-02",
+        "next-actor": "pdsarena-pds-trap-out-left-04",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -157.915,
+        28.0,
+        954.138
+      ],
+      "etype": "pds-trap-out-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.5592,
+        0.0,
+        0.829
+      ],
+      "bsphere": [
+        -157.915,
+        28.0,
+        954.138,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-right-03",
+        "prev-actor": "pdsarena-pds-trap-out-right-02",
+        "next-actor": "pdsarena-pds-trap-out-right-04",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -186.785,
+        28.0,
+        966.467
+      ],
+      "etype": "pds-trap-inner",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.8988,
+        0.0,
+        0.4384
+      ],
+      "bsphere": [
+        -186.785,
+        28.0,
+        966.467,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-inner-04",
+        "prev-actor": "pdsarena-pds-trap-inner-03",
+        "next-actor": "pdsarena-pds-trap-inner-05",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -173.396,
+        28.0,
+        967.943
+      ],
+      "etype": "pds-trap-mid-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.8988,
+        0.0,
+        0.4384
+      ],
+      "bsphere": [
+        -173.396,
+        28.0,
+        967.943,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-left-04",
+        "prev-actor": "pdsarena-pds-trap-mid-left-03",
+        "next-actor": "pdsarena-pds-trap-mid-left-05",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -182.108,
+        28.0,
+        979.093
+      ],
+      "etype": "pds-trap-mid-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.8988,
+        0.0,
+        0.4384
+      ],
+      "bsphere": [
+        -182.108,
+        28.0,
+        979.093,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-right-04",
+        "prev-actor": "pdsarena-pds-trap-mid-right-03",
+        "next-actor": "pdsarena-pds-trap-mid-right-05",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -160.573,
+        28.0,
+        973.101
+      ],
+      "etype": "pds-trap-out-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.8988,
+        0.0,
+        0.4384
+      ],
+      "bsphere": [
+        -160.573,
+        28.0,
+        973.101,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-left-04",
+        "prev-actor": "pdsarena-pds-trap-out-left-03",
+        "next-actor": "pdsarena-pds-trap-out-left-05",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -174.007,
+        28.0,
+        990.295
+      ],
+      "etype": "pds-trap-out-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.8988,
+        0.0,
+        0.4384
+      ],
+      "bsphere": [
+        -174.007,
+        28.0,
+        990.295,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-right-04",
+        "prev-actor": "pdsarena-pds-trap-out-right-03",
+        "next-actor": "pdsarena-pds-trap-out-right-04",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -199.124,
+        28.0,
+        971.458
+      ],
+      "etype": "pds-trap-inner",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.9975,
+        0.0,
+        -0.0698
+      ],
+      "bsphere": [
+        -199.124,
+        28.0,
+        971.458,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-inner-05",
+        "prev-actor": "pdsarena-pds-trap-inner-04",
+        "next-actor": "pdsarena-pds-trap-inner-06",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -193.714,
+        28.0,
+        983.781
+      ],
+      "etype": "pds-trap-mid-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.9975,
+        0.0,
+        -0.0698
+      ],
+      "bsphere": [
+        -193.714,
+        28.0,
+        983.781,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-left-05",
+        "prev-actor": "pdsarena-pds-trap-mid-left-04",
+        "next-actor": "pdsarena-pds-trap-mid-left-06",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -207.72,
+        28.0,
+        981.811
+      ],
+      "etype": "pds-trap-mid-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.9975,
+        0.0,
+        -0.0698
+      ],
+      "bsphere": [
+        -207.72,
+        28.0,
+        981.811,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-right-05",
+        "prev-actor": "pdsarena-pds-trap-mid-right-04",
+        "next-actor": "pdsarena-pds-trap-mid-right-06",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -191.764,
+        28.0,
+        997.462
+      ],
+      "etype": "pds-trap-out-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.9975,
+        0.0,
+        -0.0698
+      ],
+      "bsphere": [
+        -191.764,
+        28.0,
+        997.462,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-left-05",
+        "prev-actor": "pdsarena-pds-trap-out-left-04",
+        "next-actor": "pdsarena-pds-trap-out-left-06",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -213.366,
+        28.0,
+        994.43
+      ],
+      "etype": "pds-trap-out-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.9975,
+        0.0,
+        -0.0698
+      ],
+      "bsphere": [
+        -213.366,
+        28.0,
+        994.43,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-right-05",
+        "prev-actor": "pdsarena-pds-trap-out-right-04",
+        "next-actor": "pdsarena-pds-trap-out-right-06",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -209.613,
+        28.0,
+        963.264
+      ],
+      "etype": "pds-trap-inner",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.829,
+        0.0,
+        -0.5592
+      ],
+      "bsphere": [
+        -209.613,
+        28.0,
+        963.264,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-inner-06",
+        "prev-actor": "pdsarena-pds-trap-inner-05",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -217.584,
+        28.0,
+        974.117
+      ],
+      "etype": "pds-trap-mid-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.829,
+        0.0,
+        -0.5592
+      ],
+      "bsphere": [
+        -217.584,
+        28.0,
+        974.117,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-left-06",
+        "prev-actor": "pdsarena-pds-trap-mid-left-05",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -222.886,
+        28.0,
+        960.989
+      ],
+      "etype": "pds-trap-mid-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.829,
+        0.0,
+        -0.5592
+      ],
+      "bsphere": [
+        -222.886,
+        28.0,
+        960.989,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-mid-right-06",
+        "prev-actor": "pdsarena-pds-trap-mid-right-05",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -228.457,
+        28.0,
+        982.64
+      ],
+      "etype": "pds-trap-out-left",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.829,
+        0.0,
+        -0.5592
+      ],
+      "bsphere": [
+        -228.457,
+        28.0,
+        982.64,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-left-06",
+        "prev-actor": "pdsarena-pds-trap-out-left-05",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    },
+    {
+      "trans": [
+        -236.633,
+        28.0,
+        962.407
+      ],
+      "etype": "pds-trap-out-right",
+      "game_task": 0,
+      "quat": [
+        0.0,
+        -0.829,
+        0.0,
+        -0.5592
+      ],
+      "bsphere": [
+        -236.633,
+        28.0,
+        962.407,
+        10
+      ],
+      "lump": {
+        "name": "pdsarena-pds-trap-out-right-06",
+        "prev-actor": "pdsarena-pds-trap-out-right-05",
+        "vis-dist-hack": [
+          "meters",
+          800.0
+        ]
+      }
+    }
+  ]
+}

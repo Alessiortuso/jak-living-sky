@@ -2749,12 +2749,17 @@
 (define-extern arena-gate-update (function int none))
 
 
+;; Jak Living Sky: the sentinel's fight (the level pdsarena) loaded beside Misty: the arena's merchant away meanwhile
+(defun pds-fight-loaded? ()
+  (let ((lev (level-get *level* 'pdsarena)))
+    (and lev (!= (-> lev status) 'inactive))))
+
 (defun merchant-update ()
   (let* ((proc (handle->process (-> *merchant-handle* 0)))
          (lev (the-as level (and *target* (level-get-target-inside *level*))))
          (i (if lev (merchant-index (-> lev name)) -1)))
     (cond
-      ((and (>= i 0) (< 0.5 (-> *merchant-spots* i w)) (soul-in-play?) (or (!= i 5) (and (arena-open?) (>= *arena-offered* 1.0))))
+      ((and (>= i 0) (< 0.5 (-> *merchant-spots* i w)) (soul-in-play?) (or (!= i 5) (and (arena-open?) (>= *arena-offered* 1.0) (not (pds-fight-loaded?)))))
        (when (and proc (!= i *merchant-at*))
          (deactivate proc)
          (set! proc #f))
@@ -3106,8 +3111,14 @@
     (set! *arena-cursor* (if (< *arena-cursor* (+ (arena-fights) -1)) (+ *arena-cursor* 1) 0)))
   (when (cpad-pressed? 0 circle)
     (cpad-clear! 0 circle)
-    ;; (the fights: not yet)
-    (pc-enhanced-denied))
+    (cond
+      ;; the third: the PDS sentinel (The Forgotten Lands, by Kuitar5): Misty again, its fight's level beside it
+      ((= *arena-cursor* 2)
+       (sound-play "cursor-options")
+       (set! *soul-shop-open* #f)
+       (start 'play (get-continue-by-name *game-info* "misty-pds")))
+      ;; (the others: not yet)
+      (else (pc-enhanced-denied))))
   (when (cpad-pressed? 0 triangle)
     (cpad-clear! 0 triangle)
     (sound-play "cursor-options")

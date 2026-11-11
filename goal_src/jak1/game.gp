@@ -1690,6 +1690,25 @@
 (build-actor "ambushdoor" :gen-mesh #t)
 (build-actor "test-actor2" :gen-mesh #t)
 (build-actor "brumesteamcap" :gen-mesh #t)
+;; Jak Living Sky: the merchant's third arena fight, the PDS sentinel of The Forgotten Lands (by Kuitar5,
+;; github.com/Kuitar5/the-forgotten-lands, used with permission), on Misty's arena
+(build-custom-level "pdsarena")
+(custom-level-cgo "PDSARENA.DGO" "pdsarena/pdsarena.gd")
+(build-actor "pds-sentinel")
+(build-actor "pds-gem-green")
+(build-actor "pds-gem-yellow")
+(build-actor "pds-gem-blue")
+(build-actor "pds-trap-central" :gen-mesh #t)
+(build-actor "pds-trap-inner" :gen-mesh #t)
+(build-actor "pds-trap-mid-left" :gen-mesh #t)
+(build-actor "pds-trap-mid-right" :gen-mesh #t)
+(build-actor "pds-trap-out-left" :gen-mesh #t)
+(build-actor "pds-trap-out-right" :gen-mesh #t)
+(build-actor "pds-plat-circle" :gen-mesh #t)
+(build-actor "pds-plat-square" :gen-mesh #t)
+(build-actor "pds-plat-rectangle" :gen-mesh #t)
+(build-actor "pds-swingpole" :gen-mesh #t)
+(build-actor "pds-cam")
 
 ;; generate the art group for a custom actor.
 ;; requires a .glb model file in custom_assets/jak1/models/custom_levels
@@ -2342,6 +2361,16 @@
 (goal-src "levels/test-zone/test-zone-obs.gc" "process-drawable")
 (goal-src "engine/common-obs/linear-plat.gc" "process-drawable")
 (goal-src "levels/brume/brume-obs.gc" "process-drawable" "linear-plat")
+(goal-src-sequence
+ "levels/pdsarena/"
+ :deps ("$OUT/obj/bonelurker.o" "$OUT/obj/babak.o" "$OUT/obj/robotboss-weapon.o")
+ "pdsarena-obs.gc"
+ "pds-nav.gc"
+ "pds-boss-part.gc"
+ "pds-boss-setup.gc"
+ "pds-boss-extras.gc"
+ "pds-boss-states.gc"
+ )
 (goal-src "levels/abandoned/abandoned-obs.gc" "process-drawable")
 (goal-src "levels/abandoned/pathing-minecart.gc" "process-drawable")
 (goal-src "levels/mount/mount-obs.gc" "process-drawable")
