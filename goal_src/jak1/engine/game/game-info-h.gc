@@ -250,6 +250,11 @@
 (define *daxter-white-seen* 0.0)
 ;; Jak Living Sky: the merchant has offered his arena's fights (0 not yet, 1 yes: his gates on, him in the arena)
 (define *arena-offered* 0.0)
+;; Jak Living Sky: the arena's fights won, one bit each (0 Fuoco incrociato, 1 Ossobello, 2 Assalto dal cielo:
+;; the JET-Board on sale), kept as a float as the rest
+(define *arena-won* 0.0)
+(defun arena-won? ((k int))
+  (logtest? (the int *arena-won*) (ash 1 k)))
 (defun dark-jak-duration ()
   (the-as time-frame (the int (* (+ 10.0 (* 5.0 *soul-dark-time*)) (the float (seconds 1))))))
 ;; Jak Living Sky: Jak turned into Dark Jak (and since when)

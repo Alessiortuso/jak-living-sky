@@ -1625,8 +1625,10 @@
 
 ;; the JET-Board (the last item) is on sale once the warrior has put back Rock Village's pontoons (paid: his
 ;; task, which brings them up)
+;; (now the merchant's own prize: the arena's third fight won, Assalto dal cielo; that fight on offer once the
+;; warrior has put back Rock Village's pontoons)
 (defun soul-board-on-sale? ()
-  (task-closed? (game-task village2-warrior-money) (task-status need-resolution)))
+  (arena-won? 2))
 
 ;; the items on sale now
 (defun soul-shop-items ()
@@ -2907,12 +2909,16 @@
 (defun arena-fight-name ((k int))
   (case k
     ((0) "FUOCO INCROCIATO")
-    (else "CAMPIONE: OSSOBELLO")))
+    ((1) "CAMPIONE: OSSOBELLO")
+    (else "ASSALTO DAL CIELO")))
 (defun arena-fight-reward ((k int))
   (case k
     ((0) "RECUPERO VITA LENTO")
-    (else "ECO BIANCO X3 DAI NEMICI")))
-(defconstant ARENA-FIGHTS 2)
+    ((1) "ECO BIANCO X3 DAI NEMICI")
+    (else "IL JET-BOARD IN VENDITA")))
+;; the fights on offer now: the third once the warrior has put back Rock Village's pontoons
+(defun arena-fights ()
+  (if (task-closed? (game-task village2-warrior-money) (task-status need-resolution)) 3 2))
 
 ;; his offer of the fights, a page before his shop (once: then saved)
 (defun arena-offer-screen ()
@@ -2951,11 +2957,11 @@
   (when (cpad-pressed? 0 up)
     (cpad-clear! 0 up)
     (sound-play "cursor-up-down")
-    (set! *arena-cursor* (if (> *arena-cursor* 0) (+ *arena-cursor* -1) (+ ARENA-FIGHTS -1))))
+    (set! *arena-cursor* (if (> *arena-cursor* 0) (+ *arena-cursor* -1) (+ (arena-fights) -1))))
   (when (cpad-pressed? 0 down)
     (cpad-clear! 0 down)
     (sound-play "cursor-up-down")
-    (set! *arena-cursor* (if (< *arena-cursor* (+ ARENA-FIGHTS -1)) (+ *arena-cursor* 1) 0)))
+    (set! *arena-cursor* (if (< *arena-cursor* (+ (arena-fights) -1)) (+ *arena-cursor* 1) 0)))
   (when (cpad-pressed? 0 circle)
     (cpad-clear! 0 circle)
     ;; (the fights: not yet)
@@ -2973,9 +2979,12 @@
     (print-game-text "LOTTE NELL'ARENA" font #f 128 22)
     (+! (-> font origin y) 34.0)
     (set-scale! font 0.7)
-    (dotimes (k ARENA-FIGHTS)
+    (dotimes (k (arena-fights))
       (set! (-> font color) (if (= k *arena-cursor*) (font-color progress-yellow) (font-color default)))
-      (print-game-text (arena-fight-name k) font #f 128 22)
+      (if (arena-won? k)
+        (format (clear *temp-string*) "~S   VINTA" (arena-fight-name k))
+        (format (clear *temp-string*) "~S" (arena-fight-name k)))
+      (print-game-text *temp-string* font #f 128 22)
       (+! (-> font origin y) 16.0)
       (set-scale! font 0.55)
       (format (clear *temp-string*) "PREMIO: ~S" (arena-fight-reward k))
