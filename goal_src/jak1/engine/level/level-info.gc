@@ -212,13 +212,13 @@
              :level 'village1
              :flags (continue-flags warp)
              :trans
-             (new 'static 'vector :x -122053.9 :y 6408.4 :z -214406.9 :w 1.0)
+             (new 'static 'vector :x -128639.5 :y 8866.0 :z -222776.1 :w 1.0)
              :quat
-             (new 'static 'quaternion :y 0.9450 :w -0.3272)
+             (new 'static 'quaternion :y 0.3272 :w 0.9450)
              :camera-trans
-             (new 'static 'vector :x -104323.3 :y 18696.4 :z -191874.4 :w 1.0)
+             (new 'static 'vector :x -146370.0 :y 21154.0 :z -245308.5 :w 1.0)
              :camera-rot
-             (new 'static 'array float 9 -0.7859 0.0000 0.6184 -0.1699 0.9615 -0.2159 -0.5946 -0.2747 -0.7556)
+             (new 'static 'array float 9 0.7859 0.0000 -0.6184 0.1699 0.9615 0.2159 0.5946 -0.2747 0.7556)
              :load-commands
              '()
              :vis-nick 'vi1
@@ -535,13 +535,12 @@
              :level 'misty
              :flags (continue-flags warp)
              :trans
-             ;; (on the ground 2.6 m from the merchant's gate there, toward the arena's door: the gate's made only once
-             ;; the level's going, on it he'd fall into it; facing the door, up the steps)
-             (new 'static 'vector :x -633561.8 :y 82343.8 :z 3693073.9 :w 1.0)
+             ;; (on the merchant's gate there, made before he warps in: target-death.gc; facing the arena's door)
+             (new 'static 'vector :x -624083.5 :y 84801.6 :z 3688228.5 :w 1.0)
              :quat
              (new 'static 'quaternion :y -0.5218 :w 0.8531)
              :camera-trans
-             (new 'static 'vector :x -608043.7 :y 94631.8 :z 3680028.1 :w 1.0)
+             (new 'static 'vector :x -598565.5 :y 97089.6 :z 3675182.5 :w 1.0)
              :camera-rot
              (new 'static 'array float 9 0.4552 0.0 0.8904 -0.2446 0.9612 0.125 -0.8558 -0.2747 0.4375)
              :load-commands
@@ -802,13 +801,13 @@
              :level 'village2
              :flags (continue-flags warp)
              :trans
-             (new 'static 'vector :x 1186462.6 :y 39331.2 :z -6731180.2 :w 1.0)
+             (new 'static 'vector :x 1185520.4 :y 41788.8 :z -6741788.0 :w 1.0)
              :quat
-             (new 'static 'quaternion :y 0.9990 :w -0.0443)
+             (new 'static 'quaternion :y 0.0443 :w 0.9990)
              :camera-trans
-             (new 'static 'vector :x 1188999.2 :y 51619.2 :z -6702620.6 :w 1.0)
+             (new 'static 'vector :x 1182983.7 :y 54076.8 :z -6770347.6 :w 1.0)
              :camera-rot
-             (new 'static 'array float 9 -0.9961 0.0000 0.0885 -0.0243 0.9615 -0.2736 -0.0851 -0.2747 -0.9578)
+             (new 'static 'array float 9 0.9961 0.0000 -0.0885 0.0243 0.9615 0.2736 0.0851 -0.2747 0.9578)
              :load-commands
              '()
              :vis-nick 'vi2
@@ -1438,13 +1437,13 @@
              :level 'village3
              :flags (continue-flags warp)
              :trans
-             (new 'static 'vector :x 4628110.1 :y 188051.2 :z -14605536.2 :w 1.0)
+             (new 'static 'vector :x 4630623.6 :y 190508.8 :z -14615884.9 :w 1.0)
              :quat
-             (new 'static 'quaternion :y -0.9929 :w -0.1189)
+             (new 'static 'quaternion :y 0.1189 :w -0.9929)
              :camera-trans
-             (new 'static 'vector :x 4621343.0 :y 200339.2 :z -14577674.2 :w 1.0)
+             (new 'static 'vector :x 4637390.7 :y 202796.8 :z -14643746.9 :w 1.0)
              :camera-rot
-             (new 'static 'array float 9 -0.9717 0.0000 -0.2360 0.0648 0.9615 -0.2670 0.2269 -0.2747 -0.9344)
+             (new 'static 'array float 9 0.9717 0.0000 0.2360 -0.0648 0.9615 0.2670 -0.2269 -0.2747 0.9344)
              :load-commands
              '()
              :vis-nick 'vi3
@@ -2096,13 +2095,13 @@
              :level 'citadel
              :flags (continue-flags warp)
              :trans
-             (new 'static 'vector :x 11507459.8 :y -161605.7 :z -18312274.3 :w 1.0)
+             (new 'static 'vector :x 11515714.0 :y -159148.1 :z -18319003.5 :w 1.0)
              :quat
-             (new 'static 'quaternion :y -0.9033 :w -0.4290)
+             (new 'static 'quaternion :y 0.4290 :w -0.9033)
              :camera-trans
-             (new 'static 'vector :x 11485237.0 :y -149317.7 :z -18294157.2 :w 1.0)
+             (new 'static 'vector :x 11537936.8 :y -146860.1 :z -18337120.7 :w 1.0)
              :camera-rot
-             (new 'static 'array float 9 -0.6319 0.0000 -0.7751 0.2129 0.9615 -0.1736 0.7452 -0.2747 -0.6076)
+             (new 'static 'array float 9 0.6319 0.0000 0.7751 -0.2129 0.9615 0.1736 -0.7452 -0.2747 0.6076)
              :load-commands
              '()
              :vis-nick 'cit
@@ -2651,13 +2650,13 @@
              :level 'brume
              :flags (continue-flags warp)
              :trans
-             (new 'static 'vector :x -7128667.6 :y 821652.8 :z 1268183.6 :w 1.0)
+             (new 'static 'vector :x -7128533.0 :y 824110.4 :z 1257534.9 :w 1.0)
              :quat
-             (new 'static 'quaternion :y 1.0000 :w 0.0063)
+             (new 'static 'quaternion :y -0.0063 :w 1.0000)
              :camera-trans
-             (new 'static 'vector :x -7129030.2 :y 833940.8 :z 1296853.4 :w 1.0)
+             (new 'static 'vector :x -7128170.5 :y 836398.4 :z 1228865.2 :w 1.0)
              :camera-rot
-             (new 'static 'array float 9 -0.9999 0.0000 -0.0126 0.0035 0.9615 -0.2747 0.0122 -0.2747 -0.9614)
+             (new 'static 'array float 9 0.9999 0.0000 0.0126 -0.0035 0.9615 0.2747 -0.0122 -0.2747 0.9614)
              :load-commands '()
 
                                               :lev0 'brume
