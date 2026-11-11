@@ -128,7 +128,9 @@ OUT.mkdir(parents=True, exist_ok=True)
     '// Made by scripts/enhanced/build_pdsarena.py from the mod\'s valley.jsonc: edit there.\n' +
     json.dumps(level, indent=2), encoding='utf-8')
 
-gd = ['"pdsarena-obs.o"', '"pds-nav.o"', '"pds-boss-part.o"', '"pds-boss-setup.o"', '"pds-boss-extras.o"',
+# villagep-obs: target-warp-in is there (as in each village's DGO), and this level takes the village's place beside
+# Misty: without it Jak's warp-in state is left pointing into the unloaded village
+gd = ['"villagep-obs.o"', '"pdsarena-obs.o"', '"pds-nav.o"', '"pds-boss-part.o"', '"pds-boss-setup.o"', '"pds-boss-extras.o"',
       '"pds-boss-states.o"', '"eichar-pole+0-ag.go"', '"redring-ag.go"'] + ['"%s-ag.go"' % m for m in MODEL_NAMES]
 (OUT / 'pdsarena.gd').write_text(
     ';; Jak Living Sky: the PDS sentinel fight\'s level (build_pdsarena.py)\n'
