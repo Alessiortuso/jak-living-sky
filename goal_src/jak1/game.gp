@@ -1719,6 +1719,8 @@
 (build-actor "darkpump")
 ;; Jak Living Sky: the white eco merchant and his stall (scripts/enhanced/merchant_import.py)
 (build-actor "merchant")
+;; Jak Living Sky: him alone on his stool, the arena's middle (scripts/enhanced/merchant_import.py)
+(build-actor "merchantsolo")
 ;; Jak Living Sky: the merchant's arena gate (scripts/enhanced/prop_import.py)
 (build-actor "arenagate")
 ;; Jak Living Sky: Dark Jak's transformation, an animation of Jak's (scripts/enhanced/darkjak_anim.py)

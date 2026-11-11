@@ -862,6 +862,7 @@
   (place-merchant #x2009)
   (warp-to-citadel #x200a)
   (warp-to-village3 #x200b)
+  (move-gate #x200c)
   (save-and-load-game #x3000)
   ;; GAME-TEXT-ID ENUM ENDS
 

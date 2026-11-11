@@ -86,6 +86,9 @@ for g, f, i, it, en in LINES:
     groups.setdefault(g, []).append(f)
 out.append(';; a group\'s lines said ("first": all, in order; the others: one at random)')
 out.append('(defun merchant-group-say ((group symbol))')
+out.append('  ;; (in the arena, his shop\'s lines not: only the arena\'s, and his answer when struck)')
+arena_groups = ' '.join(g for g in groups if g.startswith('arena')) + ' hit'
+out.append("  (when (or (!= *merchant-at* 5) (member group '(%s)))" % arena_groups)
 out.append('  (case group')
 for g, fs in groups.items():
     def say(f):
@@ -101,7 +104,7 @@ for g, fs in groups.items():
         for k, f in enumerate(fs):
             out.append('       ((%d) %s)' % (k, say(f)) if k < len(fs) - 1 else '       (else %s))' % say(f))
         out.append('     )')
-out.append('    )')
+out.append('    ))')
 out.append('  (none))')
 out.append(END)
 block = '\n'.join(out)

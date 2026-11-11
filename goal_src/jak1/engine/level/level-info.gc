@@ -512,6 +512,7 @@
              'continue-point
              :name "misty-arena"
              :level 'misty
+             :flags (continue-flags warp)
              :trans
              (new 'static 'vector :x -680264.0 :y 122880.0 :z 3707085.0 :w 1.0)
              :quat

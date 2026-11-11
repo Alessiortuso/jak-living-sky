@@ -2355,6 +2355,7 @@
 ;; to be seen, on his tall stool, his little legs swinging, his stall beside him, in each village (made with Higgsfield:
 ;; scripts/enhanced/merchant_import.py). Up to him and Circle: the shop
 (def-actor merchant :bounds (-2.8 2.6 -0.6 6.6))
+(def-actor merchantsolo :bounds (0 2.0 0 2.6))
 ;; (his fights' menu at the arena: below)
 (define-extern arena-menu-screen (function none))
 ;; (the arena gate by his stall: near it, Circle is the gate's, not his shop's)
@@ -2385,6 +2386,8 @@
 (define *merchant-at* -1) ;; (the village he's spawned for)
 ;; moved about by the pad (the mod options' "move the merchant"), Jak held still meanwhile
 (define *merchant-moving* #f)
+;; (moving his gate instead of him)
+(define *move-gate* #f)
 (define *merchant-grabbed* #f)
 
 (deftype merchant (process-drawable)
@@ -2405,11 +2408,13 @@
        (let ((v (vector-! (new 'stack-no-clear 'vector) (-> *target* control trans) (-> this root trans)))
              (q (quaternion-conjugate! (new 'stack-no-clear 'quaternion) (-> this root quat))))
          (vector-orient-by-quat! v v q)
+         (if (= *merchant-at* 5)
+           (< (vector-length v) (meters 4.5))
          (and (< (meters -10.3) (-> v x))
               (< (-> v x) (meters 4.2))
               (< (meters -5.1) (-> v z))
               (< (-> v z) (meters 5.0))
-              (< (fabs (-> v y)) (meters 4))))))
+              (< (fabs (-> v y)) (meters 4)))))))
 
 ;; his voice (custom_assets/jak1/audio/voice/merchant-*.mp3): each line's subtitle and length (ticks, 300 a second),
 ;; made once (quest-line would make them anew every time)
@@ -2456,6 +2461,8 @@
 (define *mline-offer* (new 'static 'boxed-array :type int32 #x4678 3910))
 ;; a group's lines said ("first": all, in order; the others: one at random)
 (defun merchant-group-say ((group symbol))
+  ;; (in the arena, his shop's lines not: only the arena's, and his answer when struck)
+  (when (or (!= *merchant-at* 5) (member group '( hit)))
   (case group
     (('first)
      (merchant-say "voice/merchant-first-1.mp3" *mline-first-1*)
@@ -2512,7 +2519,7 @@
      (case (rand-vu-int-count 1)
        (else (merchant-say "voice/merchant-offer.mp3" *mline-offer*)))
      )
-    )
+    ))
   (none))
 ;; ==end merchant lines==
 
@@ -2693,6 +2700,7 @@
       (set-vector! (-> group local-sphere) (meters -3.3) (meters 1.8) (meters -0.8) (meters 5.5))
       (set-root-prim! cs group)
       (dotimes (k 6)
+        (when (or (!= i 5) (>= k 4))
         (let ((s (new 'process 'collide-shape-prim-sphere cs (the-as uint 0))))
           (set! (-> s prim-core collide-as) (collide-kind ground-object))
           (set! (-> s collide-with) (collide-kind target))
@@ -2703,7 +2711,7 @@
             ((0 1 2 3) (set-vector! (-> s local-sphere) (meters (+ -2.4 (* -1.5 (the float k)))) (meters 1.1) (meters -1.25) (meters 1.4)))
             ((4) (set-vector! (-> s local-sphere) 0.0 (meters 2.7) 0.0 (meters 1.15)))
             (else (set-vector! (-> s local-sphere) 0.0 (meters 0.8) 0.0 (meters 0.8))))
-          (append-prim group s)))
+          (append-prim group s))))
       ;; and one his body that Jak's blows reach (as an enemy's: 'attack), him not hurt by it
       (let ((s (new 'process 'collide-shape-prim-sphere cs (the-as uint 0))))
         (set! (-> s prim-core collide-as) (collide-kind enemy))
@@ -2719,7 +2727,8 @@
   (set! (-> self root trans w) 1.0)
   (quaternion-axis-angle! (-> self root quat) 0.0 1.0 0.0 (-> *merchant-yaw* i))
   (vector-identity! (-> self root scale))
-  (initialize-skeleton self *merchant-sg* '())
+  ;; (alone on his stool in the arena)
+  (initialize-skeleton self (if (= i 5) *merchantsolo-sg* *merchant-sg*) '())
   (transform-post)
   (go merchant-idle)
   (none))
@@ -2811,10 +2820,20 @@
   ((root collide-shape :override)
    (back symbol))
   (:states
-    arena-gate-idle))
+    arena-gate-idle
+    arena-gate-use))
 
 ;; the village Jak came from (its warp gate's continue), for the way back
 (define *arena-from* "village2-warp")
+;; where each gate stands, once moved with the mod options (w 1; the log's "[gate]" lines), and which way it faces
+(define *gate-spots* (new 'static 'inline-array vector 6
+                          (new 'static 'vector)
+                          (new 'static 'vector)
+                          (new 'static 'vector)
+                          (new 'static 'vector)
+                          (new 'static 'vector)
+                          (new 'static 'vector)))
+(define *gate-yaw* (new 'static 'array float 6 0.0 0.0 0.0 0.0 0.0 0.0))
 (define *arena-gate-at* -1)
 
 (defun arena-from-name ((i int))
@@ -2848,19 +2867,47 @@
                                ((-> self back) "PREMI ~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H PER TORNARE AL VILLAGGIO")
                                (else "PREMI ~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H PER L'ARENA"))
                              font #f 128 22))
-          (when (and (>= *arena-offered* 1.0) (cpad-pressed? 0 circle))
+          (when (and (>= *arena-offered* 1.0) (cpad-pressed? 0 circle) (process-grab? *target*))
             (cpad-clear! 0 circle)
-            (sound-play "start-options")
             (if (not (-> self back)) (set! *arena-from* (arena-from-name *merchant-at*)))
-            (set! (-> *game-info* current-continue)
-                  (get-continue-by-name *game-info* (if (-> self back) *arena-from* "misty-arena")))
-            ;; (as the level select: no death, no white eco dropped)
-            (initialize! *game-info* 'die (the-as game-save #f) (the-as string #f))))))
+            (go arena-gate-use)))))
   :code
     (behavior ()
       (ja-no-eval :group! (-> self draw art-group data 2) :num! (seek!) :frame-num 0.0)
       (loop
         (suspend)))
+  :post transform-post)
+
+;; used: as a warp gate's use (basebutton.gc): Jak warps out onto it (its effect, its sound), and once he's gone the
+;; game starts again at the continue (a warp one: he warps in there)
+(defstate arena-gate-use (arena-gate)
+  :trans
+    (behavior ()
+      (spawn (-> self part) (-> self root trans))
+      (send-event *camera* 'joystick 0.0 0.0))
+  :code
+    (behavior ()
+      (set-time! (-> self state-time))
+      (let ((msg (new 'stack-no-clear 'event-message-block)))
+        (set! (-> msg from) self)
+        (set! (-> msg num-params) 3)
+        (set! (-> msg message) 'change-state)
+        (set! (-> msg param 0) (the-as uint target-warp-out))
+        (let ((v (new 'static 'vector)))
+          (set! (-> v quad) (-> self root trans quad))
+          (+! (-> v y) (meters 0.8))
+          (set! (-> msg param 1) (the-as uint v)))
+        (set! (-> msg param 2) (the-as uint (target-pos 0)))
+        (send-event-function *target* msg))
+      (while (and *target*
+                  (not (logtest? (-> *target* draw status) (draw-status hidden)))
+                  (not (time-elapsed? (-> self state-time) (seconds 4))))
+        (suspend))
+      (set-blackout-frames (seconds 0.05))
+      (start 'play (get-continue-by-name *game-info* (if (-> self back) *arena-from* "misty-arena")))
+      (logior! (-> self mask) (process-mask sleep))
+      (suspend)
+      0)
   :post transform-post)
 
 (defbehavior arena-gate-init arena-gate ((pos vector) (yaw float) (back symbol))
@@ -2896,8 +2943,14 @@
       (set! proc #f))
     (when (and want (not proc))
       (let ((pos (new 'stack-no-clear 'vector))
-            (yaw (if (= i 5) 27235.0 (-> *merchant-yaw* i))))
+            (yaw (cond
+                   ((< 0.5 (-> *gate-spots* i w)) (-> *gate-yaw* i))
+                   ((= i 5) 27235.0)
+                   (else (-> *merchant-yaw* i)))))
         (cond
+          ((< 0.5 (-> *gate-spots* i w))
+           (set! (-> pos quad) (-> *gate-spots* i quad))
+           (set! (-> pos w) 1.0))
           ((= i 5)
            ;; (inside the arena's way in, rounddoor-3)
            (set-vector! pos (meters -170.63) (meters 28.27) (meters 912.8) 1.0))
@@ -2987,13 +3040,31 @@
            (+! (-> *merchant-spots* i z) (* (meters 4.5) (cos yaw)))
            (set! (-> *merchant-yaw* i) (+ yaw 32768.0)))
          (set! (-> *merchant-spots* i w) 1.0))
+       (set! *move-gate* #f)
+       (set! *merchant-moving* #t))))
+  (none))
+
+;; the mod options' "move the teleporter": its gate here moved as he is (from where it stands now)
+(defun gate-place-here ()
+  (let ((gate (the-as process-drawable (handle->process (-> *arena-gate-handle* 0))))
+        (i *merchant-at*))
+    (cond
+      ((or (not gate) (< i 0)) (format 0 "[gate] no gate here~%"))
+      (else
+       (when (>= 0.5 (-> *gate-spots* i w))
+         (set! (-> *gate-spots* i quad) (-> gate root trans quad))
+         (set! (-> *gate-yaw* i) (quaternion-y-angle (-> gate root quat)))
+         (set! (-> *gate-spots* i w) 1.0))
+       (set! *move-gate* #t)
        (set! *merchant-moving* #t))))
   (none))
 
 ;; moving him: the left stick along the ground (as the camera looks), L1 and R1 turn him, the D-pad up and down
 ;; raise and lower him, X leaves him there (told in the log, to be written into *merchant-spots*)
 (defun merchant-move-update ()
-  (let ((proc (the-as merchant (handle->process (-> *merchant-handle* 0))))
+  (let ((proc (the-as process-drawable (handle->process (if *move-gate*
+                                                            (-> *arena-gate-handle* 0)
+                                                            (-> *merchant-handle* 0)))))
         (i *merchant-at*))
     (cond
       ((or (not *merchant-moving*) (not proc) (< i 0) (not *target*))
@@ -3010,7 +3081,8 @@
               (fwd (vector-copy! (new 'stack-no-clear 'vector) (-> *math-camera* inv-camera-rot vector 2)))
               (right (vector-copy! (new 'stack-no-clear 'vector) (-> *math-camera* inv-camera-rot vector 0)))
               (step (* (meters 4.0) (seconds-per-frame)))
-              (spot (-> *merchant-spots* i)))
+              (spot (if *move-gate* (-> *gate-spots* i) (-> *merchant-spots* i)))
+              (yaws (if *move-gate* *gate-yaw* *merchant-yaw*)))
          (if (< (fabs sx) 0.2) (set! sx 0.0))
          (if (< (fabs sy) 0.2) (set! sy 0.0))
          (set! (-> fwd y) 0.0)
@@ -3021,30 +3093,34 @@
          (+! (-> spot z) (* step (+ (* sx (-> right z)) (* sy (-> fwd z)))))
          (if (cpad-hold? 0 up) (+! (-> spot y) (* (meters 1.0) (seconds-per-frame))))
          (if (cpad-hold? 0 down) (-! (-> spot y) (* (meters 1.0) (seconds-per-frame))))
-         (if (cpad-hold? 0 l1) (+! (-> *merchant-yaw* i) (* 16384.0 (seconds-per-frame))))
-         (if (cpad-hold? 0 r1) (-! (-> *merchant-yaw* i) (* 16384.0 (seconds-per-frame))))
+         (if (cpad-hold? 0 l1) (+! (-> yaws i) (* 16384.0 (seconds-per-frame))))
+         (if (cpad-hold? 0 r1) (-! (-> yaws i) (* 16384.0 (seconds-per-frame))))
          (set! (-> proc root trans x) (-> spot x))
          (set! (-> proc root trans y) (-> spot y))
          (set! (-> proc root trans z) (-> spot z))
-         (quaternion-axis-angle! (-> proc root quat) 0.0 1.0 0.0 (-> *merchant-yaw* i))
+         (quaternion-axis-angle! (-> proc root quat) 0.0 1.0 0.0 (-> yaws i))
          ;; (his collision moved with him)
-         (update-transforms! (-> proc root))
+         (update-transforms! (the-as collide-shape (-> proc root)))
          (when (cpad-pressed? 0 x)
            (cpad-clear! 0 x)
            (sound-play "start-options")
            (format 0
-                   "[merchant] ~A spot ~f ~f ~f yaw ~f~%"
+                   "[~A] ~A spot ~f ~f ~f yaw ~f~%"
+                   (if *move-gate* "gate" "merchant")
                    (-> (level-get-target-inside *level*) name)
                    (-> spot x)
                    (-> spot y)
                    (-> spot z)
-                   (-> *merchant-yaw* i))
+                   (-> yaws i))
            (set! *merchant-moving* #f)
            (process-release? *target*)
            (set! *merchant-grabbed* #f)
-           ;; (made again there: all of him where he is now)
+           ;; (made again there: all of it where it is now)
            (deactivate proc)
-           (set! (-> *merchant-handle* 0) (the-as handle #f)))))))
+           (if *move-gate*
+             (set! (-> *arena-gate-handle* 0) (the-as handle #f))
+             (set! (-> *merchant-handle* 0) (the-as handle #f)))
+           (set! *move-gate* #f))))))
   (none))
 
 (defun soul-pile-update ()

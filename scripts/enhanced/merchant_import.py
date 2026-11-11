@@ -400,5 +400,9 @@ def write_glb(path, name):
 
 write_glb(os.path.join(OUT, 'custom_levels', 'merchant.glb'), 'merchant')
 write_glb(os.path.join(OUT, 'common', 'merchant-lod0.glb'), 'merchant')
+# and him alone on his stool, no stall (the arena's middle): his texture the same picture, shared in the game
+prims = [p_ for p_ in prims if p_[0] != 'merchant-stall']
+write_glb(os.path.join(OUT, 'custom_levels', 'merchantsolo.glb'), 'merchantsolo')
+write_glb(os.path.join(OUT, 'common', 'merchantsolo-lod0.glb'), 'merchantsolo')
 print('ok', sum(len(p[1]) for p in prims), 'vertices', sum(len(p[4]) for p in prims) // 3, 'triangles',
       'stall offset', s_off.round(2), 'scales', round(MS, 3), round(SS, 3))

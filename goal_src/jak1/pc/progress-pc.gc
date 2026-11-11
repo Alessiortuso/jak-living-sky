@@ -112,6 +112,7 @@
 
 ;; Jak Living Sky: the merchant placed where Jak stands (collectables.gc)
 (define-extern merchant-place-here (function none))
+(define-extern gate-place-here (function none))
 
 (define *mod-options*
   (new 'static
@@ -124,6 +125,7 @@
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id give-orbs) :scale #t)
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id give-white-eco) :scale #t)
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id place-merchant) :scale #t)
+       (new 'static 'game-option :option-type (game-option-type button) :name (text-id move-gate) :scale #t)
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id warp-to-citadel) :scale #t)
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id warp-to-village3) :scale #t)
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id back) :scale #t)))
@@ -2531,6 +2533,9 @@
                   (sound-play "cursor-options"))
                  (((text-id place-merchant))
                   (merchant-place-here)
+                  (sound-play "start-options"))
+                 (((text-id move-gate))
+                  (gate-place-here)
                   (sound-play "start-options"))
                  ;; Jak Living Sky: to Gol and Maia's warp gate (and back), as the level select does
                  (((text-id warp-to-citadel))
