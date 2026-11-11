@@ -2821,7 +2821,35 @@
    (back symbol))
   (:states
     arena-gate-idle
+    arena-gate-menu
     arena-gate-use))
+
+;; the way back from the arena: the villages to choose from (those been to), each to its merchant's gate
+(define *gate-dest* 0)
+(defun gate-dest-level ((k int))
+  (case k
+    ((0) 'village1)
+    ((1) 'village2)
+    ((2) 'village3)
+    ((3) 'brume)
+    (else 'citadel)))
+(defun gate-dest-name ((k int))
+  (case k
+    ((0) "SANDOVER")
+    ((1) "ROCK VILLAGE")
+    ((2) "VILLAGGIO VULCANICO")
+    ((3) "BRUME")
+    (else "CITTA' DI GOL E MAIA")))
+(defun gate-dest-continue ((k int))
+  (case k
+    ((0) "village1-merchant")
+    ((1) "village2-merchant")
+    ((2) "village3-merchant")
+    ((3) "brume-merchant")
+    (else "citadel-merchant")))
+(defun gate-dest-been? ((k int))
+  (let ((info (lookup-level-info (gate-dest-level k))))
+    (and info (nonzero? (-> *game-info* enter-level-time (-> info index))))))
 
 ;; the village Jak came from (its warp gate's continue), for the way back
 (define *arena-from* "village2-warp")
@@ -2876,8 +2904,14 @@
                              font #f 128 22))
           (when (and (>= *arena-offered* 1.0) (cpad-pressed? 0 circle) (process-grab? *target*))
             (cpad-clear! 0 circle)
-            (if (not (-> self back)) (set! *arena-from* (arena-from-name *merchant-at*)))
-            (go arena-gate-use)))))
+            (cond
+              ((-> self back)
+               ;; (the cursor on a village been to)
+               (while (and (< *gate-dest* 4) (not (gate-dest-been? *gate-dest*)))
+                 (+! *gate-dest* 1))
+               (if (not (gate-dest-been? *gate-dest*)) (set! *gate-dest* 1))
+               (go arena-gate-menu))
+              (else (go arena-gate-use)))))))
   :code
     (behavior ()
       (ja-no-eval :group! (-> self draw art-group data 2) :num! (seek!) :frame-num 0.0)
@@ -2887,6 +2921,57 @@
 
 ;; used: as a warp gate's use (basebutton.gc): Jak warps out onto it (its effect, its sound), and once he's gone the
 ;; game starts again at the continue (a warp one: he warps in there)
+;; the way back's menu: up and down among the villages been to, Circle goes, Triangle not
+(defstate arena-gate-menu (arena-gate)
+  :trans
+    (behavior ()
+      (spawn (-> self part) (-> self root trans))
+      (when (cpad-pressed? 0 up)
+        (cpad-clear! 0 up)
+        (sound-play "cursor-up-down")
+        (dotimes (n 5)
+          (set! *gate-dest* (if (> *gate-dest* 0) (+ *gate-dest* -1) 4))
+          (if (gate-dest-been? *gate-dest*) (set! n 5))))
+      (when (cpad-pressed? 0 down)
+        (cpad-clear! 0 down)
+        (sound-play "cursor-up-down")
+        (dotimes (n 5)
+          (set! *gate-dest* (if (< *gate-dest* 4) (+ *gate-dest* 1) 0))
+          (if (gate-dest-been? *gate-dest*) (set! n 5))))
+      (when (cpad-pressed? 0 triangle)
+        (cpad-clear! 0 triangle)
+        (sound-play "cursor-options")
+        (process-release? *target*)
+        (go arena-gate-idle))
+      (when (cpad-pressed? 0 circle)
+        (cpad-clear! 0 circle)
+        (set! *arena-from* (gate-dest-continue *gate-dest*))
+        (go arena-gate-use))
+      (hide-hud)
+      (when (and (hud-hidden?) (can-grab-display? self))
+        (let ((font (new 'stack 'font-context *font-default-matrix* 6 60 0.0 (font-color default) (font-flags shadow kerning))))
+          (set-scale! font 0.8)
+          (set-width! font 500)
+          (set-height! font 24)
+          (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
+          (set! (-> font color) (font-color progress-yellow))
+          (print-game-text "TORNA AL VILLAGGIO" font #f 128 22)
+          (+! (-> font origin y) 32.0)
+          (set-scale! font 0.7)
+          (dotimes (k 5)
+            (when (gate-dest-been? k)
+              (set! (-> font color) (if (= k *gate-dest*) (font-color progress-yellow) (font-color default)))
+              (print-game-text (gate-dest-name k) font #f 128 22)
+              (+! (-> font origin y) 20.0)))
+          (set! (-> font color) (font-color default))
+          (+! (-> font origin y) 10.0)
+          (print-game-text "~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H VAI    ~Y~22L<~Z~Y~26L;~Z~Y~1L>~Z~Y~23L[~Z~+26H ESCI" font #f 128 22))))
+  :code
+    (behavior ()
+      (loop
+        (suspend)))
+  :post transform-post)
+
 (defstate arena-gate-use (arena-gate)
   :trans
     (behavior ()

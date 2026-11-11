@@ -205,6 +205,27 @@
              :disp0 'display
              :lev1 'beach
              :disp1 #f)
+        ;; Jak Living Sky: on the merchant's gate here (his arena's way back)
+        (new 'static
+             'continue-point
+             :name "village1-merchant"
+             :level 'village1
+             :flags (continue-flags warp)
+             :trans
+             (new 'static 'vector :x -128639.5 :y 9275.6 :z -222776.1 :w 1.0)
+             :quat
+             (new 'static 'quaternion :y 0.3272 :w 0.9450)
+             :camera-trans
+             (new 'static 'vector :x -146370.0 :y 21563.6 :z -245308.5 :w 1.0)
+             :camera-rot
+             (new 'static 'array float 9 0.7859 0.0000 -0.6184 0.1699 0.9615 0.2159 0.5946 -0.2747 0.7556)
+             :load-commands
+             '()
+             :vis-nick 'vi1
+             :lev0 'village1
+             :disp0 'display
+             :lev1 'beach
+             :disp1 #f)
         (new 'static
              'continue-point
              :name "village1-demo-convo"
@@ -766,6 +787,27 @@
              (new 'static 'vector :x 1555766.1 :y 103759.46 :z -6318964.5 :w 1.0)
              :camera-rot
              (new 'static 'array float 9 -0.2562 0.0 -0.9666 -0.0253 0.9996 0.0067 0.9662 0.0262 -0.2561)
+             :load-commands
+             '()
+             :vis-nick 'vi2
+             :lev0 'village2
+             :disp0 'display
+             :lev1 'firecanyon
+             :disp1 #f)
+        ;; Jak Living Sky: on the merchant's gate here (his arena's way back)
+        (new 'static
+             'continue-point
+             :name "village2-merchant"
+             :level 'village2
+             :flags (continue-flags warp)
+             :trans
+             (new 'static 'vector :x 1185520.4 :y 42198.4 :z -6741788.0 :w 1.0)
+             :quat
+             (new 'static 'quaternion :y 0.0443 :w 0.9990)
+             :camera-trans
+             (new 'static 'vector :x 1182983.7 :y 54486.4 :z -6770347.6 :w 1.0)
+             :camera-rot
+             (new 'static 'array float 9 0.9961 0.0000 -0.0885 0.0243 0.9615 0.2736 0.0851 -0.2747 0.9578)
              :load-commands
              '()
              :vis-nick 'vi2
@@ -1381,6 +1423,27 @@
              (new 'static 'vector :x 4543255.0 :y 226776.67 :z -14313317.0 :w 1.0)
              :camera-rot
              (new 'static 'array float 9 0.8563 0.0 -0.2763 0.0456 0.8875 0.1413 0.2725 -0.1485 0.8446)
+             :load-commands
+             '()
+             :vis-nick 'vi3
+             :lev0 'village3
+             :disp0 'display
+             :lev1 'ogre
+             :disp1 #f)
+        ;; Jak Living Sky: on the merchant's gate here (his arena's way back)
+        (new 'static
+             'continue-point
+             :name "village3-merchant"
+             :level 'village3
+             :flags (continue-flags warp)
+             :trans
+             (new 'static 'vector :x 4630623.6 :y 190918.4 :z -14615884.9 :w 1.0)
+             :quat
+             (new 'static 'quaternion :y 0.1189 :w -0.9929)
+             :camera-trans
+             (new 'static 'vector :x 4637390.7 :y 203206.4 :z -14643746.9 :w 1.0)
+             :camera-rot
+             (new 'static 'array float 9 0.9717 0.0000 0.2360 -0.0648 0.9615 0.2670 -0.2269 -0.2747 0.9344)
              :load-commands
              '()
              :vis-nick 'vi3
@@ -2025,6 +2088,27 @@
              :disp0 'display
              :lev1 'lavatube
              :disp1 'display)
+        ;; Jak Living Sky: on the merchant's gate here (his arena's way back)
+        (new 'static
+             'continue-point
+             :name "citadel-merchant"
+             :level 'citadel
+             :flags (continue-flags warp)
+             :trans
+             (new 'static 'vector :x 11515714.0 :y -158738.5 :z -18319003.5 :w 1.0)
+             :quat
+             (new 'static 'quaternion :y 0.4290 :w -0.9033)
+             :camera-trans
+             (new 'static 'vector :x 11537936.8 :y -146450.5 :z -18337120.7 :w 1.0)
+             :camera-rot
+             (new 'static 'array float 9 0.6319 0.0000 0.7751 -0.2129 0.9615 0.1736 -0.7452 -0.2747 0.6076)
+             :load-commands
+             '()
+             :vis-nick 'cit
+             :lev0 'citadel
+             :disp0 'display
+             :lev1 'lavatube
+             :disp1 'display)
         (new 'static
              'continue-point
              :name "citadel-launch-start"
@@ -2553,6 +2637,27 @@
         :camera-trans (new 'static 'vector :x 0.0 :y 4096.0 :z 0.0 :w 1.0)
         :camera-rot (new 'static 'array float 9 -0.2092 -0.0000 0.9778 -0.1159 0.9929 -0.0248 -0.9709 -0.1185 -0.2077)
                                               :load-commands '()
+
+                                              :lev0 'brume
+                                              :disp0 'display
+                                              :lev1 'abandon
+                                              :disp1 'display
+                                              )
+        ;; Jak Living Sky: on the merchant's gate here (his arena's way back)
+        (new 'static
+             'continue-point
+             :name "brume-merchant"
+             :level 'brume
+             :flags (continue-flags warp)
+             :trans
+             (new 'static 'vector :x -7128533.0 :y 824520.0 :z 1257534.9 :w 1.0)
+             :quat
+             (new 'static 'quaternion :y -0.0063 :w 1.0000)
+             :camera-trans
+             (new 'static 'vector :x -7128170.5 :y 836808.0 :z 1228865.2 :w 1.0)
+             :camera-rot
+             (new 'static 'array float 9 0.9999 0.0000 0.0126 -0.0035 0.9615 0.2747 -0.0122 -0.2747 0.9614)
+             :load-commands '()
 
                                               :lev0 'brume
                                               :disp0 'display
