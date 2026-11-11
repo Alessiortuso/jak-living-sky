@@ -514,14 +514,14 @@
              :level 'misty
              :flags (continue-flags warp)
              :trans
-             ;; (on the ground before the arena's steps, where misty-silo is: solid; facing its door, up the steps)
-             (new 'static 'vector :x -672503.0 :y 82131.35 :z 3651465.8 :w 1.0)
+             ;; (on the merchant's gate there, before the arena's steps; facing its door, up the steps)
+             (new 'static 'vector :x -624083.5 :y 85197.0 :z 3688243.0 :w 1.0)
              :quat
-             (new 'static 'quaternion :y -0.1125 :w 0.9937)
+             (new 'static 'quaternion :y -0.5218 :w 0.8531)
              :camera-trans
-             (new 'static 'vector :x -666051.0 :y 94413.0 :z 3623527.0 :w 1.0)
+             (new 'static 'vector :x -598548.0 :y 97485.0 :z 3675218.0 :w 1.0)
              :camera-rot
-             (new 'static 'array float 9 0.9745 0.0 0.2244 -0.0616 0.9613 0.2677 -0.2157 -0.2747 0.9368)
+             (new 'static 'array float 9 0.4552 0.0 0.8904 -0.2446 0.9612 0.125 -0.8558 -0.2747 0.4375)
              :load-commands
              '((special "med-res-level-1" #t)
               (special "med-res-level-2" #t)

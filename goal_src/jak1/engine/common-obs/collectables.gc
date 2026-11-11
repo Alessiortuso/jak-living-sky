@@ -2832,8 +2832,9 @@
                           (new 'static 'vector)
                           (new 'static 'vector :x -7128533.0 :y 820833.56 :z 1257534.9 :w 1.0)
                           (new 'static 'vector)
-                          (new 'static 'vector)))
-(define *gate-yaw* (new 'static 'array float 6 0.0 923.998 0.0 -131.8781 0.0 0.0))
+                          ;; (Misty: on the ground before the arena's steps; the arena's continue is on it)
+                          (new 'static 'vector :x -624083.5 :y 81524.578 :z 3688228.5 :w 1.0)))
+(define *gate-yaw* (new 'static 'array float 6 0.0 923.998 0.0 -131.8781 0.0 27235.438))
 (define *arena-gate-at* -1)
 
 (defun arena-from-name ((i int))
