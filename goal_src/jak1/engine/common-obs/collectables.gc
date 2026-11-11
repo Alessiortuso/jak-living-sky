@@ -2828,12 +2828,12 @@
 ;; where each gate stands, once moved with the mod options (w 1; the log's "[gate]" lines), and which way it faces
 (define *gate-spots* (new 'static 'inline-array vector 6
                           (new 'static 'vector)
+                          (new 'static 'vector :x 1185520.4 :y 38512.035 :z -6741788.0 :w 1.0)
                           (new 'static 'vector)
-                          (new 'static 'vector)
-                          (new 'static 'vector)
+                          (new 'static 'vector :x -7128533.0 :y 820833.56 :z 1257534.9 :w 1.0)
                           (new 'static 'vector)
                           (new 'static 'vector)))
-(define *gate-yaw* (new 'static 'array float 6 0.0 0.0 0.0 0.0 0.0 0.0))
+(define *gate-yaw* (new 'static 'array float 6 0.0 923.998 0.0 -131.8781 0.0 0.0))
 (define *arena-gate-at* -1)
 
 (defun arena-from-name ((i int))

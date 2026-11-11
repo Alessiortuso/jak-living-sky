@@ -272,6 +272,12 @@
                         (v1-235 (entity-by-name "assistant-lavatube-end-3")))
                     (s3-7 (if v1-235 (-> v1-235 extra process)) s4-13))))
               (set-continue! *game-info* "lavatube-end"))
+             ;; Jak Living Sky: the merchant's gate to his arena (Jak warps in where he arrives; dying after, he's
+             ;; back at misty-silo, the same spot, as an ordinary continue)
+             ((string= (-> arg0 name) "misty-arena")
+              (set! (-> s5-6 quad) (-> arg0 trans quad))
+              (+! (-> s5-6 y) (meters 1))
+              (set-continue! *game-info* "misty-silo"))
              ;; Jak Living Sky: Brume Village's gate
              ((string= (-> arg0 name) "brume-warp")
               (set! (-> s5-6 quad) (-> (entity-by-name "brume-training-part-1") extra trans quad))
