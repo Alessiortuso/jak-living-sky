@@ -2357,6 +2357,12 @@
 (def-actor merchant :bounds (-2.8 2.6 -0.6 6.6))
 ;; (his fights' menu at the arena: below)
 (define-extern arena-menu-screen (function none))
+;; (the arena gate by his stall: near it, Circle is the gate's, not his shop's)
+(define *arena-gate-handle* (new 'static 'array handle 1))
+(set! (-> *arena-gate-handle* 0) (the-as handle #f))
+(defun arena-gate-near? ()
+  (let ((gate (the-as process-drawable (handle->process (-> *arena-gate-handle* 0)))))
+    (and gate *target* (< (vector-vector-distance (-> gate root trans) (-> *target* control trans)) (meters 3.2)))))
 ;; Jak Living Sky: the merchant's fights in the arena at Misty: on offer once its ambush is over (misty-warehouse)
 (defun arena-open? ()
   (task-closed? (game-task misty-warehouse) (task-status need-resolution)))
@@ -2391,6 +2397,7 @@
 ;; left, z his front; his stall from 1.3 to 7.8 m to his right, 2.6 m deep)
 (defun merchant-near? ((this merchant))
   (and *target*
+       (not (arena-gate-near?))
        (not *progress-process*)
        (not *merchant-moving*)
        (not *soul-shop-open*)
@@ -2808,8 +2815,6 @@
 
 ;; the village Jak came from (its warp gate's continue), for the way back
 (define *arena-from* "village2-warp")
-(define *arena-gate-handle* (new 'static 'array handle 1))
-(set! (-> *arena-gate-handle* 0) (the-as handle #f))
 (define *arena-gate-at* -1)
 
 (defun arena-from-name ((i int))
