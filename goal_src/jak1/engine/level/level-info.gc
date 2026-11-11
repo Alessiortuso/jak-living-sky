@@ -507,20 +507,21 @@
              :disp0 'display
              :lev1 'village1
              :disp1 'special)
-        ;; Jak Living Sky: before the arena's door (the merchant's fights: collectables.gc)
+        ;; Jak Living Sky: before the arena's steps (the merchant's fights: collectables.gc)
         (new 'static
              'continue-point
              :name "misty-arena"
              :level 'misty
              :flags (continue-flags warp)
              :trans
-             (new 'static 'vector :x -680264.0 :y 122880.0 :z 3707085.0 :w 1.0)
+             ;; (on the ground before the arena's steps, where misty-silo is: solid; facing its door, up the steps)
+             (new 'static 'vector :x -672503.0 :y 82131.35 :z 3651465.8 :w 1.0)
              :quat
-             (new 'static 'quaternion :y -0.262 :w 0.9651)
+             (new 'static 'quaternion :y -0.1125 :w 0.9937)
              :camera-trans
-             (new 'static 'vector :x -665764.0 :y 135168.0 :z 3682345.0 :w 1.0)
+             (new 'static 'vector :x -666051.0 :y 94413.0 :z 3623527.0 :w 1.0)
              :camera-rot
-             (new 'static 'array float 9 0.8626 0.0 0.5057 -0.1389 0.9614 0.2369 -0.4863 -0.2746 0.8295)
+             (new 'static 'array float 9 0.9745 0.0 0.2244 -0.0616 0.9613 0.2677 -0.2157 -0.2747 0.9368)
              :load-commands
              '((special "med-res-level-1" #t)
               (special "med-res-level-2" #t)
