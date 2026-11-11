@@ -240,16 +240,15 @@
    #| (sp-item 4006) |#
    ))
 
-;; Jak Living Sky: its trail cyan, as the board's own lights (the mod's deep blue read as purple, as dark eco)
 (defpart 4004
   :init-specs
   ((:num 3.0)
    (:y (meters 0.25))
    (:rot-x 7)
-   (:r 40.0
+   (:r 32.0
     #| 2048.0 |#
     )
-   (:g 170.0
+   (:g 32.0
     #| 1638.4 |#
     )
    (:b 255.0
@@ -273,8 +272,8 @@
    (:rot-y (degrees 0))
    (:rot-z (degrees 0))
    (:scale-y :copy scale-x)
-   (:r 40.0 40.0)
-   (:g 160.0 60.0)
+   (:r 32.0 64.0)
+   (:g :copy r)
    (:b 255.0)
    (:a 8.0 8.0)
    (:scalevel-x (meters -0.02) (meters -0.006666667))

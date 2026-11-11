@@ -395,8 +395,9 @@
              (launch-particles s0-1 (vector<-cspace! (new 'stack-no-clear 'vector) (-> this process node-list data arg2))))))
         ;; og:j1-board added
         (('effect-board-poof)
+         ;; Jak Living Sky: the board's poof, renumbered with its other parts (3012 is now Dark Jak's shot's)
          (let ((part (-> *part-id-table*
-                         3012
+                         4012
                          ; (-> (new 'static
                          ;          'boxed-array
                          ;          :type
