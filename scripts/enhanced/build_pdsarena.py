@@ -127,7 +127,7 @@ gd = ['"pdsarena-obs.o"', '"pds-nav.o"', '"pds-boss-part.o"', '"pds-boss-setup.o
       '"pds-boss-states.o"', '"eichar-pole+0-ag.go"', '"redring-ag.go"'] + ['"%s-ag.go"' % m for m in MODEL_NAMES]
 (OUT / 'pdsarena.gd').write_text(
     ';; Jak Living Sky: the PDS sentinel fight\'s level (build_pdsarena.py)\n'
-    '("PDSARENA.DGO"\n (\n  ' + '\n  '.join(gd + ['"pdsarena.go"']) + '\n  )\n )\n', encoding='utf-8')
+    '("PDS.DGO"\n (\n  ' + '\n  '.join(gd + ['"pdsarena.go"']) + '\n  )\n )\n', encoding='utf-8')
 
 # a tiny mesh 200 m under the arena: the level's own ground, never reached (Jak is in Misty)
 cx, cy, cz = MISTY_C

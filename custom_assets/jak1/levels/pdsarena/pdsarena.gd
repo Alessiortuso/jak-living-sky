@@ -1,5 +1,5 @@
 ;; Jak Living Sky: the PDS sentinel fight's level (build_pdsarena.py)
-("PDSARENA.DGO"
+("PDS.DGO"
  (
   "pdsarena-obs.o"
   "pds-nav.o"

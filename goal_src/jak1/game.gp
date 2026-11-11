@@ -1693,7 +1693,7 @@
 ;; Jak Living Sky: the merchant's third arena fight, the PDS sentinel of The Forgotten Lands (by Kuitar5,
 ;; github.com/Kuitar5/the-forgotten-lands, used with permission), on Misty's arena
 (build-custom-level "pdsarena")
-(custom-level-cgo "PDSARENA.DGO" "pdsarena/pdsarena.gd")
+(custom-level-cgo "PDS.DGO" "pdsarena/pdsarena.gd")
 (build-actor "pds-sentinel")
 (build-actor "pds-gem-green")
 (build-actor "pds-gem-yellow")
