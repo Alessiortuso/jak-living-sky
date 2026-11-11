@@ -2936,7 +2936,8 @@
 ;; in the arena, inside its door
 (defun arena-gate-update ((i int))
   (let ((proc (handle->process (-> *arena-gate-handle* 0)))
-        (want (and (>= i 0) (<= i 5) (soul-in-play?) (handle->process (-> *merchant-handle* 0)))))
+        ;; (kept through the pause menu, as he is: "move the teleporter" is pressed there)
+        (want (and (>= i 0) (<= i 5) *target* (not (movie?)) (handle->process (-> *merchant-handle* 0)))))
     (when (and proc (or (not want) (!= i *arena-gate-at*)))
       (deactivate proc)
       (set! (-> *arena-gate-handle* 0) (the-as handle #f))
