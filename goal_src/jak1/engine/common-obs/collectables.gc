@@ -2877,6 +2877,18 @@
 (defstate arena-gate-idle (arena-gate)
   :trans
     (behavior ()
+      ;; Jak in its stone (as arriving onto it): up onto its top
+      (when *target*
+        (let* ((jt (-> *target* control trans))
+               (dx (- (-> jt x) (-> self root trans x)))
+               (dz (- (-> jt z) (-> self root trans z)))
+               (top (+ (-> self root trans y) (meters 0.78))))
+          (when (and (< (+ (* dx dx) (* dz dz)) (* (meters 1.4) (meters 1.4)))
+                     (< (-> jt y) (- top (meters 0.08)))
+                     (< (- (-> self root trans y) (meters 0.6)) (-> jt y)))
+            (format 0 "[gate] lifted Jak from ~,,2M to its top~%" (- (-> jt y) (-> self root trans y)))
+            (set! (-> jt y) top)
+            (if (< (-> *target* control transv y) 0.0) (set! (-> *target* control transv y) 0.0)))))
       (cond
         ((>= *arena-offered* 1.0)
          (spawn (-> self part) (-> self root trans))
@@ -2904,6 +2916,8 @@
                              font #f 128 22))
           (when (and (>= *arena-offered* 1.0) (cpad-pressed? 0 circle) (process-grab? *target*))
             (cpad-clear! 0 circle)
+            (format 0 "[gate] Circle: back ~A, been ~A ~A ~A ~A ~A~%" (-> self back)
+                    (gate-dest-been? 0) (gate-dest-been? 1) (gate-dest-been? 2) (gate-dest-been? 3) (gate-dest-been? 4))
             (cond
               ((-> self back)
                ;; (the cursor on a village been to)
@@ -2925,6 +2939,7 @@
 (defstate arena-gate-menu (arena-gate)
   :enter
     (behavior ()
+      (format 0 "[gate] menu open, cursor ~D~%" *gate-dest*)
       (set-time! (-> self state-time)))
   :trans
     (behavior ()
@@ -2952,6 +2967,7 @@
         (go arena-gate-idle))
       (when (cpad-pressed? 0 circle)
         (cpad-clear! 0 circle)
+        (format 0 "[gate] menu chose ~D~%" *gate-dest*)
         (set! *arena-from* (gate-dest-continue *gate-dest*))
         (go arena-gate-use))
       (hide-hud)
@@ -2980,6 +2996,9 @@
   :post transform-post)
 
 (defstate arena-gate-use (arena-gate)
+  :enter
+    (behavior ()
+      (format 0 "[gate] use: back ~A to ~A~%" (-> self back) (if (-> self back) *arena-from* "misty-arena")))
   :trans
     (behavior ()
       (spawn (-> self part) (-> self root trans))
