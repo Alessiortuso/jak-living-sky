@@ -507,6 +507,37 @@
              :disp0 'display
              :lev1 'village1
              :disp1 'special)
+        ;; Jak Living Sky: before the arena's door (the merchant's fights: collectables.gc)
+        (new 'static
+             'continue-point
+             :name "misty-arena"
+             :level 'misty
+             :trans
+             (new 'static 'vector :x -680264.0 :y 122880.0 :z 3707085.0 :w 1.0)
+             :quat
+             (new 'static 'quaternion :y -0.262 :w 0.9651)
+             :camera-trans
+             (new 'static 'vector :x -665764.0 :y 135168.0 :z 3682345.0 :w 1.0)
+             :camera-rot
+             (new 'static 'array float 9 0.8626 0.0 0.5057 -0.1389 0.9614 0.2369 -0.4863 -0.2746 0.8295)
+             :load-commands
+             '((special "med-res-level-1" #t)
+              (special "med-res-level-2" #t)
+              (special "med-res-level-4" #t)
+              (special "med-res-level-6" #t)
+              (special "med-res-level-7" #t)
+              (special "med-res-level-8" #t)
+              (special "med-res-level-9" #t)
+              (special "med-res-level-11" #t)
+              (special "med-res-level-14" #t)
+              (special "med-res-level-22" #t)
+              (special "med-res-level-23" #t)
+              (special "fishermans-boat-2" #t))
+             :vis-nick 'mis
+             :lev0 'misty
+             :disp0 'display
+             :lev1 'village1
+             :disp1 'special)
         (new 'static
              'continue-point
              :name "misty-bike"

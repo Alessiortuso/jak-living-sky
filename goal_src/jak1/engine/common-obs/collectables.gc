@@ -2353,17 +2353,21 @@
 ;; to be seen, on his tall stool, his little legs swinging, his stall beside him, in each village (made with Higgsfield:
 ;; scripts/enhanced/merchant_import.py). Up to him and Circle: the shop
 (def-actor merchant :bounds (-2.8 2.6 -0.6 6.6))
+;; (his fights' menu at the arena: below)
+(define-extern arena-menu-screen (function none))
 
 ;; his place in each village: village1, village2, village3, brume, citadel (game units; w: 1 placed), and which way he
 ;; faces
 ;; (as placed in the game with the mod options' "move the merchant": the log's "[merchant]" lines)
-(define *merchant-spots* (new 'static 'inline-array vector 5
+(define *merchant-spots* (new 'static 'inline-array vector 6
                               (new 'static 'vector :x -141610.17 :y 5589.2393 :z -216739.23 :w 1.0)
                               (new 'static 'vector :x 1172267.25 :y 38512.035 :z -6757252.0 :w 1.0)
                               (new 'static 'vector :x 4617864.0 :y 187232.03 :z -14622356.0 :w 1.0)
                               (new 'static 'vector :x -7088640.5 :y 819673.31 :z 1255100.0 :w 1.0)
-                              (new 'static 'vector :x 11509454.0 :y -162424.88 :z -18331868.0 :w 1.0)))
-(define *merchant-yaw* (new 'static 'array float 5 6953.8872 925.1523 63050.809 65404.66 56286.082))
+                              (new 'static 'vector :x 11509454.0 :y -162424.88 :z -18331868.0 :w 1.0)
+                              ;; (the arena at Misty: his fights, once its ambush is over)
+                              (new 'static 'vector :x -808067.0 :y 115794.0 :z 3925115.0 :w 1.0)))
+(define *merchant-yaw* (new 'static 'array float 6 6953.8872 925.1523 63050.809 65404.66 56286.082 27235.0))
 ;; (a handle in a 64-bit slot, as the pump's)
 (define *merchant-handle* (new 'static 'array handle 1))
 (set! (-> *merchant-handle* 0) (the-as handle #f))
@@ -2646,7 +2650,7 @@
       (while (and *soul-shop-open* *target*)
         (can-grab-display? self)
         (hide-hud)
-        (soul-shop-screen)
+        (if (= *merchant-at* 5) (arena-menu-screen) (soul-shop-screen))
         (merchant-anim-step)
         (suspend))
       (go merchant-idle))
@@ -2704,17 +2708,23 @@
     (('village3) 2)
     (('brume) 3)
     (('citadel) 4)
+    (('misty) 5)
     (else -1)))
 
 ;; him there while Jak's in his village, once placed
 (define-extern merchant-move-update (function none))
+(define-extern arena-gate-update (function int none))
+
+;; Jak Living Sky: the merchant's fights in the arena at Misty: on offer once its ambush is over (misty-warehouse)
+(defun arena-open? ()
+  (task-closed? (game-task misty-warehouse) (task-status need-resolution)))
 
 (defun merchant-update ()
   (let* ((proc (handle->process (-> *merchant-handle* 0)))
          (lev (the-as level (and *target* (level-get-target-inside *level*))))
          (i (if lev (merchant-index (-> lev name)) -1)))
     (cond
-      ((and (>= i 0) (< 0.5 (-> *merchant-spots* i w)) (soul-in-play?))
+      ((and (>= i 0) (< 0.5 (-> *merchant-spots* i w)) (soul-in-play?) (or (!= i 5) (arena-open?)))
        (when (and proc (!= i *merchant-at*))
          (deactivate proc)
          (set! proc #f))
@@ -2727,6 +2737,152 @@
        (set! *merchant-at* -1)
        (set! *merchant-moving* #f))))
   (merchant-move-update)
+  (arena-gate-update *merchant-at*)
+  (none))
+
+;; ---------------------------------------------------------------------------------------------------------
+;; Jak Living Sky: the gates to the merchant's arena. By his stall from Rock Village on (once the arena's ambush is
+;; over): a column of white eco light, Circle takes Jak before the arena's door at Misty ("misty-arena"). Inside the
+;; arena by its door, one back to the village he came from
+(deftype arena-gate (process-drawable)
+  ((back symbol))
+  (:states
+    arena-gate-idle))
+
+;; the village Jak came from (its warp gate's continue), for the way back
+(define *arena-from* "village2-warp")
+(define *arena-gate-handle* (new 'static 'array handle 1))
+(set! (-> *arena-gate-handle* 0) (the-as handle #f))
+(define *arena-gate-at* -1)
+
+(defun arena-from-name ((i int))
+  (case i
+    ((1) "village2-warp")
+    ((2) "village3-warp")
+    ((3) "brume-warp")
+    ((4) "citadel-warp")
+    (else "village2-warp")))
+
+(defstate arena-gate-idle (arena-gate)
+  :trans
+    (behavior ()
+      (spawn (-> self part) (-> self root trans))
+      (when (and *target*
+                 (not *progress-process*)
+                 (not *soul-shop-open*)
+                 (not *merchant-moving*)
+                 (< (vector-vector-distance (-> self root trans) (-> *target* control trans)) (meters 2.5))
+                 (not (logtest? (-> *target* state-flags) (state-flags dangerous being-attacked grabbed dying board))))
+        (hide-hud)
+        (when (and (hud-hidden?) (can-grab-display? self))
+          (let ((font (new 'stack 'font-context *font-default-matrix* 32 140 0.0 (font-color default) (font-flags shadow kerning))))
+            (set-width! font 440)
+            (set-height! font 60)
+            (set-scale! font 0.9)
+            (set! (-> font flags) (font-flags shadow kerning middle-vert large))
+            (print-game-text (if (-> self back)
+                               "PREMI ~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H PER TORNARE AL VILLAGGIO"
+                               "PREMI ~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H PER L'ARENA")
+                             font #f 128 22))
+          (when (cpad-pressed? 0 circle)
+            (cpad-clear! 0 circle)
+            (sound-play "start-options")
+            (if (not (-> self back)) (set! *arena-from* (arena-from-name *merchant-at*)))
+            (set! (-> *game-info* current-continue)
+                  (get-continue-by-name *game-info* (if (-> self back) *arena-from* "misty-arena")))
+            ;; (as the level select: no death, no white eco dropped)
+            (initialize! *game-info* 'die (the-as game-save #f) (the-as string #f))))))
+  :code
+    (behavior ()
+      (loop
+        (suspend))))
+
+(defbehavior arena-gate-init arena-gate ((pos vector) (back symbol))
+  (logclear! (-> self mask) (process-mask actor-pause))
+  (set! (-> self root) (new 'process 'trsqv))
+  (set! (-> self root trans quad) (-> pos quad))
+  (set! (-> self back) back)
+  (set! (-> self part) (create-launch-control group-soul-vent self))
+  (go arena-gate-idle)
+  (none))
+
+;; the gate there with him: by his stall (3 m to his left, a little forward) in the villages from Rock Village on;
+;; in the arena, inside its door
+(defun arena-gate-update ((i int))
+  (let ((proc (handle->process (-> *arena-gate-handle* 0)))
+        (want (and (arena-open?) (>= i 1) (<= i 5) (soul-in-play?) (handle->process (-> *merchant-handle* 0)))))
+    (when (and proc (or (not want) (!= i *arena-gate-at*)))
+      (deactivate proc)
+      (set! (-> *arena-gate-handle* 0) (the-as handle #f))
+      (set! proc #f))
+    (when (and want (not proc))
+      (let ((pos (new 'stack-no-clear 'vector)))
+        (cond
+          ((= i 5)
+           ;; (inside the arena's way in, rounddoor-3)
+           (set-vector! pos (meters -170.63) (meters 28.27) (meters 912.8) 1.0))
+          (else
+           (let ((q (new 'stack-no-clear 'quaternion)))
+             (quaternion-axis-angle! q 0.0 1.0 0.0 (-> *merchant-yaw* i))
+             (set-vector! pos (meters 3.0) 0.0 (meters 0.5) 1.0)
+             (vector-orient-by-quat! pos pos q)
+             (vector+! pos pos (-> *merchant-spots* i))
+             (set! (-> pos w) 1.0))))
+        (set! *arena-gate-at* i)
+        (set! (-> *arena-gate-handle* 0)
+              (ppointer->handle (process-spawn arena-gate pos (= i 5) :init arena-gate-init :to *entity-pool*))))))
+  (none))
+
+;; the arena's menu: his fights, each with its reward (the fights themselves: next)
+(define *arena-cursor* 0)
+(defun arena-fight-name ((k int))
+  (case k
+    ((0) "FUOCO INCROCIATO")
+    (else "CAMPIONE: OSSOBELLO")))
+(defun arena-fight-reward ((k int))
+  (case k
+    ((0) "RECUPERO VITA LENTO")
+    (else "ECO BIANCO X3 DAI NEMICI")))
+(defconstant ARENA-FIGHTS 2)
+
+(defun arena-menu-screen ()
+  (when (cpad-pressed? 0 up)
+    (cpad-clear! 0 up)
+    (sound-play "cursor-up-down")
+    (set! *arena-cursor* (if (> *arena-cursor* 0) (+ *arena-cursor* -1) (+ ARENA-FIGHTS -1))))
+  (when (cpad-pressed? 0 down)
+    (cpad-clear! 0 down)
+    (sound-play "cursor-up-down")
+    (set! *arena-cursor* (if (< *arena-cursor* (+ ARENA-FIGHTS -1)) (+ *arena-cursor* 1) 0)))
+  (when (cpad-pressed? 0 circle)
+    (cpad-clear! 0 circle)
+    ;; (the fights: not yet)
+    (pc-enhanced-denied))
+  (when (cpad-pressed? 0 triangle)
+    (cpad-clear! 0 triangle)
+    (sound-play "cursor-options")
+    (set! *soul-shop-open* #f))
+  (let ((font (new 'stack 'font-context *font-default-matrix* 6 40 0.0 (font-color default) (font-flags shadow kerning))))
+    (set-scale! font 0.8)
+    (set-width! font 500)
+    (set-height! font 24)
+    (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
+    (set! (-> font color) (font-color progress-yellow))
+    (print-game-text "LOTTE NELL'ARENA" font #f 128 22)
+    (+! (-> font origin y) 34.0)
+    (set-scale! font 0.7)
+    (dotimes (k ARENA-FIGHTS)
+      (set! (-> font color) (if (= k *arena-cursor*) (font-color progress-yellow) (font-color default)))
+      (print-game-text (arena-fight-name k) font #f 128 22)
+      (+! (-> font origin y) 16.0)
+      (set-scale! font 0.55)
+      (format (clear *temp-string*) "PREMIO: ~S" (arena-fight-reward k))
+      (print-game-text *temp-string* font #f 128 22)
+      (set-scale! font 0.7)
+      (+! (-> font origin y) 24.0))
+    (set! (-> font color) (font-color default))
+    (+! (-> font origin y) 8.0)
+    (print-game-text "~Y~22L<~Z~Y~25L@~Z~Y~1L>~Z~Y~23L[~Z~+26H COMBATTI    ~Y~22L<~Z~Y~26L;~Z~Y~1L>~Z~Y~23L[~Z~+26H ESCI" font #f 128 22))
   (none))
 
 ;; the mod options' "move the merchant": in his village, put 4.5 m in front of Jak if not there yet, then moved with
