@@ -3098,7 +3098,11 @@
     (else "IL JET-BOARD IN VENDITA")))
 ;; the fights on offer now: the third once the warrior has put back Rock Village's pontoons
 (defun arena-fights ()
-  (if (task-closed? (game-task village2-warrior-money) (task-status need-resolution)) 3 2))
+  ;; (paid: his reward speech's stage closed, the pontoons up; his cell picked up or not)
+  (if (or (task-closed? (game-task village2-warrior-money) (task-status need-reward-speech))
+          (task-complete? *game-info* (game-task village2-warrior-money)))
+    3
+    2))
 
 (defun arena-menu-screen ()
   (when (cpad-pressed? 0 up)
