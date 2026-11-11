@@ -80,6 +80,7 @@
   (soul-board 917)
   (merchant-met 918)
   (daxter-white-seen 919)
+  (arena-offered 920)
   (money-per-level 204)
   (buzzer-total 205)
   (fuel-cell 206)
@@ -310,11 +311,12 @@
 
 ;; Jak Living Sky: its tags, returning where the next one goes
 (defun soul-save-tags ((p pointer))
-  (dotimes (i 20)
+  (dotimes (i 21)
     (let ((tag (the-as game-save-tag (&+ p (* i 16)))))
       (set! (-> tag elt-type) (the-as game-save-elt (+ i 900)))
       (set! (-> tag elt-count) 0)
       (set! (-> tag user-float0) (cond
+                                       ((= i 20) *arena-offered*)
                                        ((= i 19) *daxter-white-seen*)
                                        ((= i 18) *merchant-met*)
                                        ((= i 17) *soul-board*)
@@ -332,7 +334,7 @@
                                        ((= i 5) *soul-life*)
                                        ((= i 4) *soul-eco*)
                                        (else (-> *soul-pile* data i))))))
-  (&+ p 320))
+  (&+ p 336))
 
 (defmethod save-game! ((this game-info) (arg0 game-save) (arg1 string))
   "Update the game-save to have the info from the current game state"
@@ -674,6 +676,7 @@
   (set! *soul-board* 0.0)
   (set! *merchant-met* 0.0)
   (set! *daxter-white-seen* 0.0)
+  (set! *arena-offered* 0.0)
   ;; loop over all tags
   (let ((data (the-as game-save-tag (-> save tag))))
     (while (< (the-as int data) (the-as int (&-> save tag 0 user-int8 (-> save length))))
@@ -726,6 +729,7 @@
         (((game-save-elt soul-board)) (set! *soul-board* (-> data user-float0)))
         (((game-save-elt merchant-met)) (set! *merchant-met* (-> data user-float0)))
         (((game-save-elt daxter-white-seen)) (set! *daxter-white-seen* (-> data user-float0)))
+        (((game-save-elt arena-offered)) (set! *arena-offered* (-> data user-float0)))
         (((game-save-elt money-per-level))
          (let ((v1-34 (min 32 (-> data elt-count))))
            (dotimes (a0-76 v1-34)

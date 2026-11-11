@@ -228,6 +228,7 @@
      (set! *soul-board* 0.0)
      (set! *merchant-met* 0.0)
      (set! *daxter-white-seen* 0.0)
+     (set! *arena-offered* 0.0)
      (set! (-> this fuel) 0.0)
      (set! (-> this money-total) 0.0)
      (set! (-> this buzzer-total) 0.0)
