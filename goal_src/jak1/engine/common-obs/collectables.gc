@@ -2448,6 +2448,7 @@
 (define *mline-hit-2* (new 'static 'boxed-array :type int32 #x4674 736))
 (define *mline-hit-1* (new 'static 'boxed-array :type int32 #x4675 838))
 (define *mline-bye-nothing-1* (new 'static 'boxed-array :type int32 #x4676 713))
+(define *mline-offer* (new 'static 'boxed-array :type int32 #x4678 3910))
 ;; a group's lines said ("first": all, in order; the others: one at random)
 (defun merchant-group-say ((group symbol))
   (case group
@@ -2501,6 +2502,10 @@
      (case (rand-vu-int-count 2)
        ((0) (merchant-say "voice/merchant-hit-2.mp3" *mline-hit-2*))
        (else (merchant-say "voice/merchant-hit-1.mp3" *mline-hit-1*)))
+     )
+    (('offer)
+     (case (rand-vu-int-count 1)
+       (else (merchant-say "voice/merchant-offer.mp3" *mline-offer*)))
      )
     )
   (none))
@@ -2634,7 +2639,8 @@
       ;; from Rock Village on, the arena's ambush over, not offered yet: his offer first
       (set! *arena-offer-showing*
             (and (>= *merchant-at* 1) (<= *merchant-at* 4) (arena-open?) (< *arena-offered* 1.0)))
-      (merchant-open-line))
+      ;; (his offer said aloud, in its turn after any line being said; then no opening line over it)
+      (if *arena-offer-showing* (merchant-group-say 'offer) (merchant-open-line)))
   :exit
     (behavior ()
       ;; his goodbye: after a purchase or not (unless another line's being said)
@@ -2945,7 +2951,7 @@
     (+! (-> font origin y) 52.0)
     (print-game-text "VINCI, E TI VENDO MERCE CHE NON VENDO A NESSUN ALTRO." font #f 128 22)
     (+! (-> font origin y) 44.0)
-    (print-game-text "IL TELETRASPORTO QUI ACCANTO TI PORTA DAVANTI ALLA PORTA. CI VEDIAMO AL CENTRO."
+    (print-game-text "IL TELETRASPORTO QUI ACCANTO TI PORTA DAVANTI ALL'ARENA. CI VEDIAMO AL CENTRO."
                      font #f 128 22)
     (set-scale! font 0.7)
     (set-height! font 24)
