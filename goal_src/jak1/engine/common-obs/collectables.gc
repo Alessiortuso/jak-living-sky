@@ -2923,9 +2923,16 @@
 ;; game starts again at the continue (a warp one: he warps in there)
 ;; the way back's menu: up and down among the villages been to, Circle goes, Triangle not
 (defstate arena-gate-menu (arena-gate)
+  :enter
+    (behavior ()
+      (set-time! (-> self state-time)))
   :trans
     (behavior ()
       (spawn (-> self part) (-> self root trans))
+      ;; (the Circle that opened it not taken as a choice: input from 0.3 s on)
+      (when (not (time-elapsed? (-> self state-time) (seconds 0.3)))
+        (cpad-clear! 0 circle)
+        (cpad-clear! 0 triangle))
       (when (cpad-pressed? 0 up)
         (cpad-clear! 0 up)
         (sound-play "cursor-up-down")
