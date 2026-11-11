@@ -113,7 +113,12 @@ level = {
     'base_id': 60100,
     'art_groups': [],
     'custom_models': MODEL_NAMES,
-    'textures': [],
+    'textures': [['misty-vis-alpha']],  # (Misty's sky page: also what makes the builder read Misty's data below)
+    # Misty's texture remap, sky and tpages (filled in from its bsp): without tpages the level logs in none and the
+    # drawing crashes
+    'tex_remap': 'misty',
+    'sky': 'misty',
+    'tpages': [],
     'ambients': [],
     'actors': out_actors,
 }

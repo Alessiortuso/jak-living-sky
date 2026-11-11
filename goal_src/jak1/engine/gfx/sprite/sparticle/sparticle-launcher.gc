@@ -55,7 +55,7 @@
 
 ;; All the particle launchers.
 ;; Particle effects will add themselves to this table when the code is loaded/linked
-(define *part-id-table* (new 'global 'boxed-array sparticle-launcher 4096)) ;; Jak Living Sky: Brume's levels go up to 3998
+(define *part-id-table* (new 'global 'boxed-array sparticle-launcher 8192)) ;; Jak Living Sky: Brume's levels go up to 3998, the PDS sentinel's to 4183 (past 4096 they overwrote *part-group-id-table*, allocated right after)
 
 ;; All the particle groups.
 (define *part-group-id-table* (new 'global 'boxed-array sparticle-launch-group 4096)) ;; and to 3107

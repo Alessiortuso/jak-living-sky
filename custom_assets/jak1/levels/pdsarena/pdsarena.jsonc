@@ -27,7 +27,14 @@
     "pds-swingpole",
     "pds-cam"
   ],
-  "textures": [],
+  "textures": [
+    [
+      "misty-vis-alpha"
+    ]
+  ],
+  "tex_remap": "misty",
+  "sky": "misty",
+  "tpages": [],
   "ambients": [],
   "actors": [
     {
