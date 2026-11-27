@@ -790,11 +790,15 @@
     (cond
       (a1-0
        ;; og:j1-board changed
-       (if (board?)
-         (if (zero? arg0)
-           (-> a1-0 control trans)
-           (vector<-cspace! (new 'static 'vector) (-> a1-0 board-node-list data (min arg0 (1- (-> a1-0 board-node-list length))))))
-         (if (zero? arg0) (-> a1-0 control trans) (vector<-cspace! (new 'static 'vector) (-> a1-0 node-list data arg0)))))
+       ;; Jak Living Sky: a joint not computed yet (the board's, before it's drawn) gives Jak's own position, not a crash
+       (let ((cs (if (zero? arg0)
+                   (the-as cspace #f)
+                   (if (board?)
+                     (-> a1-0 board-node-list data (min arg0 (1- (-> a1-0 board-node-list length))))
+                     (-> a1-0 node-list data arg0)))))
+         (if (and cs (-> cs bone) (nonzero? (-> cs bone)))
+           (vector<-cspace! (new 'static 'vector) cs)
+           (-> a1-0 control trans))))
       (else (camera-pos)))))
 
 (defun target-cam-pos ()

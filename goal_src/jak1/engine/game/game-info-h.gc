@@ -220,8 +220,11 @@
 (define *soul-vent-gen* 0)
 ;; Jak Living Sky: the white eco left behind can be taken back (Jak's been away from it since)
 (define *soul-pile-armed* #f)
-;; Jak Living Sky: bought in the shop: how much longer the eco lasts (0 to 3 steps)
+;; Jak Living Sky: bought in the shop: how much longer the eco lasts (0 to 3 steps): blue (this one: once all three,
+;; a save made before them gives its steps to all three), yellow, red
 (define *soul-eco-time* 0.0)
+(define *soul-eco-time-yellow* 0.0)
+(define *soul-eco-time-red* 0.0)
 ;; Jak Living Sky: the dark eco Jak has taken in from corrupted enemies, kept for good (0 to 100: full, he
 ;; can turn into Dark Jak)
 (define *soul-dark* 0.0)
@@ -255,6 +258,13 @@
 (define *arena-won* 0.0)
 (defun arena-won? ((k int))
   (logtest? (the int *arena-won*) (ash 1 k)))
+;; Jak Living Sky: a fight's prize bought in the merchant's shop (on sale there once the fight's won): in *arena-won*
+;; too, from its 9th bit (k + 8), so kept in the save with it
+(defun arena-bought? ((k int))
+  (logtest? (the int *arena-won*) (ash 1 (+ k 8))))
+(defun arena-buy! ((k int))
+  (set! *arena-won* (the float (logior (the int *arena-won*) (ash 1 (+ k 8)))))
+  (none))
 (defun dark-jak-duration ()
   (the-as time-frame (the int (* (+ 10.0 (* 5.0 *soul-dark-time*)) (the float (seconds 1))))))
 ;; Jak Living Sky: Jak turned into Dark Jak (and since when)

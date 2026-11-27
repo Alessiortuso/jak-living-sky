@@ -1,11 +1,11 @@
 {
   "schemaVersion": "1.0.0",
   "sourceName": "Jak Living Sky",
-  "lastUpdated": "2026-11-02T14:00:00Z",
+  "lastUpdated": "2026-11-27T10:00:00Z",
   "mods": {
     "jak-living-sky": {
       "displayName": "Jak Living Sky",
-      "description": "New graphics and living weather for Jak and Daxter: clouds, mist, rain, snow, day and night, sun and shadows, reflections, vegetation. Based on Jak Enhanced Trilogy by stichlola, with fixes for the shadow and sea lines and the missing eco particles. Adds optional harder rules: white eco from enemies, lost when you die, spent at the warp gates. Includes Brume Village by Cuttlefishthesage, used with their permission.",
+      "description": "New graphics and living weather for Jak and Daxter: clouds, mist, rain, snow, day and night, sun and shadows, reflections, vegetation. Based on Jak Enhanced Trilogy by stichlola, with fixes for the shadow and sea lines and the missing eco particles. Adds optional harder rules: white eco from enemies, lost when you die, spent at the warp gates, and a white eco merchant with a shop and an arena of three fights. Includes Brume Village by Cuttlefishthesage and the PDS sentinel from The Forgotten Lands by Kuitar5, used with their permission, and The JET-Board Legacy by Hat Kid (ISC license).",
       "authors": [
         "Alessiortuso",
         "stichlola"
@@ -21,6 +21,18 @@
       "coverArtUrl": null,
       "thumbnailArtUrl": null,
       "versions": [
+        {
+          "version": "2.1",
+          "publishedDate": "2026-11-27T10:00:00Z",
+          "assets": {
+            "windows": "https://github.com/Alessiortuso/jak-living-sky/releases/download/v2.1/Jak-Living-Sky-v2.1.zip",
+            "linux": null,
+            "macos": null
+          },
+          "supportedGames": [
+            "jak1"
+          ]
+        },
         {
           "version": "1.9",
           "publishedDate": "2026-11-05T17:00:00Z",

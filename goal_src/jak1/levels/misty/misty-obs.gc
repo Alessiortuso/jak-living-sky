@@ -1573,3 +1573,903 @@
     (go boat-fuelcell-spawn)
     (go boat-fuelcell-idle))
   (none))
+
+;; ---------------------------------------------------------------------------------------------------------
+;; Jak Living Sky: the merchant's first arena fight, "FUOCO INCROCIATO": in Misty's own arena, three waves of its
+;; lurkers (6, 9, 12 of them; 3, 4, 5 at once) coming in as its ambush's do (the ambush's own battlecontroller entity:
+;; its spawners' paths, its kinds of lurker, the arena's nav mesh), while the cannon above keeps firing at Jak (the
+;; crossfire). Started from the arena merchant's menu (collectables.gc, arena-menu-screen); *crossfire-on* the while
+;; (the merchant away, the arena's doors shut). Won: the victory screen (arena-victory 0), its reward (slow health
+;; back). Lost (Jak dead) or left (away from the arena): over.
+(define-extern *crossfire-on* symbol)
+(define-extern *crossfire-cannon* symbol)
+(define-extern *crossfire-away* symbol)
+(define-extern *arena-lost* symbol)
+(define-extern arena-victory (function int none))
+(define-extern crossfire-spawn-spitter (function process entity-actor vector none)) ;; (quicksandlurker.gc)
+(define-extern crossfire-spawn-puddle (function process vector int none)) ;; (quicksandlurker.gc)
+
+(defconstant CROSSFIRE-WAVES 3)
+
+(deftype crossfire-battle (battlecontroller)
+  ((wave int32))
+  (:state-methods
+   crossfire-intro
+   crossfire-rest
+   crossfire-wave
+   crossfire-done))
+
+;; the spitters' spots (their pools': 24 m across): 35 m from the arena's middle, on its flat sand past its raised ring
+;; and its bowl, away from the silo's side and the way in (degrees round from +z to +x)
+(define *crossfire-spitter-deg* (new 'static 'array float 4 195.0 245.0 295.0 345.0))
+
+;; the ground under a spot (Misty's), or its arena's floor
+(defun crossfire-ground ((out vector) (x float) (z float))
+  (set-vector! out x (meters 40) z 1.0)
+  (let ((tri (new 'stack-no-clear 'collide-tri-result)))
+    (if (>= (fill-and-probe-using-y-probe *collide-cache* out (meters 30) (collide-kind background) (the-as process-drawable #f)
+                                          tri (new 'static 'pat-surface :noentity #x1))
+            0.0)
+      (set! (-> out quad) (-> tri intersect quad))
+      (set! (-> out y) (meters 27.8))))
+  out)
+
+;; the spitters' spot k, on the ground
+(defun crossfire-spitter-spot ((out vector) (k int))
+  (let ((a (* 182.04445 (-> *crossfire-spitter-deg* k))))
+    (crossfire-ground out
+                      (+ (meters -197.28) (* (meters 35) (sin a)))
+                      (+ (meters 958.28) (* (meters 35) (cos a))))))
+
+;; their puddles, once (the fight's start)
+(defbehavior crossfire-puddles crossfire-battle ()
+  (dotimes (k 4)
+    (crossfire-spawn-puddle self (crossfire-spitter-spot (new 'stack-no-clear 'vector) k) k))
+  (none))
+
+;; the spitters of a wave: those left gone, four new ones up
+(defbehavior crossfire-spitters crossfire-battle ()
+  (let ((c (-> self child)))
+    (while c
+      (let ((next (-> c 0 brother)))
+        (if (= (-> c 0 type symbol) 'quicksandlurker) (deactivate (-> c 0)))
+        (set! c next))))
+  (dotimes (k 4)
+    ;; (as Misty's: its spot half a metre over its mud's middle; the pool's middle 0.7 m over the sand)
+    (let ((pos (crossfire-spitter-spot (new 'stack-no-clear 'vector) k)))
+      (+! (-> pos y) (meters 1.2))
+      (crossfire-spawn-spitter self (-> self entity) pos)))
+  (none))
+
+;; one lurker in, at a spawner free (its way in, as the ambush's), corrupted by dark eco three times in ten (its
+;; corruption by its entity: the same, the ambush's, for all)
+(defbehavior crossfire-spawn-one crossfire-battle ()
+  (let ((k (rand-vu-int-count (-> self spawner-count))))
+    (when (not (handle->process (-> self spawner-array k creature)))
+      (battlecontroller-spawn-creature-at-spawner k 0)
+      (let ((e (the-as nav-enemy (handle->process (-> self spawner-array k creature)))))
+        (when e
+          (set! (-> e dark) (rand-vu-percent? 0.3))
+          (set! (-> e dark-eye 0) -2)
+          (set! (-> e dark-eye 1) -2)))))
+  (none))
+
+;; the ambush's battlecontroller entity in Misty
+(defun crossfire-entity ()
+  (let ((lev (level-get *level* 'misty)))
+    (when (and lev (= (-> lev status) 'active))
+      (let ((ents (-> lev bsp level entity)))
+        (dotimes (j (-> ents length))
+          (let ((e (-> ents data j entity)))
+            (if (and e (= (-> (the-as entity-actor e) etype) misty-battlecontroller)) (return (the-as entity-actor e))))))))
+  (the-as entity-actor #f))
+
+;; a wave's lurkers: how many in all, how many at once
+(defbehavior crossfire-setup-wave crossfire-battle ()
+  (set! (-> self max-spawn-count) (+ 6 (* 3 (-> self wave))))
+  (set! (-> self target-count) (+ 3 (-> self wave)))
+  (set! (-> self spawn-count) 0)
+  (set! (-> self die-count) 0)
+  (none))
+
+;; its words in the middle of the screen
+(defun crossfire-banner ((str string))
+  (let ((font (new 'stack 'font-context *font-default-matrix* 6 70 0.0 (font-color progress-yellow) (font-flags shadow kerning))))
+    (set-scale! font 1.0)
+    (set-width! font 500)
+    (set-height! font 40)
+    (set! (-> font flags) (font-flags shadow kerning middle middle-vert large))
+    (print-game-text str font #f 128 22))
+  (none))
+
+;; Jak Living Sky: one of Ossobello's sounds, at a spot: heard far off (full up to 30 m, fading out at 120 m: the
+;; game's own sounds go quiet much nearer)
+(defun ossobello-sound-id ((name sound-name) (pos vector) (id sound-id))
+  (when *sound-player-enable*
+    (let ((cmd (the-as sound-rpc-play (get-sound-buffer-entry))))
+      (set! (-> cmd command) (sound-command play))
+      (set! (-> cmd id) id)
+      (set! (-> cmd name) name)
+      (set! (-> cmd parms mask) (sound-mask volume fo-min fo-max))
+      (set! (-> cmd parms group) (sound-group sfx))
+      (set! (-> cmd parms volume) 1024)
+      (set! (-> cmd parms pitch-mod) 0)
+      (set! (-> cmd parms bend) 0)
+      (set! (-> cmd parms fo-min) 30)
+      (set! (-> cmd parms fo-max) 120)
+      (sound-trans-convert (-> cmd parms trans) pos)))
+  (none))
+
+(defun ossobello-sound ((name sound-name) (pos vector))
+  (let ((id (new-sound-id)))
+    (ossobello-sound-id name pos id)
+    id))
+
+;; Jak Living Sky: Ossobello's voices, Klaww's (the ogre's bank, Mountain Pass's): loaded for his fight, as an extra
+;; bank (as the JET-Board's, level.gc), unloaded after (unless a level loaded needs it)
+(define *ossobello-bank* #f)
+(defun ossobello-bank! ((on symbol))
+  (cond
+    ((and on (not *ossobello-bank*))
+     (if (and (!= *sound-bank-1* 'ogre) (!= *sound-bank-2* 'ogre)) (sound-bank-load (static-sound-name "ogre")))
+     (set! *ossobello-bank* #t))
+    ((and (not on) *ossobello-bank*)
+     (if (and (!= *sound-bank-1* 'ogre) (!= *sound-bank-2* 'ogre)) (sound-bank-unload (static-sound-name "ogre")))
+     (set! *ossobello-bank* #f)))
+  (none))
+
+;; still on: the fight not ended elsewhere (Jak dead), Jak still in the arena
+(defbehavior crossfire-check crossfire-battle ()
+  (when (or (not *crossfire-on*)
+            (not *target*)
+            (< (meters 70) (vector-vector-distance (-> self root trans) (-> *target* control trans))))
+    (format 0 "[crossfire] over (on ~A)~%" *crossfire-on*)
+    (set! *crossfire-on* #f)
+    (set! *crossfire-cannon* #f)
+    (ossobello-bank! #f)
+    (deactivate self))
+  (none))
+
+;; its start: the screen to black, Jak held; then back, the first wave's words
+(defstate crossfire-intro (crossfire-battle)
+  :virtual #t
+  :event battlecontroller-default-event-handler
+  :exit
+    (behavior ()
+      (remove-setting! 'bg-a)
+      (remove-setting! 'bg-a-speed)
+      (process-release? *target*))
+  :code
+    (behavior ()
+      (process-grab? *target*)
+      (set-setting! 'bg-a-speed #f 2.0 0)
+      (set-setting! 'bg-a 'abs 1.0 0)
+      (set-time! (-> self state-time))
+      (until (time-elapsed? (-> self state-time) (seconds 1.2))
+        (suspend))
+      (set! *crossfire-away* #t)
+      ;; (in the black: the spitters' puddles)
+      (crossfire-puddles)
+      (remove-setting! 'bg-a)
+      (set-time! (-> self state-time))
+      (until (time-elapsed? (-> self state-time) (seconds 0.6))
+        (suspend))
+      (go-virtual crossfire-rest)))
+
+(defstate crossfire-rest (crossfire-battle)
+  :virtual #t
+  :event battlecontroller-default-event-handler
+  :trans
+    (behavior ()
+      (crossfire-check)
+      (format (clear *temp-string*) "ONDATA ~D DI ~D" (+ (-> self wave) 1) CROSSFIRE-WAVES)
+      (crossfire-banner *temp-string*))
+  :code
+    (behavior ()
+      (set-time! (-> self state-time))
+      (until (time-elapsed? (-> self state-time) (seconds 3))
+        (suspend))
+      (crossfire-setup-wave)
+      (crossfire-spitters)
+      (go-virtual crossfire-wave)))
+
+(defstate crossfire-wave (crossfire-battle)
+  :virtual #t
+  :event battlecontroller-default-event-handler
+  :trans
+    (behavior ()
+      (crossfire-check)
+      (battlecontroller-update-spawners))
+  :code
+    (behavior ()
+      (set-time! (-> self state-time))
+      (format 0 "[crossfire] wave ~D: ~D lurkers, ~D at once~%" (-> self wave) (-> self max-spawn-count) (-> self target-count))
+      (loop
+        (when (time-elapsed? (-> self state-time) (seconds 0.1))
+          (set-time! (-> self state-time))
+          (let ((alive 0))
+            (let ((c (-> self child)))
+              (while c
+                (if (type-type? (-> c 0 type) nav-enemy) (+! alive 1))
+                (set! c (-> c 0 brother))))
+            (when (and (zero? alive) (>= (-> self spawn-count) (-> self max-spawn-count)))
+              (+! (-> self wave) 1)
+              (cond
+                ((>= (-> self wave) CROSSFIRE-WAVES)
+                 ;; won: the reward's bit, saved; the victory screen
+                 ;; (the fight still on until the victory screen's black: the merchant not back yet; the cannon and
+                 ;; the spitters quiet the while)
+                 (format 0 "[crossfire] won~%")
+                 (set! *crossfire-cannon* #f)
+                 (let ((c (-> self child)))
+                   (while c
+                     (let ((next (-> c 0 brother)))
+                       (if (= (-> c 0 type symbol) 'quicksandlurker) (deactivate (-> c 0)))
+                       (set! c next))))
+                 (set! *arena-won* (the float (logior (the int *arena-won*) 1)))
+                 (auto-save-command 'auto-save 0 0 *default-pool*)
+                 (arena-victory 0)
+                 (go-virtual crossfire-done))
+                (else (go-virtual crossfire-rest))))
+            (when (< alive (-> self target-count))
+              (suspend-for (-> self spawn-period))
+              (crossfire-spawn-one))))
+        (suspend))))
+
+;; won: waiting for the victory screen's black (it ends the fight: *crossfire-on* off, Jak back before the merchant)
+(defstate crossfire-done (crossfire-battle)
+  :virtual #t
+  :event battlecontroller-default-event-handler
+  :code
+    (behavior ()
+      (while *crossfire-on*
+        (suspend))
+      (ossobello-bank! #f)
+      (deactivate self)))
+
+(defbehavior crossfire-init-by-other crossfire-battle ((e entity-actor))
+  (set! (-> self entity) e)
+  (set! (-> self root) (new 'process 'trsqv))
+  (vector-copy! (-> self root trans) (-> e extra trans))
+  (vector-identity! (-> self root scale))
+  (quaternion-identity! (-> self root quat))
+  ;; the ambush's spawners, kinds of lurker, timing (its entity's lumps); its doors and triggers not used
+  (battlecontroller-method-27 self)
+  (dotimes (k (-> self spawner-count))
+    (set! (-> self spawner-array k trigger-actor) #f)
+    (set! (-> self spawner-array k blocker-actor) #f)
+    (set! (-> self spawner-array k enabled) #t))
+  (set! (-> self misty-ambush-collision-hack) #t)
+  (set! (-> self noticed-player) #t)
+  (set! (-> self camera-on) #f)
+  (set! (-> self final-pickup-type) (pickup-type none))
+  (set! (-> self wave) 0)
+  (format 0 "[crossfire] begun: ~D spawners, ~D kinds~%" (-> self spawner-count) (-> self creature-type-count))
+  (go-virtual crossfire-intro))
+
+;; from the merchant's menu: begun if the ambush's entity is there (Misty loaded, Jak at its arena)
+(defun crossfire-start ()
+  (let ((e (crossfire-entity)))
+    (cond
+      (e
+       (set! *crossfire-on* #t)
+       (set! *crossfire-cannon* #t)
+       (set! *arena-lost* #f)
+       (set! *crossfire-away* #f)
+       (process-spawn crossfire-battle :init crossfire-init-by-other e :to *entity-pool*))
+      (else (format 0 "[crossfire] no battlecontroller in Misty~%"))))
+  (none))
+
+;; ---------------------------------------------------------------------------------------------------------
+;; Jak Living Sky: the merchant's second arena fight, "CAMPIONE: OSSOBELLO": in Misty's arena (as the first, its
+;; ambush's battlecontroller entity: its spawners' paths, its bonelurkers, the arena's nav mesh), its champion
+;; Ossobello, a giant bonelurker (bonelurker.gc): stunned by a hit, a hit while stunned one of his 6. The cannon quiet.
+;; Started from the arena merchant's menu; *crossfire-on* the while (the merchant away, the arena's doors shut; lost:
+;; Jak dead, mod-custom-code.gc). Won: the victory screen (arena-victory 1).
+(define-extern ossobello-make! (function process int none)) ;; (bonelurker.gc)
+(define-extern ossobello-hp (function process int)) ;; (bonelurker.gc)
+(define-extern ossobello-hp-max (function process int)) ;; (bonelurker.gc)
+(define-extern ossobello-phase! (function process int none)) ;; (bonelurker.gc)
+(define-extern soul-shop-box (function int int int int int int int int none)) ;; (collectables.gc)
+(define-extern *soul-hud-top-time* time-frame) ;; (hud-classes.gc: the white eco's counter moved up meanwhile)
+
+(defconstant OSSOBELLO-HITS 9)
+
+(deftype ossobello-battle (crossfire-battle)
+  ((boss  handle)
+   (music handle)
+   (shown float)
+   (phase int32)         ;; 0; 1 at 6 hits left (three babaks in); 2 at 3 (dark eco, three dark bonelurkers in)
+   (said  time-frame)
+   (support time-frame)))  ;; (since his last support lurker in)  ;; since when his phase's words are on screen  ;; his health bar's fill (going down to his hits left)
+
+;; his health bar, at the foot of the screen (screen units: 512 across, 224 down): his name over it, gold-edged as the
+;; menus' panel; red, a mark between each of his hits, the part just lost first white
+(defconstant OSSOBELLO-BAR-X 136)
+(defconstant OSSOBELLO-BAR-W 240)
+(defconstant OSSOBELLO-BAR-Y 196)
+(defconstant OSSOBELLO-BAR-H 7)
+
+(defbehavior ossobello-bar ossobello-battle ()
+  (let ((e (handle->process (-> self boss))))
+    (when e
+      (let* ((hp (ossobello-hp e))
+             (most (max 1 (ossobello-hp-max e)))
+             (now (/ (the float hp) (the float most))))
+        (set-time! *soul-hud-top-time*)
+        (seek! (-> self shown) now (* 0.6 (seconds-per-frame)))
+        (if (< (-> self shown) now) (set! (-> self shown) now))
+        (let ((font (new 'stack 'font-context *font-default-matrix* OSSOBELLO-BAR-X (+ OSSOBELLO-BAR-Y -15) 0.0
+                         (font-color progress-yellow) (font-flags shadow kerning))))
+          (set-scale! font 0.6)
+          (set-width! font OSSOBELLO-BAR-W)
+          (set-height! font 20)
+          (set! (-> font flags) (font-flags shadow kerning middle large))
+          (print-game-text "OSSOBELLO" font #f 128 22))
+        (let ((x OSSOBELLO-BAR-X) (y OSSOBELLO-BAR-Y) (w OSSOBELLO-BAR-W) (h OSSOBELLO-BAR-H))
+          (soul-shop-box (+ x -2) (+ y -2) (+ w 4) (+ h 4) 0 0 0 #x60)
+          (soul-shop-box (+ x -2) (+ y -2) (+ w 4) 1 255 190 70 #x70)
+          (soul-shop-box (+ x -2) (+ y h 1) (+ w 4) 1 255 190 70 #x70)
+          (soul-shop-box x y (the int (* (-> self shown) (the float w))) h 255 255 255 #x60)
+          (soul-shop-box x y (the int (* now (the float w))) h 200 30 20 #x80)
+          (dotimes (i (+ most -1))
+            (soul-shop-box (+ x (/ (* w (+ i 1)) most)) y 1 h 0 0 0 #x50))))))
+  (none))
+
+;; Jak Living Sky: his fight's music, "ossobello" (custom_assets/jak1/audio/arena/ossobello.mp3), on the main
+;; music player as the sentinel's (pdsarena-obs.gc): from his coming in to his death, Misty's own music silent the while,
+;; paused with the game; a child of the fight (gone with it, lost or left: the music stops)
+(define-extern *main-music-busy* symbol)
+(define-extern *last-music-level* symbol)
+
+(deftype ossobello-music (process)
+  ((paused symbol))
+  (:state-methods
+   active))
+
+(defmethod deactivate ((this ossobello-music))
+  (format 0 "[ossobello] music stop~%")
+  (stop-main-music)
+  (remove-setting! 'music-volume)
+  (set! *main-music-busy* #f)
+  (set! *last-music-level* #f)
+  (call-parent-method this)
+  (none))
+
+(defstate active (ossobello-music)
+  :virtual #t
+  :code
+    (behavior ()
+      (loop
+        (let ((p (if (paused?) #t #f)))
+          (when (!= p (-> self paused))
+            (if p (pause-main-music) (resume-main-music))
+            (set! (-> self paused) p)))
+        (suspend))))
+
+(defbehavior ossobello-music-init-by-other ossobello-music ()
+  (process-mask-clear! (-> self mask) pause menu)
+  (set! (-> self paused) #f)
+  (set! *main-music-busy* #t)
+  (format 0 "[ossobello] music play~%")
+  (play-main-music "arena/ossobello.mp3" (the int (-> *setting-control* default music-volume)))
+  (set-setting! 'music-volume 'abs 0.0 0)
+  (go-virtual active))
+
+;; the ambush's kind of lurker of that name (-1: none)
+(defbehavior ossobello-kind ossobello-battle ((name symbol))
+  (dotimes (i (-> self creature-type-count))
+    (if (= (-> self creature-type-array i type2 symbol) name) (return i)))
+  -1)
+(defbehavior ossobello-bonelurker-kind ossobello-battle ()
+  (ossobello-kind 'bonelurker))
+
+;; (the kinds' shares, kept while only bonelurkers come in)
+(define *ossobello-kinds-was* (new 'static 'array float 4 0.0 0.0 0.0 0.0))
+
+;; a lurker of a kind (its name) in at a spawner (its way in, as the ambush's): only that kind, the while
+(defbehavior ossobello-spawn-kind ossobello-battle ((k int) (name symbol))
+  (let ((b (ossobello-kind name))
+        (was *ossobello-kinds-was*))
+    (dotimes (i (-> self creature-type-count))
+      (set! (-> was i) (-> self creature-type-array i percent))
+      (set! (-> self creature-type-array i percent) (if (= i b) 1.0 0.0)))
+    (+! (-> self max-spawn-count) 1)
+    (battlecontroller-spawn-creature-at-spawner k 0)
+    (dotimes (i (-> self creature-type-count))
+      (set! (-> self creature-type-array i percent) (-> was i))))
+  (let ((e (the-as nav-enemy (handle->process (-> self spawner-array k creature)))))
+    (when e
+      (set! (-> e dark) #f)
+      (set! (-> e dark-eye 0) -2)
+      (set! (-> e dark-eye 1) -2))
+    e))
+
+(defbehavior ossobello-spawn-bonelurker ossobello-battle ((k int))
+  (ossobello-spawn-kind k 'bonelurker))
+
+;; his support: lurkers with him all along, more from phase to phase (2 babaks; 4 babaks; 4 bonelurkers, corrupted by dark
+;; eco), coming in again as they're killed. One in, at a spawner free (from the second on), if fewer than that
+(defbehavior ossobello-support-one ossobello-battle ()
+  (let ((alive 0)
+        (b (handle->process (-> self boss)))
+        (want (case (-> self phase) ((0) 2) (else 4))))
+    (let ((c (-> self child)))
+      (while c
+        (if (and (type-type? (-> c 0 type) nav-enemy) (!= (-> c 0) b)) (+! alive 1))
+        (set! c (-> c 0 brother))))
+    (when (< alive want)
+      (let ((start (+ 1 (rand-vu-int-count (+ (-> self spawner-count) -1))))
+            (done #f))
+        (dotimes (j (+ (-> self spawner-count) -1))
+          (let ((k (+ 1 (mod (+ (- start 1) j) (+ (-> self spawner-count) -1)))))
+            (when (and (not done) (not (handle->process (-> self spawner-array k creature))))
+              (let ((m (ossobello-spawn-kind k (if (= (-> self phase) 2) 'bonelurker 'babak))))
+                (when m
+                  (set! done #t)
+                  (if (= (-> self phase) 2) (set! (-> (the-as nav-enemy m) dark) #t))))))))))
+  (none))
+
+;; his phase from his hits left: once in a new one, his speed's, its lurkers in (no words on screen)
+(defbehavior ossobello-phases ossobello-battle ()
+  (let ((e (handle->process (-> self boss))))
+    (when e
+      (let* ((hp (ossobello-hp e))
+             (want (cond
+                     ((<= hp 3) 2)
+                     ((<= hp 6) 1)
+                     (else 0))))
+        (when (< (-> self phase) want)
+          (set! (-> self phase) want)
+          (set-time! (-> self said))
+          (format 0 "[ossobello] phase ~D~%" want)
+          (ossobello-sound (static-sound-name "ogre-roar1") (-> (the-as process-drawable e) root trans))
+          (ossobello-phase! e want)
+          ;; (his support, all its lurkers in at once)
+          (dotimes (i 6)
+            (ossobello-support-one))))))
+  ;; his support kept up: one in every 2.5 s while fewer than his phase's
+  (when (and (handle->process (-> self boss)) (time-elapsed? (-> self support) (seconds 2.5)))
+    (set-time! (-> self support))
+    (ossobello-support-one))
+  (none))
+
+;; ---------------------------------------------------------------------------------------------------------
+;; Jak Living Sky: Ossobello's fight's pistons: Snowy Mountain's Precursor pistons stood on end (arenapusher,
+;; scripts/enhanced/arenapusher_model.py), in groups of three side by side (a wall, no way between them) in one hole
+;; (arenahole, scripts/enhanced/arenahole_model.py), the groups spread over the arena. Each group out of the sand a
+;; while (with Snowy's pistons' own sounds), then back down, then up again, at times of its own; down, their tops flush
+;; in the hole (stood on). Up, solid: in Jak's way, and Ossobello's: charging into one, he's stunned as at a wall
+;; (bonelurker.gc, *ossobello-pillars*). Ossobello winding up a charge: a group or two near Jak up at once (the cage).
+;; Not rising over Jak or anyone (they wait). On the lurkers' nav mesh obstacles they go round.
+(def-actor arenapusher :bounds (0 5 0 7))
+(def-actor arenahole :bounds (0 0 0 8))
+
+(defconstant OSSOBELLO-GROUPS 14)
+(defconstant OSSOBELLO-PILLARS 48)                 ;; (three a group)
+(defconstant OSSOBELLO-PILLAR-R (meters 3.0))      ;; a piston's girth
+(defconstant OSSOBELLO-PILLAR-STEP (meters 4.44))  ;; from one to the next in a group (its width and a hand's breadth)
+(defconstant OSSOBELLO-PILLAR-DEPTH (meters 6.85)) ;; how far they sink: down, still 2.2 m out of the hole
+;; where each piston is (its foot) and, in w, how far up it is (0 down, 1 up: its group's)
+(define *ossobello-pillars*
+  (new 'static 'inline-array vector 48
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)
+       (new 'static 'vector) (new 'static 'vector) (new 'static 'vector) (new 'static 'vector)))
+;; the groups' middles, spread over the arena's flat sand well past the bowl's raised ring (its slope under a hole: in
+;; it): seven across the way round (none at 45 degrees: before the silo's side); seven more between them, further out, near the walls, pointing at the middle (none
+;; on the dark eco pool's side, the silo's, ~63 degrees: the lurkers jump in there) (degrees round from +z to +x, metres
+;; from the middle, which way: 0 across, 1 at the middle)
+(define *ossobello-group-spots*
+  (new 'static 'array float 42
+       0.0 28.0 0.0 90.0 28.0 0.0 135.0 33.0 0.0 180.0 28.0 0.0 225.0 33.0 0.0 270.0 28.0 0.0 315.0 33.0 0.0
+       22.5 45.0 1.0 112.5 45.0 1.0 157.5 45.0 1.0 202.5 45.0 1.0 247.5 45.0 1.0 292.5 45.0 1.0 337.5 45.0 1.0))
+;; the cage (bonelurker.gc): the groups to rise at once (1)
+(define *ossobello-cage* (new 'static 'array int32 16 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
+;; a group's hole's opening (half sizes): across, along its row (arenahole_model.py's IX, IZ)
+(defconstant OSSOBELLO-HOLE-ACROSS (meters 3.045))
+(defconstant OSSOBELLO-HOLE-ALONG (meters 6.655))
+
+;; the cage: Ossobello about to charge at Jak, up to two groups down near him (15 m from their nearest piston), not on
+;; him, not between him and Ossobello (at his sides or behind him: his way out narrowed, his way off the charge's),
+;; up at once
+(defun ossobello-cage ((jak vector) (boss vector))
+  (let ((to-boss (vector-! (new 'stack-no-clear 'vector) boss jak))
+        (n 0))
+    (set! (-> to-boss y) 0.0)
+    (vector-normalize! to-boss 1.0)
+    (dotimes (pass 2)
+      (let ((best -1)
+            (best-d (meters 15)))
+        (dotimes (g OSSOBELLO-GROUPS)
+          (let ((near (meters 1000))
+                (mid (-> *ossobello-pillars* (+ (* g 3) 1)))
+                (to-p (new 'stack-no-clear 'vector)))
+            (dotimes (i 3)
+              (set! near (fmin near (vector-vector-xz-distance jak (-> *ossobello-pillars* (+ (* g 3) i))))))
+            (vector-! to-p mid jak)
+            (set! (-> to-p y) 0.0)
+            (vector-normalize! to-p 1.0)
+            (when (and (< (-> mid w) 0.02)
+                       (zero? (-> *ossobello-cage* g))
+                       (< (+ OSSOBELLO-PILLAR-R (meters 1.6)) near)
+                       (< near best-d)
+                       (< (vector-dot to-p to-boss) 0.4))
+              (set! best g)
+              (set! best-d near))))
+        (when (>= best 0)
+          (set! (-> *ossobello-cage* best) 1)
+          (+! n 1))))
+    (if (> n 0) (format 0 "[pillar] cage: ~D groups up round Jak~%" n)))
+  (none))
+
+;; a piston: where its group says (its height, *ossobello-pillars*' w), drawn and collided with there
+(deftype arenapillar (process-drawable)
+  ((root   collide-shape :override)
+   (k      int32)
+   (ground float)
+   (up     float))
+  (:states
+   arenapillar-idle))
+
+(defstate arenapillar-idle (arenapillar)
+  :code
+    (behavior ()
+      (loop
+        (let ((u (-> *ossobello-pillars* (-> self k) w)))
+          (when (!= u (-> self up))
+            (set! (-> self up) u)
+            (set! (-> self root trans y) (+ (-> self ground) (* (- u 1.0) OSSOBELLO-PILLAR-DEPTH)))
+            ;; (an obstacle to the lurkers only while up: down, they walk over them; the nav mesh's users looked at only
+            ;; with this flag, navigate.gc)
+            (if (< 0.3 u)
+              (logior! (-> self root nav-flags) (nav-flags navf0))
+              (logclear! (-> self root nav-flags) (nav-flags navf0)))
+            (transform-post)))
+        (suspend))))
+
+(defbehavior arenapillar-init arenapillar ((k int) (pos vector) (q quaternion))
+  ;; (a plain shape, as the pools': moved by hand, no riders carried)
+  (let ((cshape (new 'process 'collide-shape self (collide-list-enum hit-by-player))))
+    (let ((mesh (new 'process 'collide-shape-prim-mesh cshape (the uint 0) (the uint 0))))
+      (set! (-> mesh prim-core collide-as) (collide-kind ground-object))
+      (set! (-> mesh collide-with) (collide-kind target))
+      (set! (-> mesh prim-core action) (collide-action solid))
+      (set! (-> mesh prim-core offense) (collide-offense indestructible))
+      (set! (-> mesh transform-index) 0)
+      (set-vector! (-> mesh local-sphere) 0.0 (meters 5) 0.0 (meters 6.2))
+      (set-root-prim! cshape mesh))
+    ;; (its group's middle one: round all three, while up: arenapillar-idle)
+    (set! (-> cshape nav-radius) (meters 7.0))
+    (backup-collide-with-as cshape)
+    (set! (-> self root) cshape))
+  (set! (-> self k) k)
+  ;; (its foot a metre under the sand: up, it stands in it, not over it)
+  (set! (-> self ground) (- (-> pos y) (meters 1)))
+  (set! (-> self up) 0.0)
+  (vector-copy! (-> self root trans) pos)
+  (set! (-> self root trans y) (+ (-> self ground) (- OSSOBELLO-PILLAR-DEPTH)))
+  (quaternion-copy! (-> self root quat) q)
+  (vector-identity! (-> self root scale))
+  (initialize-skeleton self *arenapusher-sg* '())
+  ;; (its still pose, as the pools': without an animation on, its joints are never worked out)
+  (logior! (-> self skel status) (janim-status inited))
+  (ja-channel-set! 1)
+  (let ((ch (-> self skel root-channel 0)))
+    (joint-control-channel-group-eval! ch (the-as art-joint-anim (-> self draw art-group data 2)) num-func-identity)
+    (set! (-> ch frame-num) 0.0))
+  (logclear! (-> self mask) (process-mask actor-pause))
+  (transform-post)
+  ;; on the lurkers' nav mesh (the fight's: the ambush's entity's), an obstacle they go round: one a group, its middle
+  ;; one (the mesh's users are few, its lurkers among them)
+  (set! (-> self entity) (-> (the-as process (ppointer->process (-> self parent))) entity))
+  (when (= (mod k 3) 1)
+    (nav-mesh-connect self (-> self root) (the-as nav-control #f))
+    ;; (down at first: no obstacle yet)
+    (logclear! (-> self root nav-flags) (nav-flags navf0)))
+  (go arenapillar-idle))
+
+;; the hole of a group: a frame of Precursor metal on the sand round its three, turned as they are; its rim collided with
+(deftype arenahole (process-drawable) ()
+  (:states
+   arenahole-idle))
+
+(defstate arenahole-idle (arenahole)
+  :code
+    (behavior ()
+      (loop
+        (suspend))))
+
+(defbehavior arenahole-init arenahole ((pos vector) (q quaternion))
+  (let ((cshape (new 'process 'collide-shape self (collide-list-enum hit-by-player))))
+    (let ((mesh (new 'process 'collide-shape-prim-mesh cshape (the uint 0) (the uint 0))))
+      (set! (-> mesh prim-core collide-as) (collide-kind ground-object))
+      (set! (-> mesh collide-with) (collide-kind target))
+      (set! (-> mesh prim-core action) (collide-action solid))
+      (set! (-> mesh prim-core offense) (collide-offense indestructible))
+      (set! (-> mesh transform-index) 0)
+      (set-vector! (-> mesh local-sphere) 0.0 0.0 0.0 (meters 8))
+      (set-root-prim! cshape mesh))
+    (backup-collide-with-as cshape)
+    (set! (-> self root) cshape))
+  (vector-copy! (-> self root trans) pos)
+  (quaternion-copy! (-> self root quat) q)
+  (vector-identity! (-> self root scale))
+  (initialize-skeleton self *arenahole-sg* '())
+  (logior! (-> self skel status) (janim-status inited))
+  (ja-channel-set! 1)
+  (let ((ch (-> self skel root-channel 0)))
+    (joint-control-channel-group-eval! ch (the-as art-joint-anim (-> self draw art-group data 2)) num-func-identity)
+    (set! (-> ch frame-num) 0.0))
+  (logclear! (-> self mask) (process-mask actor-pause))
+  (transform-post)
+  (go arenahole-idle))
+
+;; a group: its three pistons and their hole; their times (down a while, up, down...), their height (each one's w)
+(deftype arenagroup (process)
+  ((g      int32)
+   (fast   symbol)           ;; (the cage's: risen fast, up a little less)
+   (mid    vector :inline)   ;; its hole's middle
+   (along  vector :inline)   ;; its row's way
+   (across vector :inline))  ;; and across it
+  (:states
+   (arenagroup-down time-frame)
+   (arenagroup-move symbol)
+   arenagroup-up))
+
+(defbehavior arenagroup-set arenagroup ((u float))
+  (dotimes (i 3)
+    (set! (-> *ossobello-pillars* (+ (* (-> self g) 3) i) w) u))
+  (none))
+
+;; how far a spot is from its hole (0 in it)
+(defbehavior arenagroup-dist arenagroup ((pos vector))
+  (let* ((d (vector-! (new 'stack-no-clear 'vector) pos (-> self mid)))
+         (a (fmax 0.0 (- (fabs (vector-dot d (-> self along))) OSSOBELLO-HOLE-ALONG)))
+         (b (fmax 0.0 (- (fabs (vector-dot d (-> self across))) OSSOBELLO-HOLE-ACROSS))))
+    (sqrtf (+ (* a a) (* b b)))))
+
+;; Jak near it (to rise); Ossobello near it (to sink: let through)
+(defconstant OSSOBELLO-GROUP-JAK (meters 8))
+(defconstant OSSOBELLO-GROUP-BOSS (meters 11))
+(defbehavior arenagroup-jak-near? arenagroup ()
+  (and *target* (< (arenagroup-dist (-> *target* control trans)) OSSOBELLO-GROUP-JAK)))
+(defbehavior arenagroup-boss-near? arenagroup ()
+  (let ((b (handle->process (-> (the-as ossobello-battle (ppointer->process (-> self parent))) boss))))
+    (and b (< (arenagroup-dist (-> (the-as process-drawable b) root trans)) OSSOBELLO-GROUP-BOSS))))
+
+;; someone in its hole (over its pistons: in its opening, a little more), Jak or anyone of the fight's (Ossobello, his
+;; lurkers): not rising yet. Beside it, near: up all the same
+(defbehavior arenagroup-in-hole? arenagroup ((pos vector) (more float))
+  (let ((d (vector-! (new 'stack-no-clear 'vector) pos (-> self mid))))
+    (and (< (fabs (vector-dot d (-> self along))) (+ OSSOBELLO-HOLE-ALONG more))
+         (< (fabs (vector-dot d (-> self across))) (+ OSSOBELLO-HOLE-ACROSS more)))))
+
+(defbehavior arenagroup-clear? arenagroup ()
+  (let ((near (and *target* (arenagroup-in-hole? (-> *target* control trans) (meters 0.5)))))
+    (let ((c (-> self parent 0 child)))
+      (while c
+        (if (and (type-type? (-> c 0 type) nav-enemy)
+                 (arenagroup-in-hole? (-> (the-as process-drawable (-> c 0)) root trans) (meters 2.5)))
+          (set! near #t))
+        (set! c (-> c 0 brother))))
+    (not near)))
+
+;; down: up when Jak comes near (not with Ossobello near too), or for the cage, or after a long while anyway; never
+;; over anyone in its hole
+(defstate arenagroup-down (arenagroup)
+  :code
+    (behavior ((wait time-frame))
+      (arenagroup-set 0.0)
+      (set! (-> *ossobello-cage* (-> self g)) 0)
+      (let ((t0 (current-time)))
+        (until (and (arenagroup-clear?)
+                    (or (nonzero? (-> *ossobello-cage* (-> self g)))
+                        (and (not (arenagroup-boss-near?)) (or (arenagroup-jak-near?) (time-elapsed? t0 wait)))))
+          (suspend)))
+      (set! (-> self fast) (nonzero? (-> *ossobello-cage* (-> self g))))
+      (set! (-> *ossobello-cage* (-> self g)) 0)
+      (go arenagroup-move #t)))
+
+(defstate arenagroup-move (arenagroup)
+  :code
+    (behavior ((rise symbol))
+      ;; (Snowy's pistons' sounds, in the common bank: at the middle one)
+      (let ((mid (-> *ossobello-pillars* (+ (* (-> self g) 3) 1))))
+        (if rise
+          (ossobello-sound (static-sound-name "snow-piston-opn") mid)
+          (ossobello-sound (static-sound-name "snow-piston-cls") mid)))
+      (let ((t0 (current-time))
+            (len (cond
+                   ((and rise (-> self fast)) (seconds 0.35))
+                   (rise (seconds 0.7))
+                   (else (seconds 0.9)))))
+        (until (time-elapsed? t0 len)
+          (let* ((t (/ (the float (- (current-time) t0)) (the float len)))
+                 (s (* t t (- 3.0 (* 2.0 t)))))
+            (arenagroup-set (if rise s (- 1.0 s))))
+          (suspend)))
+      (if rise
+        (go arenagroup-up)
+        (go arenagroup-down (the time-frame (the int (* (rand-vu-float-range 8.0 14.0) (the float (seconds 1)))))))))
+
+;; up: down when Ossobello comes near (letting him by), or when Jak's been away a while
+(defstate arenagroup-up (arenagroup)
+  :code
+    (behavior ()
+      (arenagroup-set 1.0)
+      (let ((t0 (current-time))
+            (away (current-time)))
+        (loop
+          (if (arenagroup-jak-near?) (set! away (current-time)))
+          (when (or (and (arenagroup-boss-near?) (time-elapsed? t0 (seconds 0.6)))
+                    (and (time-elapsed? t0 (seconds 3)) (time-elapsed? away (seconds 2.5))))
+            (goto cfg-down))
+          (suspend)))
+      (label cfg-down)
+      (go arenagroup-move #f)))
+
+;; a group at its spot: its three across the way round, side by side (their middle's sand under all three, and their
+;; hole), down; up first after a wait
+(defbehavior arenagroup-init arenagroup ((g int) (wait time-frame))
+  (set! (-> self g) g)
+  (set! (-> self fast) #f)
+  (set! (-> self entity) (-> (the-as process (ppointer->process (-> self parent))) entity))
+  (let* ((a (* 182.04445 (-> *ossobello-group-spots* (* 3 g))))
+         (r (* 4096.0 (-> *ossobello-group-spots* (+ (* 3 g) 1))))
+         (radial (< 0.5 (-> *ossobello-group-spots* (+ (* 3 g) 2))))
+         (mid (crossfire-ground (-> self mid)
+                                (+ (meters -197.28) (* r (sin a)))
+                                (+ (meters 958.28) (* r (cos a)))))
+         ;; (their local z, their row's way: across the way round, or at the middle)
+         (q (quaternion-axis-angle! (new 'stack-no-clear 'quaternion) 0.0 1.0 0.0 (if radial a (+ a 16384.0))))
+         (along (-> self along)))
+    (cond
+      (radial
+       (set-vector! along (sin a) 0.0 (cos a) 1.0)
+       (set-vector! (-> self across) (cos a) 0.0 (- (sin a)) 1.0))
+      (else
+       (set-vector! along (cos a) 0.0 (- (sin a)) 1.0)
+       (set-vector! (-> self across) (sin a) 0.0 (cos a) 1.0)))
+    ;; (the hole on the highest of the sand under it: its four corners and its middle; not sunk into it)
+    (let ((y (-> mid y))
+          (pt (new 'stack-no-clear 'vector)))
+      ;; (its corners, and halfway along its sides)
+      (dotimes (c 8)
+        (let ((sa (case c ((0 1) -1.0) ((2 3) 1.0) ((4 5) 0.0) (else (if (= c 6) -1.0 1.0))))
+              (sb (case c ((0 2 4) -1.0) ((1 3 5) 1.0) (else 0.0))))
+          (crossfire-ground pt
+                            (+ (-> mid x) (* sa (meters 6.8) (-> along x)) (* sb (meters 3.2) (-> self across x)))
+                            (+ (-> mid z) (* sa (meters 6.8) (-> along z)) (* sb (meters 3.2) (-> self across z))))
+          (if (< (fabs (- (-> pt y) (-> mid y))) (meters 1.2)) (set! y (fmax y (-> pt y))))))
+      (set! (-> mid y) y))
+    (dotimes (i 3)
+      (let ((k (+ (* g 3) i))
+            (pos (new 'stack-no-clear 'vector)))
+        (vector+float*! pos mid along (* (the float (+ i -1)) OSSOBELLO-PILLAR-STEP))
+        (set! (-> pos y) (-> mid y))
+        (set! (-> pos w) 0.0)
+        (vector-copy! (-> *ossobello-pillars* k) pos)
+        (process-spawn arenapillar :init arenapillar-init k pos q :to self)))
+    (process-spawn arenahole :init arenahole-init mid q :to self))
+  (set! (-> *ossobello-cage* g) 0)
+  (go arenagroup-down wait))
+
+;; the groups, down, each up at its own time
+(defbehavior ossobello-pillars ossobello-battle ()
+  ;; (no Ossobello yet: the groups look for him, by this)
+  (set! (-> self boss) (the-as handle #f))
+  (dotimes (g OSSOBELLO-GROUPS)
+    (process-spawn arenagroup :init arenagroup-init g
+                   (the time-frame (the int (* (rand-vu-float-range 2.0 6.0) (the float (seconds 1)))))
+                   :to self))
+  (none))
+
+;; its start: as the first's (the screen to black, Jak held; then back), no puddles
+(defstate crossfire-intro (ossobello-battle)
+  :virtual #t
+  :event battlecontroller-default-event-handler
+  :exit
+    (behavior ()
+      (remove-setting! 'bg-a)
+      (remove-setting! 'bg-a-speed)
+      (process-release? *target*))
+  :code
+    (behavior ()
+      (process-grab? *target*)
+      (set-setting! 'bg-a-speed #f 2.0 0)
+      (set-setting! 'bg-a 'abs 1.0 0)
+      (set-time! (-> self state-time))
+      (until (time-elapsed? (-> self state-time) (seconds 1.2))
+        (suspend))
+      (set! *crossfire-away* #t)
+      ;; (in the black: the pillars, down)
+      (ossobello-pillars)
+      (remove-setting! 'bg-a)
+      (set-time! (-> self state-time))
+      (until (time-elapsed? (-> self state-time) (seconds 0.6))
+        (suspend))
+      (go-virtual crossfire-rest)))
+
+;; his name on screen a while; then he comes in
+(defstate crossfire-rest (ossobello-battle)
+  :virtual #t
+  :event battlecontroller-default-event-handler
+  :trans
+    (behavior ()
+      (crossfire-check))
+  :code
+    (behavior ()
+      (set-time! (-> self state-time))
+      (until (time-elapsed? (-> self state-time) (seconds 3))
+        (suspend))
+      (set! (-> self max-spawn-count) 0)
+      (set! (-> self spawn-count) 0)
+      (let ((e (ossobello-spawn-bonelurker 0)))
+        (cond
+          (e
+           (ossobello-make! e OSSOBELLO-HITS)
+           (set! (-> self boss) (process->handle e))
+           (set! (-> self music)
+                 (ppointer->handle (process-spawn ossobello-music :init ossobello-music-init-by-other :to self)))
+           (ossobello-sound (static-sound-name "ogre-roar1") (-> (the-as process-drawable e) root trans))
+           (format 0 "[ossobello] in~%"))
+          (else
+           (format 0 "[ossobello] no bonelurker (kind ~D)~%" (ossobello-bonelurker-kind))
+           (set! *crossfire-on* #f))))
+      (go-virtual crossfire-wave)))
+
+;; the fight: until he's dead
+(defstate crossfire-wave (ossobello-battle)
+  :virtual #t
+  :event battlecontroller-default-event-handler
+  :trans
+    (behavior ()
+      (crossfire-check)
+      (battlecontroller-update-spawners)
+      (ossobello-phases)
+      (ossobello-bar))
+  :code
+    (behavior ()
+      (set! (-> self shown) 1.0)
+      (set! (-> self phase) 0)
+      (set-time! (-> self support))
+      (loop
+        (when (not (handle->process (-> self boss)))
+          ;; won: its bit, saved; the victory screen (his lurkers left gone)
+          (format 0 "[ossobello] won~%")
+          (let ((m (handle->process (-> self music))))
+            (if m (deactivate m)))
+          (let ((c (-> self child)))
+            (while c
+              (let ((next (-> c 0 brother)))
+                (if (type-type? (-> c 0 type) nav-enemy) (deactivate (-> c 0)))
+                (set! c next))))
+          (set! *arena-won* (the float (logior (the int *arena-won*) 2)))
+          (auto-save-command 'auto-save 0 0 *default-pool*)
+          (arena-victory 1)
+          (go-virtual crossfire-done))
+        (suspend))))
+
+;; from the merchant's menu: begun if the ambush's entity is there (Misty loaded, Jak at its arena)
+(defun ossobello-start ()
+  (let ((e (crossfire-entity)))
+    (cond
+      (e
+       (set! *crossfire-on* #t)
+       (set! *crossfire-cannon* #f)
+       (set! *arena-lost* #f)
+       (set! *crossfire-away* #f)
+       (ossobello-bank! #t)
+       (process-spawn ossobello-battle :init crossfire-init-by-other e :to *entity-pool*))
+      (else (format 0 "[ossobello] no battlecontroller in Misty~%"))))
+  (none))

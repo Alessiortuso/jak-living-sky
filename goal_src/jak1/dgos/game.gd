@@ -345,6 +345,9 @@
   "darkjak-claw-ag.go"
   "darkjak-turn-ag.go"
   "darkpump-ag.go" ;; Jak Living Sky: the fisherman's mission's pump
+  "arenapool-ag.go" ;; Jak Living Sky: the first arena fight's mud pools
+  "arenapusher-ag.go" ;; Jak Living Sky: the second arena fight's pillars (Snowy's pistons)
+  "arenahole-ag.go" ;; Jak Living Sky: the holes they rise out of
   "merchant-ag.go" ;; Jak Living Sky: the white eco merchant
   "merchantsolo-ag.go" ;; Jak Living Sky: him alone, in the arena
   "arenagate-ag.go" ;; Jak Living Sky: the merchant's arena gate

@@ -561,22 +561,51 @@
              :disp0 'display
              :lev1 'village1
              :disp1 'special)
-        ;; Jak Living Sky: the merchant's third fight, the PDS sentinel (The Forgotten Lands, by Kuitar5): the same
-        ;; spot, its level beside Misty
+        ;; Jak Living Sky: after winning one of the merchant's arena fights, before him at the arena's centre
+        (new 'static
+             'continue-point
+             :name "misty-merchant-front"
+             :level 'misty
+             :trans
+             (new 'static 'vector :x -797697.3 :y 117145.6 :z 3907449.5 :w 1.0)
+             :quat
+             (new 'static 'quaternion :y -0.2621 :w 0.9650)
+             :camera-trans
+             (new 'static 'vector :x -785263.3 :y 127385.6 :z 3886250.9 :w 1.0)
+             :camera-rot
+             (new 'static 'array float 9 0.8626 0.0000 0.5059 -0.1227 0.9701 0.2092 -0.4908 -0.2425 0.8368)
+             :load-commands
+             '((special "med-res-level-1" #t)
+              (special "med-res-level-2" #t)
+              (special "med-res-level-4" #t)
+              (special "med-res-level-6" #t)
+              (special "med-res-level-7" #t)
+              (special "med-res-level-8" #t)
+              (special "med-res-level-9" #t)
+              (special "med-res-level-11" #t)
+              (special "med-res-level-14" #t)
+              (special "med-res-level-22" #t)
+              (special "med-res-level-23" #t)
+              (special "fishermans-boat-2" #t))
+             :vis-nick 'mis
+             :lev0 'misty
+             :disp0 'display
+             :lev1 'village1
+             :disp1 'special)
+        ;; Jak Living Sky: the merchant's third fight, the PDS sentinel (The Forgotten Lands, by Kuitar5): inside the
+        ;; arena by its way in, facing its centre (no warp: the fight starts at once, after the loading's black), its level beside Misty
         (new 'static
              'continue-point
              :name "misty-pds"
              :level 'misty
-             :flags (continue-flags warp)
              :trans
-             ;; (on the merchant's gate there, made before he warps in: target-death.gc; facing the arena's door)
-             (new 'static 'vector :x -624083.5 :y 84801.6 :z 3688228.5 :w 1.0)
+             (new 'static 'vector :x -714847.9 :y 120422.4 :z 3766100.5 :w 1.0)
              :quat
-             (new 'static 'quaternion :y -0.5218 :w 0.8531)
+             (new 'static 'quaternion :y -0.2620 :w 0.9651)
              :camera-trans
-             (new 'static 'vector :x -598565.5 :y 97089.6 :z 3675182.5 :w 1.0)
+             (new 'static 'vector :x -700348.5 :y 132710.4 :z 3741364.9 :w 1.0)
              :camera-rot
-             (new 'static 'array float 9 0.4552 0.0 0.8904 -0.2446 0.9612 0.125 -0.8558 -0.2747 0.4375)
+             (new 'static 'array float 9 0.8627 0.0000 0.5057 -0.1389 0.9615 0.2370 -0.4862 -0.2747 0.8295)
              :load-commands
              '((special "med-res-level-1" #t)
               (special "med-res-level-2" #t)
@@ -3130,8 +3159,10 @@
        :nickname 'pds
        :packages
        '()
+       ;; (the cave's bank: the sentinel's gems' "crystal-explode" is only there and in darkcave's; the rest of
+       ;; the fight's sounds are common's)
        :sound-banks
-       '()
+       '(maincave)
        :music-bank #f
        :ambient-sounds
        '()

@@ -7,9 +7,28 @@
 ;; DECOMP BEGINS
 
 (deftype bonelurker (nav-enemy)
-  ((bump-player-time time-frame))
+  ((bump-player-time time-frame)
+   ;; Jak Living Sky: the arena's champion, Ossobello (the merchant's second fight, misty-obs.gc): his hits left (0:
+   ;; an ordinary bonelurker), how many he had, since when he's back up from the last (none taken a while then)
+   (boss-hp          int32)
+   (boss-hp-max      int32)
+   (boss-guard       time-frame)
+   ;; his charges: since the last, how often (his phase's), how fast, its way; how long he's dazed after one
+   ;; missed (his stun's again, or more)
+   (boss-charge-time time-frame)
+   (boss-period      time-frame)
+   (boss-speed       float)
+   (boss-daze        int32)
+   (boss-dir         vector :inline)
+   ;; his wind-up before a charge, how fast he's up again from a hit's stun (both from his hits left)
+   (boss-windup      time-frame)
+   (boss-stun-speed  float))
   (:states
-   bonelurker-stun))
+   bonelurker-stun
+   ossobello-charge))
+
+;; Jak Living Sky: Ossobello's speeds from his hits left (below)
+(define-extern ossobello-tune! (function bonelurker none))
 
 (defskelgroup *bonelurker-sg*
   bonelurker
@@ -19,28 +38,47 @@
   :bounds (static-spherem 0 2 0 6)
   :shadow bonelurker-shadow-mg)
 
+;; Jak Living Sky: Ossobello, a giant one: its size (his drawing, his collision, his room on the nav mesh)
+(defconstant OSSOBELLO-SCALE 1.8)
+
 (defbehavior bonelurker-set-small-bounds-sphere bonelurker ()
-  (set! (-> self draw bounds w) 12288.0)
+  (set! (-> self draw bounds w) (if (> (-> self boss-hp-max) 0) (* OSSOBELLO-SCALE 12288.0) 12288.0))
   0
   (none))
 
 (defbehavior bonelurker-set-large-bounds-sphere bonelurker ()
-  (set! (-> self draw bounds w) 24576.0)
+  (set! (-> self draw bounds w) (if (> (-> self boss-hp-max) 0) (* OSSOBELLO-SCALE 24576.0) 24576.0))
   0
   (none))
 
 (defmethod touch-handler ((this bonelurker) (arg0 process) (arg1 event-message-block))
+  ;; Jak Living Sky: Ossobello hurts no one while stunned, nor just after he's back up from a hit (Jak on him then)
+  (if (and (> (-> this boss-hp-max) 0)
+           (or (= (-> this next-state name) 'bonelurker-stun) (not (time-elapsed? (-> this boss-guard) (seconds 1.5)))))
+    (return #f))
+  ;; (Ossobello: by any of his spheres, his body's too: his head's, up high on him, over Jak on the ground)
   (when (and (logtest? (-> this nav-enemy-flags) (nav-enemy-flags navenmf6))
              ((method-of-type touching-shapes-entry prims-touching?)
               (the-as touching-shapes-entry (-> arg1 param 0))
               (-> this collide-info)
-              (the-as uint 1)))
+              (the-as uint (if (> (-> this boss-hp-max) 0) 3 1))))
     (when (nav-enemy-send-attack arg0 (the-as touching-shapes-entry (-> arg1 param 0)) 'generic)
       (set! (-> this speed-scale) 0.5)
       #t)))
 
 (defmethod attack-handler ((this bonelurker) (arg0 process) (arg1 event-message-block))
   (with-pp
+    ;; Jak Living Sky: Ossobello: any hit (eco blasts too) only stuns him, Jak shoved off; none just after he's back up
+    ;; (his hits taken only while he's stunned: bonelurker-stunned-event-handler)
+    (when (> (-> this boss-hp-max) 0)
+      (send-event arg0 'shove (-> arg1 param 0) (static-attack-info ((shove-back (meters 5)))))
+      (when (time-elapsed? (-> this boss-guard) (seconds 1.5))
+        (set-time! (-> this state-time))
+        (set! (-> this boss-daze) 0)
+        ;; (his voices: Klaww's, his bank loaded for the fight, misty-obs.gc)
+        (ossobello-sound (static-sound-name "ogre-grunt1") (-> this collide-info trans))
+        (go bonelurker-stun))
+      (return 'push))
     (set-time! (-> this state-time))
     (let ((a1-1 (new 'stack-no-clear 'event-message-block)))
       (set! (-> a1-1 from) pp)
@@ -78,6 +116,24 @@
   (case arg2
     (('attack)
      (when (time-elapsed? (-> self state-time) (seconds 0.5))
+       ;; Jak Living Sky: Ossobello: a hit taken (Jak shoved off); his last, his death; else back up at once
+       (when (> (-> self boss-hp-max) 0)
+         (+! (-> self boss-hp) -1)
+         (ossobello-tune! self)
+         (format 0 "[ossobello] hit: ~D of ~D left~%" (-> self boss-hp) (-> self boss-hp-max))
+         (send-event arg0 'get-attack-count 1)
+         (cond
+           ((<= (-> self boss-hp) 0)
+            (ossobello-sound (static-sound-name "ogre-dies") (-> self collide-info trans))
+            (nav-enemy-set-hit-from-direction arg0)
+            (logclear! (-> self mask) (process-mask actor-pause))
+            (go-virtual nav-enemy-die))
+           (else
+            (ossobello-sound (static-sound-name "ogre-grunt2") (-> self collide-info trans))
+            (send-event arg0 'shove (-> arg3 param 0) (static-attack-info ((shove-back (meters 6)))))
+            (set-time! (-> self boss-guard))
+            (go-virtual nav-enemy-chase)))
+         (return 'die))
        (nav-enemy-set-hit-from-direction arg0)
        (send-event arg0 'get-attack-count 1)
        (logclear! (-> self mask) (process-mask actor-pause))
@@ -99,12 +155,31 @@ nav-enemy-default-event-handler
   (align! (-> self align) (align-opts adjust-quat) 1.0 1.0 1.0)
   (integrate-for-enemy-with-move-to-ground! (-> self collide-info)
                                             (-> self collide-info transv)
-                                            (collide-kind background)
+                                            (-> self nav-info gnd-collide-with) ;; Jak Living Sky: its nav info's ground (the sentinel's traps too, in the fight)
                                             8192.0
                                             #t
                                             #f
                                             #f)
   (nav-enemy-common-post)
+  (none))
+
+;; Jak Living Sky: Ossobello's body hitting Jak: near him (within his girth, under his height), not while he's stunned
+;; or just back up, once a second. (His spheres, on his joints, up high on him: over Jak on the ground.) Its hurt
+;; his (three marks once corrupted by dark eco: target-handler.gc)
+(defconstant OSSOBELLO-REACH (meters 3.4))
+(defbehavior ossobello-body-hit bonelurker ()
+  (when (and *target*
+             (> (-> self boss-hp-max) 0)
+             (time-elapsed? (-> self boss-guard) (seconds 1.5))
+             (time-elapsed? (-> self bump-player-time) (seconds 1)))
+    (let ((dy (- (-> *target* control trans y) (-> self collide-info trans y))))
+      (when (and (< (vector-vector-xz-distance (-> self collide-info trans) (-> *target* control trans)) OSSOBELLO-REACH)
+                 (< (meters -1) dy)
+                 (< dy (meters 4.5)))
+        (set-time! (-> self bump-player-time))
+        (when (send-event *target* 'attack #f (static-attack-info ((shove-back (meters 5)) (shove-up (meters 2.5)))))
+          (ossobello-sound (static-sound-name "bone-bigswing") (-> self collide-info trans))
+          (logior! (-> self nav-enemy-flags) (nav-enemy-flags navenmf8))))))
   (none))
 
 (defstate nav-enemy-idle (bonelurker)
@@ -141,7 +216,16 @@ nav-enemy-default-event-handler
       ((-> (method-of-type nav-enemy nav-enemy-chase) trans))
       (if (and (not (logtest? (-> self nav-enemy-flags) (nav-enemy-flags navenmf6)))
                (time-elapsed? (-> self bump-player-time) (seconds 0.5)))
-        (logior! (-> self nav-enemy-flags) (nav-enemy-flags navenmf6))))
+        (logior! (-> self nav-enemy-flags) (nav-enemy-flags navenmf6)))
+      ;; Jak Living Sky: Ossobello, his body hitting Jak; now and then (his phase's), Jak neither too near nor too far:
+      ;; a charge
+      (ossobello-body-hit)
+      (when (and (> (-> self boss-hp-max) 0)
+                 *target*
+                 (time-elapsed? (-> self boss-charge-time) (-> self boss-period))
+                 (time-elapsed? (-> self boss-guard) (seconds 1.5)))
+        (let ((d (vector-vector-xz-distance (-> self collide-info trans) (-> *target* control trans))))
+          (if (and (< (meters 7) d) (< d (meters 30))) (go ossobello-charge)))))
   :code
     (behavior ()
       (set! (-> self rotate-speed) 524288.0)
@@ -286,10 +370,19 @@ nav-enemy-default-event-handler
         (vector+! gp-0 (-> self collide-info trans) gp-0)
         (set! (-> self nav target-pos quad) (-> gp-0 quad)))
       (ja-channel-push! 1 (seconds 0.1))
-      (ja-no-eval :group! bonelurker-stun-ja :num! (seek!) :frame-num 0.0)
-      (until (ja-done? 0)
-        (suspend)
-        (ja :num! (seek!)))
+      ;; (Jak Living Sky: Ossobello's, from a hit, faster: less time to hit him in)
+      (let ((sp (if (and (> (-> self boss-hp-max) 0) (zero? (-> self boss-daze))) (-> self boss-stun-speed) 1.0)))
+        (ja-no-eval :group! bonelurker-stun-ja :num! (seek! max sp) :frame-num 0.0)
+        (until (ja-done? 0)
+          (suspend)
+          (ja :num! (seek! max sp))))
+      ;; Jak Living Sky: Ossobello after a charge missed: dazed longer (his stun again)
+      (while (> (-> self boss-daze) 0)
+        (+! (-> self boss-daze) -1)
+        (ja-no-eval :group! bonelurker-stun-ja :num! (seek!) :frame-num 0.0)
+        (until (ja-done? 0)
+          (suspend)
+          (ja :num! (seek!))))
       (go-virtual nav-enemy-chase))
   :post bonelurker-push-post)
 
@@ -389,8 +482,189 @@ nav-enemy-default-event-handler
 (defmethod nav-enemy-method-48 ((this bonelurker))
   (initialize-skeleton this *bonelurker-sg* '())
   (init-defaults! this *bonelurker-nav-enemy-info*)
+  ;; Jak Living Sky: an ordinary one (Ossobello made after: ossobello-make!)
+  (set! (-> this boss-hp) 0)
+  (set! (-> this boss-hp-max) 0)
+  (set! (-> this boss-daze) 0)
   (set! (-> this neck up) (the-as uint 0))
   (set! (-> this neck nose) (the-as uint 1))
   (set! (-> this neck ear) (the-as uint 2))
   0
+  (none))
+
+;; Jak Living Sky: Ossobello's hits left, and how many he had (for his health bar, misty-obs.gc)
+(defun ossobello-hp ((this bonelurker))
+  (-> this boss-hp))
+(defun ossobello-hp-max ((this bonelurker))
+  (-> this boss-hp-max))
+
+;; Jak Living Sky: Ossobello's phase (misty-obs.gc, from his hits left): how often he charges, how fast; the last
+;; corrupted by dark eco (its hits three marks: target-handler.gc)
+;; his own way of moving (a copy of the bonelurkers', his running speed his own)
+(define *ossobello-nav-enemy-info* (new 'static 'nav-enemy-info))
+
+;; Jak Living Sky: Ossobello faster and fiercer hit by hit (k: 0 untouched, 1 at his last): his running, his charges
+;; (how fast, how often, how short the wind-up), how soon he's up from a hit's stun
+(defun ossobello-tune! ((this bonelurker))
+  (let ((k (/ (the float (- (-> this boss-hp-max) (-> this boss-hp))) (the float (max 1 (+ (-> this boss-hp-max) -1))))))
+    (set! k (fmax 0.0 (fmin 1.0 k)))
+    (set! (-> *ossobello-nav-enemy-info* run-travel-speed) (+ (meters 4.5) (* k (meters 6.5))))
+    (set! (-> this boss-speed) (+ (meters 12) (* k (meters 13))))
+    (set! (-> this boss-period) (the time-frame (the int (+ (seconds 5.5) (* k (- (seconds 1.5) (seconds 5.5)))))))
+    (set! (-> this boss-windup) (the time-frame (the int (+ (seconds 0.95) (* k (- (seconds 0.3) (seconds 0.95)))))))
+    (set! (-> this boss-stun-speed) (+ 1.1 (* k 1.0))))
+  (none))
+
+;; Jak Living Sky: Ossobello's phase (misty-obs.gc, from his hits left): the last corrupted by dark eco (its hits three
+;; marks: target-handler.gc); his speeds from his hits left
+(defun ossobello-phase! ((this bonelurker) (phase int))
+  (ossobello-tune! this)
+  (when (>= phase 2)
+    (set! (-> this dark) #t)
+    (set! (-> this dark-eye 0) -2)
+    (set! (-> this dark-eye 1) -2))
+  (none))
+
+;; the middle of Misty's arena, its sand (the edge: a charge stops there)
+(defconstant OSSOBELLO-ARENA-X (meters -197.28))
+(defconstant OSSOBELLO-ARENA-Z (meters 958.28))
+(defconstant OSSOBELLO-ARENA-R (meters 65))
+
+;; his move in a charge: straight on its way (still while winding up), gravity, along the ground
+(defbehavior ossobello-charge-post bonelurker ((run symbol))
+  (let ((v (-> self collide-info transv)))
+    (set! (-> v x) (if run (* (-> self boss-speed) (-> self boss-dir x)) 0.0))
+    (set! (-> v z) (if run (* (-> self boss-speed) (-> self boss-dir z)) 0.0)))
+  (vector-v++! (-> self collide-info transv) (compute-acc-due-to-gravity (-> self collide-info) (new-stack-vector0) 0.0))
+  (integrate-for-enemy-with-move-to-ground! (-> self collide-info)
+                                            (-> self collide-info transv)
+                                            (-> self nav-info gnd-collide-with)
+                                            8192.0
+                                            #t
+                                            #f
+                                            #f)
+  (nav-enemy-common-post)
+  (none))
+
+;; Jak Living Sky: one of his fight's rock pillars up (most of the way), in his way just ahead (misty-obs.gc: where
+;; each is, how far up)
+(defbehavior ossobello-pillar-hit? bonelurker ()
+  (let ((ahead (new 'stack-no-clear 'vector))
+        (hit #f))
+    (vector+float*! ahead (-> self collide-info trans) (-> self boss-dir) (meters 1.5))
+    (dotimes (k 48)
+      (let ((p (-> *ossobello-pillars* k)))
+        (if (and (< 0.6 (-> p w)) (< (vector-vector-xz-distance ahead p) (meters 4.4))) (set! hit #t))))
+    hit))
+
+;; a charge: he stops, turns to Jak a moment; then runs straight on that way, fast, not turning. Jak hit (knocked
+;; off), back to chasing; into a wall or a rock, dazed a while (to hit him in); at the arena's edge, back to chasing
+(defstate ossobello-charge (bonelurker)
+  :event nav-enemy-default-event-handler
+  :enter
+    (behavior ()
+      (set-time! (-> self state-time))
+      (set-time! (-> self boss-charge-time))
+      (logclear! (-> self nav-enemy-flags) (nav-enemy-flags navenmf8))
+      (logior! (-> self nav-enemy-flags) (nav-enemy-flags navenmf6)))
+  :exit
+    (behavior ()
+      (set-time! (-> self boss-charge-time)))
+  :code
+    (behavior ()
+      ;; the cage: pistons up round Jak (misty-obs.gc)
+      (if *target* (ossobello-cage (-> *target* control trans) (-> self collide-info trans)))
+      ;; winding up: to Jak, roaring
+      (if (<= (-> self boss-hp) 6)
+        (ossobello-sound (static-sound-name "ogre-roar3") (-> self collide-info trans))
+        (ossobello-sound (static-sound-name "ogre-roar2") (-> self collide-info trans)))
+      (ja-channel-push! 1 (seconds 0.15))
+      (let ((t0 (current-time)))
+        (until (time-elapsed? t0 (-> self boss-windup))
+          (if *target* (seek-to-point-toward-point! (-> self collide-info) (-> *target* control trans) 131072.0 (seconds 0.1)))
+          (ja :group! bonelurker-idle-ja :num! (loop! 1.5))
+          (ossobello-charge-post #f)
+          (suspend)))
+      (when (not *target*) (go-virtual nav-enemy-chase))
+      ;; its way: to Jak, then past him a little
+      (vector-! (-> self boss-dir) (-> *target* control trans) (-> self collide-info trans))
+      (set! (-> self boss-dir y) 0.0)
+      (let ((t1 (current-time))
+            (stuck 0)
+            (missed #f)
+            (wall #f))
+        (vector-normalize! (-> self boss-dir) 1.0)
+        (forward-up->quaternion (-> self collide-info quat) (-> self boss-dir) *up-vector*)
+        (ja-channel-push! 1 (seconds 0.1))
+        (ja-no-eval :group! bonelurker-charge-ja :num! (loop! 1.6) :frame-num 0.0)
+        (loop
+          ;; (straight on, not turning to Jak; held back by something: a few frames hardly moving, at speed)
+          (forward-up->quaternion (-> self collide-info quat) (-> self boss-dir) *up-vector*)
+          (let ((from (new 'stack-no-clear 'vector)))
+            (set! (-> from quad) (-> self collide-info trans quad))
+            (ossobello-charge-post #t)
+            (if (< (vector-vector-xz-distance from (-> self collide-info trans)) (* 0.35 (-> self boss-speed) (seconds-per-frame)))
+              (+! stuck 1)
+              (set! stuck 0)))
+          (ja :num! (loop! 1.6))
+          (ossobello-body-hit)
+          (cond
+            ;; Jak hit
+            ((logtest? (-> self nav-enemy-flags) (nav-enemy-flags navenmf8))
+             (go-virtual nav-enemy-chase))
+            ;; a wall
+            ;; (the arena's rocks and walls: where its nav mesh ends, 2 m on from him; enemies go through walls)
+            ((and (time-elapsed? t1 (seconds 0.3))
+                  (or (logtest? (-> self collide-info status) (cshape-moving-flags twall))
+                      (>= stuck 3)
+                      (ossobello-pillar-hit?)
+                      (let ((ahead (new 'stack-no-clear 'vector)))
+                        (vector+float*! ahead (-> self collide-info trans) (-> self boss-dir) (meters 2))
+                        (not (nav-control-method-16 (-> self nav) ahead)))))
+             (set! missed #t)
+             (set! wall #t))
+            ;; the arena's edge, or a long while
+            ((or (< OSSOBELLO-ARENA-R (sqrtf (+ (square (- (-> self collide-info trans x) OSSOBELLO-ARENA-X))
+                                                (square (- (-> self collide-info trans z) OSSOBELLO-ARENA-Z)))))
+                 (time-elapsed? t1 (seconds 3)))
+             (set! missed #t)))
+          ;; (dazed only at a wall: missed in the open, back to chasing)
+          (when missed
+            (format 0 "[ossobello] charge missed (wall ~A, stuck ~D, ~,,1M m from the middle, ~,,1M s)~%" wall stuck
+                    (sqrtf (+ (square (- (-> self collide-info trans x) OSSOBELLO-ARENA-X))
+                              (square (- (-> self collide-info trans z) OSSOBELLO-ARENA-Z))))
+                    (* 4096.0 (/ (the float (- (current-time) t1)) (the float (seconds 1)))))
+            (when (not wall) (go-virtual nav-enemy-chase))
+            (activate! *camera-smush-control* 819.2 37 600 1.0 0.995)
+            (ossobello-sound (static-sound-name "bone-helmet") (-> self collide-info trans))
+            (ossobello-sound (static-sound-name "ogre-grunt3") (-> self collide-info trans))
+            (set! (-> self boss-daze) 1)
+            (vector-float*! (-> self hit-from-dir) (-> self boss-dir) -1.0)
+            (set-time! (-> self state-time))
+            (go bonelurker-stun))
+          (suspend)))))
+
+;; Jak Living Sky: an ordinary bonelurker (just born, of the arena's battlecontroller) made Ossobello: giant (his
+;; drawing, his collision spheres, his room on the nav mesh), hits hits to take, not corrupted by dark eco
+(defun ossobello-make! ((this bonelurker) (hits int))
+  (set! (-> this boss-hp) hits)
+  (set! (-> this boss-hp-max) hits)
+  (set! (-> this boss-guard) 0)
+  (set! (-> this boss-daze) 0)
+  (set-time! (-> this boss-charge-time))
+  (mem-copy! (the-as pointer *ossobello-nav-enemy-info*) (the-as pointer *bonelurker-nav-enemy-info*)
+             (the int (-> nav-enemy-info size)))
+  (set! (-> this nav-info) *ossobello-nav-enemy-info*)
+  (ossobello-phase! this 0)
+  (set! (-> this dark) #f)
+  (set-vector! (-> this collide-info scale) OSSOBELLO-SCALE OSSOBELLO-SCALE OSSOBELLO-SCALE 1.0)
+  (let ((root (-> this collide-info root-prim)))
+    (vector-float*! (-> root local-sphere) (-> root local-sphere) OSSOBELLO-SCALE)
+    (let ((g (the-as collide-shape-prim-group root)))
+      ;; (its spheres on his joints: their places scaled with him already, by the joints; only their size)
+      (dotimes (i (-> g num-prims))
+        (let ((p (-> g prims i)))
+          (set! (-> p local-sphere w) (* OSSOBELLO-SCALE (-> p local-sphere w)))))))
+  (set! (-> this collide-info nav-radius) (* OSSOBELLO-SCALE (-> this collide-info nav-radius)))
+  (set! (-> this draw bounds w) (* OSSOBELLO-SCALE (-> this draw bounds w)))
   (none))

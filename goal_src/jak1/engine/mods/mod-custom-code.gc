@@ -105,10 +105,19 @@
       ))
   (none))
 
+;; (collectables.gc: the first arena fight on)
+(define-extern *crossfire-on* symbol)
+(define-extern *crossfire-cannon* symbol)
+
 (defun runs-on-jak-spawn ()
   ;; Code here runs every time jak spawns (loading a file new game or death)
   ;;uncomment this to use custom music for custom levels - the function is in mod-common-functions.gc
   (process-spawn-function process music-manager-proc)
+  ;; Jak Living Sky: the first arena fight lost (Jak died in it): over once he's born again, not before (the merchant
+  ;; back then, not while he's dying)
+  (when *crossfire-on*
+    (set! *crossfire-on* #f)
+    (set! *crossfire-cannon* #f))
   (none))
 
 (defun runs-on-checkpt ()
@@ -117,10 +126,20 @@
   (process-spawn-function process music-manager-proc)
   (none))
 
+;; Jak Living Sky: a fight of the merchant's lost (Jak died with its level loaded): his line on it when Jak's back
+;; with him at the arena (collectables.gc, merchant-hello), once
+(define *arena-lost* #f)
+
 (defun runs-on-jak-death ((death-event symbol))
   (case death-event
     (('dying)
      ;; Code here runs immediately every time jak dies, before any death animation or death cutscene
+     (let ((lev (level-get *level* 'pdsarena)))
+       (if (and lev (!= (-> lev status) 'inactive)) (set! *arena-lost* #t)))
+     ;; (the first fight, in Misty's arena itself: lost; its cannon quiet; over when he's born again, runs-on-jak-spawn)
+     (when *crossfire-on*
+       (set! *crossfire-cannon* #f)
+       (set! *arena-lost* #t))
      )
     (('blackout)
      ;; Code here runs after jak dies (and any death cutscene finishes), during the blackout before he spawns

@@ -32,6 +32,7 @@
               #f))))
 
 (define-extern runs-on-jak-spawn (function none))
+(define-extern runs-on-jak-death (function symbol none))
 
 ;; Jak Living Sky: the merchant's gates (collectables.gc)
 (define-extern merchant-update (function none))
@@ -298,8 +299,7 @@
                                (else "lavatube-end"))))
              ;; Jak Living Sky: the merchant's gate to his arena (Jak warps in where he arrives; dying after, he's
              ;; back at misty-silo, the same spot, as an ordinary continue)
-             ;; (and to his third fight, the sentinel's: dying there, the fight's lost, Jak back at misty-silo)
-             ((or (string= (-> arg0 name) "misty-arena") (string= (-> arg0 name) "misty-pds"))
+             ((string= (-> arg0 name) "misty-arena")
               (set! (-> s5-6 quad) (-> arg0 trans quad))
               (+! (-> s5-6 y) (meters 1))
               (set-continue! *game-info* "misty-silo"))
@@ -310,13 +310,15 @@
               (runs-on-jak-spawn)))
            ;; Jak Living Sky: arriving by the merchant's gates: his gate there made before Jak warps in onto it (else
            ;; it's made a moment after, and he'd sink into its stone)
-           (when (or (string= (-> arg0 name) "misty-arena") (string= (-> arg0 name) "misty-pds") (string-suffix-merchant? (-> arg0 name)))
+           (when (or (string= (-> arg0 name) "misty-arena") (string-suffix-merchant? (-> arg0 name)))
              (dotimes (k 4)
                (merchant-update)
                (suspend)))
            (go target-warp-in s5-6 (-> arg0 trans))))
         (else (suspend-for (seconds 0.05))))
       (set-continue! *game-info* arg0)
+      ;; Jak Living Sky: the merchant's sentinel fight starts here; dying in it, it's lost: Jak back at misty-silo
+      (if (string= (-> arg0 name) "misty-pds") (set-continue! *game-info* "misty-silo"))
       (runs-on-jak-spawn)
       (when *auto-continue*
         (let ((s5-8 (next-level (-> arg0 level))))
@@ -733,6 +735,8 @@
         trans)
   :code
     (behavior ((arg0 symbol))
+      ;; Jak Living Sky: the mod's death hook (mod-custom-code.gc), never called before: an arena fight lost there
+      (runs-on-jak-death 'dying)
       (set! (-> self control unknown-uint20) (the-as uint #f))
       (set! (-> self control did-move-to-pole-or-max-jump-height)
             (the-as int (send-event (handle->process (-> self attack-info attacker)) 'target 'die arg0)))

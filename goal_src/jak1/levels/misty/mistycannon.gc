@@ -854,6 +854,10 @@
 ;; WARN: Function (method 22 mistycannon) has a return type of none, but the expression builder found a return statement.
 (defmethod mistycannon-method-22 ((this mistycannon) (arg0 float) (arg1 float) (arg2 float))
   (if (not (-> this postbindinfo-ok)) (return #f))
+  ;; Jak Living Sky: no shots during the merchant's fights in the arena below (collectables.gc, arena-steps-update),
+  ;; nor while Jak's with him there (talking, his menu open: merchant-update)
+  ;; (the first fight, "FUOCO INCROCIATO", is its crossfire: it fires then)
+  (if (or (and *arena-doors-shut* (not *crossfire-cannon*)) *arena-merchant-talk*) (return #f))
   (let* ((s3-0 (-> this launch-origin))
          (s2-0 (new 'stack-no-clear 'vector))
          (v1-3 (-> this rotate))
@@ -1049,13 +1053,14 @@
         (set! (-> gp-0 x) (vector-xz-length s5-1))
         (set! (-> gp-0 y) (-> s5-1 y))))
     (mistycannon-find-trajectory gp-0)
+;; Jak Living Sky: (twice as often during the first arena fight, "FUOCO INCROCIATO")
     (when (= (-> gp-0 time) 0.0)
-      (when (time-elapsed? (-> self state-time) (seconds 3))
+      (when (time-elapsed? (-> self state-time) (if *crossfire-cannon* (seconds 1.5) (seconds 3)))
         (mistycannon-method-22 self 409600.0 2.0 20480.0)
         (set-time! (-> self state-time)))
       (return #f))
     (when (angle-tracker-seek! (-> self tilt) (-> gp-0 theta))
-      (when (time-elapsed? (-> self state-time) (seconds 3))
+      (when (time-elapsed? (-> self state-time) (if *crossfire-cannon* (seconds 1.5) (seconds 3)))
         (mistycannon-method-22 self (fmax 163840.0 (fmin 409600.0 (-> gp-0 speed))) (-> gp-0 time) 20480.0)
         (set-time! (-> self state-time)))))
   0

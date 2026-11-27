@@ -418,6 +418,30 @@
     (set! (-> v1-0 base) (&+ (the-as pointer a0-1) 16)))
   (none))
 
+;; Jak Living Sky: while the merchant's fight level is loaded beside Misty (in village1's place, set by
+;; arena-steps-update), Sandover's island (the beach's, the jungle's) isn't drawn: the ocean's mid masks still leave
+;; its land out, black holes from up high. Then the sea is drawn there too: each 96 m cell's mask bit (1 = skip)
+;; cleared, except round Misty (480 m from its middle, 0, 1000 m: its own island). The cell's middle is tried both
+;; ways (row on z or on x), so a cell near Misty is never opened whichever way the mask runs.
+(define *ocean-fill-land* #f)
+
+(defun ocean-cell-far-from-misty? ((x float) (z float))
+  (let ((dx x)
+        (dz (- z (meters 1000))))
+    (< (* (meters 480) (meters 480)) (+ (* dx dx) (* dz dz)))))
+
+(defun ocean-mid-unmask ((mask uint) (row int) (col int))
+  (let ((x0 (+ (-> *ocean-map* start-corner x) (* 3145728.0 (the float col))))
+        (z0 (+ (-> *ocean-map* start-corner z) (* 3145728.0 (the float row))))
+        (result mask))
+    (dotimes (r 8)
+      (dotimes (c 8)
+        (let ((fr (* 393216.0 (+ 0.5 (the float r))))
+              (fc (* 393216.0 (+ 0.5 (the float c)))))
+          (when (and (ocean-cell-far-from-misty? (+ x0 fc) (+ z0 fr)) (ocean-cell-far-from-misty? (+ x0 fr) (+ z0 fc)))
+            (set! result (logand result (lognot (ash (the-as uint 1) (+ (* r 8) c)))))))))
+    result))
+
 (defun ocean-mid-add-upload ((arg0 dma-buffer) (arg1 int) (arg2 int) (arg3 int) (arg4 int) (arg5 float))
   (let ((gp-0 (new-stack-vector0)))
     (let ((v1-1 (-> *ocean-map* start-corner)))
@@ -451,7 +475,8 @@
     (let ((v1-8 (-> arg0 base)))
       (let ((a0-12 (-> *ocean-map* ocean-mid-masks data arg3)))
         (set! (-> *ocean-work* mid-mask-ptrs arg4) (the-as (pointer int64) v1-8))
-        (set! (-> (the-as (pointer uint64) v1-8)) (-> a0-12 dword))
+        (set! (-> (the-as (pointer uint64) v1-8))
+              (if *ocean-fill-land* (ocean-mid-unmask (-> a0-12 dword) arg1 arg2) (-> a0-12 dword)))
         ;; (set! (-> (the-as (pointer uint64) v1-8)) #xffffffffffffffff)
         )
       (set! (-> (the-as (pointer uint64) v1-8) 1) (the-as uint 0)))

@@ -279,7 +279,7 @@
    (you-suck-stage (_type_) int))
   (:state-methods
    idle
-   (send-with-delay (array entity-actor) symbol time-frame)
+   (send-with-delay int symbol time-frame)
    activate-traps))
 
 (define *pds-debug?* #f)
@@ -311,6 +311,8 @@
   (set! (-> this death-count) (min 6 (-> *game-info* fuel-cell-deaths)))
   (set! (-> this pickup) INVALID_HANDLE)
   (pds-reset-part)
+  ;; Jak Living Sky: the fight's music (pdsarena-obs.gc)
+  (process-spawn pds-music :init pds-music-init-by-other :to this)
   (pds-master-actors gems traps traps-outer traps-mid traps-inner poles poles-2 poles-3 plats plats-1 plats-2 plats-3)
   (go-virtual idle :proc this)
   (none))

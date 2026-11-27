@@ -504,16 +504,8 @@
     },
 
     ///////////////////FISHERMAN///////////////////
-    {
-      "trans": [-1709.26, 201.02300, 339.48], // translation
-      "etype": "fisherman-v4", // actor type
-      "game_task": "(game-task none)", // associated game task (for powercells, etc)
-      "quat": [ 0.0118, -0.8212, 0.0206, -0.5701], // quaternion
-      "bsphere": [-21.6238, 19.3496, 17.1191, 10], // bounding sphere
-      "lump": {
-       "name": "v4-fisherman"
-     }
-    },
+    // (Jak Living Sky: the fisherman (v4-fisherman, fisherman-v4) and his rivers taken out: his power cell is
+    // Abandoned Caves' again, abandon-fuel-cell-01)
     /////////////////////////YELLOWSAGE///////////////////////
     
     /////////////////////////MUSES/////////////////////

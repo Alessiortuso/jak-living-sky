@@ -1415,7 +1415,7 @@
  (new 'static 'level-tasks-info
               :level-name-id (text-id brume)
               :text-group-index 3
-              :nb-of-tasks 7
+              :nb-of-tasks 6
               :buzzer-task-index 0
               :task-info
               (new 'static 'array task-info-data 8
@@ -1483,15 +1483,7 @@
                              )
 
                         )
-                    ;; Jak Living Sky: the fisherman's rivers
-                    (new 'static 'task-info-data
-                        :task-id (game-task brume-fisherman)
-                        :task-name
-                        (new 'static 'array text-id 4
-                             (text-id brume-fisherman)
-                             (text-id brume-fisherman)
-                             (text-id brume-fisherman)
-                             (text-id zero)))
+                    ;; (Jak Living Sky: the fisherman's rivers taken out with him)
 
                    )
 
@@ -1505,7 +1497,7 @@
 (new 'static 'level-tasks-info
               :level-name-id (text-id abandon)
               :text-group-index 3
-              :nb-of-tasks 5
+              :nb-of-tasks 6
               :buzzer-task-index 0
               :task-info
               (new 'static 'array task-info-data 8
@@ -1519,7 +1511,17 @@
                              (text-id zero)
                              )
                         )
-                   ;; (Jak Living Sky: abandon-findcell-1 left out: that power cell is now the fisherman's, in Brume)
+                   ;; (Jak Living Sky: abandon-findcell-1 back, Brume's fisherman taken out)
+                   (new 'static 'task-info-data
+                        :task-id (game-task abandon-findcell-1)
+                        :task-name
+                        (new 'static 'array text-id 4
+                             (text-id abandon-findcell-1)
+                             (text-id abandon-findcell-1)
+                             (text-id abandon-findcell-1)
+                             (text-id zero)
+                             )
+                        )
                    (new 'static 'task-info-data
                         :task-id (game-task abandon-findcell-2)
                         :task-name

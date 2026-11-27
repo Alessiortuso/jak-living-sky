@@ -2,7 +2,7 @@
 (in-package goal)
 
 ;; Jak Living Sky: the PDS sentinel fight's nav mesh (The Forgotten Lands, by Kuitar5, with permission): the mod's
-;; arena hexagon (*nav-valley-boss*), moved onto Misty's arena floor and turned 52 degrees like the level's actors
+;; arena hexagon (*nav-valley-boss*), moved onto Misty's arena floor and turned 67 degrees like the level's actors
 ;; (scripts/enhanced/build_pdsarena.py). Hooked to the master's 'custom-nav lump in entity.gc.
 
 (set! *pds-arena-nav*
@@ -10,21 +10,21 @@
        'nav-mesh
        :custom-hacky? #t
        :bounds
-       (new 'static 'sphere :x (meters -197.28) :y (meters 28.0) :z (meters 958.28) :w (meters 64.26))
+       (new 'static 'sphere :x (meters -197.28) :y (meters 29.0) :z (meters 958.28) :w (meters 64.26))
        :origin
-       (new 'static 'vector :x (meters -197.28) :y (meters 28.0) :z (meters 958.28) :w 1.0000)
+       (new 'static 'vector :x (meters -197.28) :y (meters 29.0) :z (meters 958.28) :w 1.0000)
        :vertex-count 6
        :vertex
        (new 'static
             'inline-array
             nav-vertex
             6
-            (new 'static 'nav-vertex :x (meters -48.1041) :y (meters 0.0) :z (meters -6.7606) :w 1.0000)
-            (new 'static 'nav-vertex :x (meters -29.9069) :y (meters 0.0) :z (meters 38.2791) :w 1.0000)
-            (new 'static 'nav-vertex :x (meters 18.1972) :y (meters 0.0) :z (meters 45.0397) :w 1.0000)
-            (new 'static 'nav-vertex :x (meters 48.1041) :y (meters 0.0) :z (meters 6.7606) :w 1.0000)
-            (new 'static 'nav-vertex :x (meters 29.9069) :y (meters 0.0) :z (meters -38.2791) :w 1.0000)
-            (new 'static 'nav-vertex :x (meters -18.1972) :y (meters 0.0) :z (meters -45.0397) :w 1.0000))
+            (new 'static 'nav-vertex :x (meters -48.2148) :y (meters 0.0) :z (meters 5.9200) :w 1.0000)
+            (new 'static 'nav-vertex :x (meters -18.9805) :y (meters 0.0) :z (meters 44.7153) :w 1.0000)
+            (new 'static 'nav-vertex :x (meters 29.2343) :y (meters 0.0) :z (meters 38.7952) :w 1.0000)
+            (new 'static 'nav-vertex :x (meters 48.2148) :y (meters 0.0) :z (meters -5.9200) :w 1.0000)
+            (new 'static 'nav-vertex :x (meters 18.9805) :y (meters 0.0) :z (meters -44.7153) :w 1.0000)
+            (new 'static 'nav-vertex :x (meters -29.2343) :y (meters 0.0) :z (meters -38.7952) :w 1.0000))
        :poly-count 4
        :poly
        (new 'static

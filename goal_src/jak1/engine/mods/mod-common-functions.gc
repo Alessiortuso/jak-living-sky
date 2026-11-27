@@ -311,12 +311,15 @@ if the result of rand-vu-int-range is 1, then DANCE! if it is not 1, then Don't 
 
 (define *last-music-level* (the-as symbol #f))
 
+;; Jak Living Sky: the main music player taken by a fight's own music (the sentinel's: pdsarena-obs.gc): left alone
+(define *main-music-busy* #f)
+
 (defun music-manager ()
   (let ((cur-level (the-as symbol (-> (level-get-target-inside *level*) name))))
 
     ;; only do anything if the level actually changed
 
-    (when (!= cur-level *last-music-level*)
+    (when (and (!= cur-level *last-music-level*) (not *main-music-busy*))
 
       (set! *last-music-level* cur-level)
 

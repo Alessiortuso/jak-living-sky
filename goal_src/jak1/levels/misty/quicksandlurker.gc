@@ -272,6 +272,43 @@
    (sp-item 129 :flags (start-dead) :period (seconds 3) :length (seconds 0.4))
    (sp-item 129 :flags (start-dead) :period (seconds 3) :length (seconds 0.4))))
 
+(deftype quicksandlurker (process-drawable)
+  ((root              collide-shape :override)
+   (original-position vector :inline)
+   (y-offset          float)
+   (theta-angle       float)
+   (radial-offset     float)
+   (bob-angle         float)
+   (mud-entity        entity-actor)
+   (arena             symbol))  ;; Jak Living Sky: one of the first arena fight's spitters
+  (:states
+   quicksandlurker-attack
+   quicksandlurker-die
+   quicksandlurker-hide
+   quicksandlurker-idle
+   quicksandlurker-popup
+   quicksandlurker-track
+   quicksandlurker-victory
+   quicksandlurker-wait
+   quicksandlurker-yawn))
+
+;; Jak Living Sky: the first arena fight's spitters ("FUOCO INCROCIATO") spit from across the arena: they rise and spit
+;; from much farther than Misty's own (their spit lasting long enough to get there). Only theirs: Misty's lurkers as
+;; ever, during the fight too
+(defconstant CROSSFIRE-SPIT-RANGE (meters 80))
+(defconstant CROSSFIRE-WAKE-RANGE (meters 90))
+
+(defbehavior quicksandlurker-attack-range quicksandlurker ()
+  (if (-> self arena) CROSSFIRE-SPIT-RANGE 81920.0))
+
+(defbehavior quicksandlurker-wake-range quicksandlurker ()
+  (if (-> self arena) CROSSFIRE-WAKE-RANGE 163840.0))
+
+;; a spit's life: longer if its spitter (its parent) is one of the arena's
+(defun quicksandlurker-missile-life ((spit process))
+  (let ((p (ppointer->process (-> spit parent))))
+    (if (and p (type-type? (-> p type) quicksandlurker) (-> (the-as quicksandlurker p) arena)) (seconds 8) (seconds 4))))
+
 (deftype quicksandlurker-missile (process-drawable)
   ((root collide-shape-moving :override))
   (:states
@@ -303,7 +340,7 @@
       (set-time! (-> self state-time)))
   :code
     (behavior ()
-      (while (not (time-elapsed? (-> self state-time) (seconds 4)))
+      (while (not (time-elapsed? (-> self state-time) (quicksandlurker-missile-life self)))
         (fill-cache-integrate-and-collide! (-> self root) (-> self root transv) (-> self root root-prim collide-with))
         (if (or (logtest? (-> self root status) (cshape-moving-flags twall))
                 (< (vector-vector-distance (-> self root trans) (-> self root trans-old 0)) 40.96))
@@ -381,24 +418,6 @@
   0
   (none))
 
-(deftype quicksandlurker (process-drawable)
-  ((root              collide-shape :override)
-   (original-position vector :inline)
-   (y-offset          float)
-   (theta-angle       float)
-   (radial-offset     float)
-   (bob-angle         float)
-   (mud-entity        entity-actor))
-  (:states
-   quicksandlurker-attack
-   quicksandlurker-die
-   quicksandlurker-hide
-   quicksandlurker-idle
-   quicksandlurker-popup
-   quicksandlurker-track
-   quicksandlurker-victory
-   quicksandlurker-wait
-   quicksandlurker-yawn))
 
 
 (defskelgroup *quicksandlurker-sg*
@@ -448,9 +467,10 @@
              (!= (-> *target* next-state name) 'target-flop))
       (go quicksandlurker-hide))
     0.0
+    ;; Jak Living Sky: (not during the first arena fight: those in the arena have its nav mesh, Jak always on it)
     (let ((a0-2 (-> self nav))
           (a1-1 (-> *target* control trans)))
-      (when (if (nav-control-method-16 a0-2 a1-1) #t)
+      (when (and (not *crossfire-on*) (nav-control-method-16 a0-2 a1-1))
         (if (< (- (-> *target* control trans y) (-> self original-position y)) 0.0) (go quicksandlurker-hide)))))
   (none))
 
@@ -464,7 +484,7 @@
       (logclear! (-> self draw status) (draw-status hidden)))
   :trans
     (behavior ()
-      (if (and *target* (>= 163840.0 (vector-vector-distance (-> self root trans) (-> *target* control trans))))
+      (if (and *target* (>= (quicksandlurker-wake-range) (vector-vector-distance (-> self root trans) (-> *target* control trans))))
         (go quicksandlurker-wait)))
   :code
     (behavior ()
@@ -477,10 +497,10 @@
   :trans
     (behavior ()
       (cond
-        ((and *target* (>= 81920.0 (vector-vector-distance (-> self root trans) (-> *target* control trans))))
+        ((and *target* (>= (quicksandlurker-attack-range) (vector-vector-distance (-> self root trans) (-> *target* control trans))))
          (set! (-> self y-offset) 1228.8)
          (go quicksandlurker-track))
-        ((or (not *target*) (< 163840.0 (vector-vector-distance (-> self root trans) (-> *target* control trans))))
+        ((or (not *target*) (< (quicksandlurker-wake-range) (vector-vector-distance (-> self root trans) (-> *target* control trans))))
          (seek! (-> self y-offset) -6553.6 (* 20480.0 (seconds-per-frame)))
          (if (= (-> self y-offset) -6553.6) (go quicksandlurker-idle)))
         (else (seek! (-> self y-offset) 1228.8 (* 20480.0 (seconds-per-frame))))))
@@ -526,7 +546,7 @@
   :event quicksandlurker-default-event-handler
   :trans
     (behavior ()
-      (if (or (not *target*) (< 81920.0 (vector-vector-distance (-> self root trans) (-> *target* control trans))))
+      (if (or (not *target*) (< (quicksandlurker-attack-range) (vector-vector-distance (-> self root trans) (-> *target* control trans))))
         (go quicksandlurker-wait))
       (quicksandlurker-check-hide-transition))
   :code
@@ -624,7 +644,7 @@
       (let ((a0-0 (-> self nav))
             (a1-0 (-> *target* control trans)))
         (cond
-          ((or (if (nav-control-method-16 a0-0 a1-0) #t)
+          ((or (and (not *crossfire-on*) (nav-control-method-16 a0-0 a1-0))
                (and *target* (>= 16384.0 (vector-vector-distance (-> self root trans) (-> *target* control trans)))))
            (set-time! (-> self state-time)))
           (else (if (time-elapsed? (-> self state-time) (seconds 2)) (go quicksandlurker-popup))))))
@@ -734,5 +754,169 @@
   (logior! (-> this nav flags) (nav-control-flags display-marks navcf3 navcf5 navcf6 navcf7))
   (set! (-> this fact) (new 'process 'fact-info-enemy this (pickup-type eco-pill-random) (-> *FACT-bank* default-pill-inc)))
   (set! (-> this mud-entity) (entity-actor-lookup (-> this entity) 'water-actor 0))
+  (set! (-> this arena) #f)
   (go quicksandlurker-idle)
+  (none))
+
+;; Jak Living Sky: the first arena fight's spitters ("FUOCO INCROCIATO", misty-obs.gc): a quicksand lurker at a spot
+;; by the arena's edge (on its ground), a child of the fight; the ambush's entity for its nav mesh. As init-from-entity!
+;; but not from an entity of its own
+(defbehavior crossfire-spitter-init quicksandlurker ((e entity-actor) (pos vector))
+  (logior! (-> self mask) (process-mask enemy))
+  (let ((s4-0 (new 'process 'collide-shape self (collide-list-enum usually-hit-by-player))))
+    (let ((s3-0 (new 'process 'collide-shape-prim-group s4-0 (the-as uint 3) 0)))
+      (set! (-> s3-0 prim-core collide-as) (collide-kind enemy))
+      (set! (-> s3-0 collide-with) (collide-kind target))
+      (set! (-> s3-0 prim-core action) (collide-action solid))
+      (set-vector! (-> s3-0 local-sphere) 0.0 0.0 0.0 8192.0)
+      (set-root-prim! s4-0 s3-0)
+      (let ((s2-0 (new 'process 'collide-shape-prim-sphere s4-0 (the-as uint 0))))
+        (set! (-> s2-0 prim-core collide-as) (collide-kind enemy))
+        (set! (-> s2-0 collide-with) (collide-kind target))
+        (set! (-> s2-0 prim-core action) (collide-action solid))
+        (set! (-> s2-0 prim-core offense) (collide-offense touch))
+        (set! (-> s2-0 transform-index) 3)
+        (set-vector! (-> s2-0 local-sphere) 0.0 0.0 0.0 4096.0)
+        (append-prim s3-0 s2-0))
+      (let ((s2-1 (new 'process 'collide-shape-prim-sphere s4-0 (the-as uint 0))))
+        (set! (-> s2-1 prim-core collide-as) (collide-kind enemy))
+        (set! (-> s2-1 collide-with) (collide-kind target))
+        (set! (-> s2-1 prim-core action) (collide-action solid))
+        (set! (-> s2-1 prim-core offense) (collide-offense touch))
+        (set! (-> s2-1 transform-index) 5)
+        (set-vector! (-> s2-1 local-sphere) 0.0 0.0 0.0 4096.0)
+        (append-prim s3-0 s2-1))
+      (let ((s2-2 (new 'process 'collide-shape-prim-sphere s4-0 (the-as uint 1))))
+        (set! (-> s2-2 prim-core offense) (collide-offense normal-attack))
+        (set! (-> s2-2 transform-index) 5)
+        (set-vector! (-> s2-2 local-sphere) 0.0 -2048.0 0.0 5324.8)
+        (append-prim s3-0 s2-2)))
+    (set! (-> s4-0 nav-radius) (* 0.75 (-> s4-0 root-prim local-sphere w)))
+    (backup-collide-with-as s4-0)
+    (set! (-> self root) s4-0))
+  (set! (-> self entity) e)
+  (vector-copy! (-> self root trans) pos)
+  (quaternion-identity! (-> self root quat))
+  (vector-identity! (-> self root scale))
+  (+! (-> self root trans y) -2048.0)
+  (set! (-> self original-position quad) (-> self root trans quad))
+  (set! (-> self theta-angle) (rand-vu-float-range 0.0 65536.0))
+  (set! (-> self bob-angle) (rand-vu-float-range 0.0 65536.0))
+  (set! (-> self radial-offset) 4096.0)
+  (set! (-> self y-offset) -6553.6)
+  (set-yaw-angle-clear-roll-pitch! (-> self root) (rand-vu-float-range 0.0 65536.0))
+  (initialize-skeleton self *quicksandlurker-sg* '())
+  (set! (-> self nav) (new 'process 'nav-control (-> self root) 16 40960.0))
+  (logior! (-> self nav flags) (nav-control-flags display-marks navcf3 navcf5 navcf6 navcf7))
+  (set! (-> self fact) (new 'process 'fact-info-enemy self (pickup-type eco-pill-random) (-> *FACT-bank* default-pill-inc)))
+  (set! (-> self mud-entity) #f)
+  (set! (-> self arena) #t)
+  (logclear! (-> self mask) (process-mask actor-pause))
+  (go quicksandlurker-idle))
+
+(defun crossfire-spawn-spitter ((parent process) (e entity-actor) (pos vector))
+  (process-spawn quicksandlurker :init crossfire-spitter-init e pos :to parent)
+  (none))
+
+;; Jak Living Sky: the first arena fight's mud pools, one under each spitter: a copy of one of Misty's own, its "lonely
+;; island" (mud-11): its ring of rock (scripts/enhanced/arenapool_model.py: a mud-coloured floor in it, under the mud)
+;; and its mud itself, a real one (crossfire-mud below: its look, its ripples, Jak wading in it), at their size. Its
+;; middle (the mud's) 0.7 m over the arena's sand: the sand under it its bottom, Jak in it to his thighs as in Misty's;
+;; the rock solid (a plain ring of its shape), children of the fight
+(def-actor arenapool :bounds (0 0 0 15))
+
+(defconstant CROSSFIRE-POOL-LIFT (meters 0.7))
+
+;; mud-11's volume, round its middle as in Misty (its planes' normals, Misty's way round; their distance from its
+;; middle): 4.9 m and 8.1 m to its sides, from 3.2 m under its middle to 0.5 m under
+(define *crossfire-mud-vol* (new 'static 'inline-array vector 6
+                                 (new 'static 'vector :x -0.7362 :y 0.0 :z 0.6768 :w 20174.0)
+                                 (new 'static 'vector :x 0.7362 :y 0.0 :z -0.6768 :w 20010.0)
+                                 (new 'static 'vector :x 0.0 :y -1.0 :z 0.0 :w 13217.4)
+                                 (new 'static 'vector :x -0.6768 :y 0.0 :z -0.7362 :w 33254.7)
+                                 (new 'static 'vector :x 0.0 :y 1.0 :z 0.0 :w -2048.0)
+                                 (new 'static 'vector :x 0.6768 :y 0.0 :z 0.7362 :w 29353.5)))
+;; (the four pools' volumes)
+(define *crossfire-mud-planes* (new 'static 'inline-array vector 24))
+
+(deftype crossfire-mud (mud) ())
+
+;; a mud of Misty's own (mud-11's: its look, its depths, its flags), here: at pos, turned by q as the pool, its volume
+;; moved with it (its planes in *crossfire-mud-planes*, slot k)
+(defbehavior crossfire-mud-init crossfire-mud ((e entity-actor) (pos vector) (q quaternion) (k int))
+  (set! (-> self entity) e)
+  (set-stack-size! self)
+  (reset-root! self)
+  (init! self)
+  (quaternion-copy! (-> self root quat) q)
+  (water-vol-method-25 self)
+  (vector-copy! (-> self root trans) pos)
+  ;; (its surface half a metre over its middle, as in Misty)
+  (set! (-> self water-height) (+ (-> pos y) 2048.0))
+  (let ((n (new 'stack-no-clear 'vector)))
+    (dotimes (i 6)
+      (let ((src (-> *crossfire-mud-vol* i))
+            (dst (-> *crossfire-mud-planes* (+ (* k 6) i))))
+        (set-vector! n (-> src x) (-> src y) (-> src z) 0.0)
+        (vector-orient-by-quat! n n q)
+        (set-vector! dst (-> n x) (-> n y) (-> n z) (+ (vector-dot n pos) (-> src w))))))
+  (set! (-> self vol pos-vol-count) 1)
+  (set! (-> self vol neg-vol-count) 0)
+  (set! (-> self vol pos-vol 0 num-planes) 6)
+  (set! (-> self vol pos-vol 0 plane) (the-as (inline-array plane) (-> *crossfire-mud-planes* (* k 6))))
+  (water-vol-method-22 self)
+  (logclear! (-> self mask) (process-mask actor-pause))
+  (go-virtual water-vol-startup))
+
+(deftype crossfire-puddle (process-drawable)
+  ((root collide-shape :override))
+  (:states
+   crossfire-puddle-idle))
+
+(defstate crossfire-puddle-idle (crossfire-puddle)
+  :code
+    (behavior ()
+      (loop
+        (suspend)))
+  :post transform-post)
+
+(defbehavior crossfire-puddle-init crossfire-puddle ((pos vector) (k int))
+  (let ((cshape (new 'process 'collide-shape self (collide-list-enum hit-by-player))))
+    (let ((mesh (new 'process 'collide-shape-prim-mesh cshape (the uint 0) (the uint 0))))
+      (set! (-> mesh prim-core collide-as) (collide-kind ground-object))
+      (set! (-> mesh collide-with) (collide-kind target))
+      (set! (-> mesh prim-core action) (collide-action solid))
+      (set! (-> mesh prim-core offense) (collide-offense indestructible))
+      (set! (-> mesh transform-index) 0)
+      (set-vector! (-> mesh local-sphere) 0.0 0.0 0.0 (meters 15))
+      (set-root-prim! cshape mesh))
+    (backup-collide-with-as cshape)
+    ;; (the lurkers keep clear of it: a circle round it on their nav mesh, the rock's ring inside)
+    (set! (-> cshape nav-radius) (meters 11))
+    (set! (-> self root) cshape))
+  (vector-copy! (-> self root trans) pos)
+  (+! (-> self root trans y) CROSSFIRE-POOL-LIFT)
+  (quaternion-axis-angle! (-> self root quat) 0.0 1.0 0.0 (rand-vu-float-range 0.0 65536.0))
+  (vector-identity! (-> self root scale))
+  (initialize-skeleton self *arenapool-sg* '())
+  ;; (its still pose, build-actor's "idle": without an animation on, its joints are never worked out)
+  (logior! (-> self skel status) (janim-status inited))
+  (ja-channel-set! 1)
+  (let ((ch (-> self skel root-channel 0)))
+    (joint-control-channel-group-eval! ch (the-as art-joint-anim (-> self draw art-group data 2)) num-func-identity)
+    (set! (-> ch frame-num) 0.0))
+  (logclear! (-> self mask) (process-mask actor-pause))
+  (transform-post)
+  ;; on the lurkers' nav mesh (the fight's, the ambush's entity's: Misty's arena's), an obstacle they go round
+  (set! (-> self entity) (-> (the-as process-drawable (ppointer->process (-> self parent))) entity))
+  (nav-mesh-connect self (-> self root) (the-as nav-control #f))
+  ;; its mud, a real one, the same place and way round
+  (let ((e (entity-by-name "mud-11")))
+    (if e
+      (process-spawn crossfire-mud :init crossfire-mud-init (the-as entity-actor e) (-> self root trans) (-> self root quat) k
+                     :to self)))
+  (go crossfire-puddle-idle))
+
+(defun crossfire-spawn-puddle ((parent process) (pos vector) (k int))
+  (process-spawn crossfire-puddle :init crossfire-puddle-init pos k :to parent)
   (none))

@@ -130,14 +130,15 @@
                                           ((1) 0.20)
                                           ((2) 0.25))))
                    enemy
-                   (-> enemy 0 enemy-info))
+                   (nonzero? (-> enemy 0))
+                   (nonzero? (-> enemy 0 enemy-info)))
           (let ((info (-> enemy 0 enemy-info)))
             (set! (-> enemy 0 fact pickup-type) ptype)
             (set! (-> info pickup-amount) 1.0)
             (set! (-> info pickup-spawn-amount) 0.0)
             (logior! (-> info options) (fact-options fade))
             (set! (-> info fade-time) (seconds 12))))
-        (logclear! (-> enemy 0 mask) (process-mask actor-pause))
+        (if (and enemy (nonzero? (-> enemy 0))) (logclear! (-> enemy 0 mask) (process-mask actor-pause)))
         (send-event *pds-master* 'notify 'spawned (ppointer->handle enemy))))
   :post ja-post)
 
@@ -1192,6 +1193,7 @@
 
 (defmethod deactivate ((this pds-master))
   (set! *pds-master* (the pds-master #f))
+  (pds-arena-ground #f)
   (deactivate-handle (-> this pickup))
   (call-parent-method this))
 
@@ -1238,12 +1240,14 @@
 (defmethod target-in-arena? ((this pds-master))
   (aif *target* (< (vector-vector-distance (-> this root trans) (target-pos 0)) (meters 70))))
 
-(defbehavior pds-master-send-to-group-delayed pds-master ((group (array entity-actor)) (message symbol) (delay time-frame))
-  (dotimes (i (length group))
+;; Jak Living Sky: the group by its index in actors (9-11: plats-1/2/3), looked up after each wait: a pointer to the
+;; array kept across the suspend goes stale when the master's process is moved (actors are compacted)
+(defbehavior pds-master-send-to-group-delayed pds-master ((group-idx int) (message symbol) (delay time-frame))
+  (dotimes (i (length (-> self actors group-idx)))
     ; (format 0 "pds-master-send-to-group-delayed ~A ~A~%" message (-> group i extra process))
     ;; (format 0 "~D : pds-master-send-to-group-delayed: #x~X ~%" (current-time) group)
     (suspend-for delay)
-    (send-to-actor self (-> group i) message)))
+    (send-to-actor self (-> self actors group-idx i) message)))
 
 (defmethod you-suck-stage ((this pds-master))
   (cond
@@ -1294,14 +1298,14 @@
     (('deactivate-traps) (go-virtual idle))
     (('spawn-plats)
      (case (-> self stage)
-       ((0) (go-virtual send-with-delay (-> self plats-1) 'activate (seconds 0.25)))
+       ((0) (go-virtual send-with-delay 9 'activate (seconds 0.25)))
        ((1) (send-to-actor-group self (-> self plats-2) 'activate))
        ((2) (send-to-actor-group self (-> self plats-3) 'activate))))
     (('deactivate-plats)
      (case (if (and (>= argc 1) (true? (-> block param 0))) (-> self stage) (1- (-> self stage)))
-       ((0) (go-virtual send-with-delay (-> self plats-1) 'deactivate (seconds 0.25)))
-       ((1) (go-virtual send-with-delay (-> self plats-2) 'deactivate (seconds 0.25)))
-       ((2) (go-virtual send-with-delay (-> self plats-3) 'deactivate (seconds 0.25)))))))
+       ((0) (go-virtual send-with-delay 9 'deactivate (seconds 0.25)))
+       ((1) (go-virtual send-with-delay 10 'deactivate (seconds 0.25)))
+       ((2) (go-virtual send-with-delay 11 'deactivate (seconds 0.25)))))))
 
 (defpost pds-master
   (set! (-> self death-count) (min 6 (-> *game-info* fuel-cell-deaths)))
@@ -1349,8 +1353,8 @@
 (defstate send-with-delay (pds-master)
   :virtual #t
   :code
-    (behavior ((group (array entity-actor)) (message symbol) (delay time-frame))
-      (pds-master-send-to-group-delayed group message delay)
+    (behavior ((group-idx int) (message symbol) (delay time-frame))
+      (pds-master-send-to-group-delayed group-idx message delay)
       (go-virtual idle)))
 
 (defstate activate-traps (pds-master)

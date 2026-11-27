@@ -193,6 +193,21 @@
             :param3 (game-option-menu quit))
        (new 'static 'game-option :option-type (game-option-type button) :name (text-id back) :scale #t)))
 
+;; Jak Living Sky: the main options without the mod options (the published mod: pc-enhanced-light?), made once
+(define *main-options-pc-public* (the-as (array game-option) #f))
+(define *main-options-secrets-public* (the-as (array game-option) #f))
+(defun options-without-mod ((arr (array game-option)))
+  (let ((n 0))
+    (dotimes (i (-> arr length))
+      (if (!= (-> arr i name) (text-id mod-options)) (+! n 1)))
+    (let ((out (the-as (array game-option) (new 'global 'boxed-array game-option n)))
+          (j 0))
+      (dotimes (i (-> arr length))
+        (when (!= (-> arr i name) (text-id mod-options))
+          (set! (-> out j) (-> arr i))
+          (+! j 1)))
+      out)))
+
 (define *main-options-secrets*
   (new 'static
        'boxed-array
@@ -2097,8 +2112,18 @@
       (logior! (-> *pc-settings* cheats-known)
                (pc-cheats invinc eco-blue eco-red eco-green eco-yellow huge-head mirror no-tex))))
   ;; set up options for each screen
+  ;; (Jak Living Sky: the published mod, OpenGOAL's launcher's build: no mod options in it)
   (set! (-> *options-remap* (progress-screen settings))
-        (if (or *cheat-mode* (nonzero? (-> *pc-settings* cheats-known))) *main-options-secrets* *main-options-pc*))
+        (let ((secrets (or *cheat-mode* (nonzero? (-> *pc-settings* cheats-known)))))
+          (cond
+            ((not (pc-enhanced-light?)) (if secrets *main-options-secrets* *main-options-pc*))
+            (secrets
+             (if (not *main-options-secrets-public*)
+               (set! *main-options-secrets-public* (options-without-mod *main-options-secrets*)))
+             *main-options-secrets-public*)
+            (else
+             (if (not *main-options-pc-public*) (set! *main-options-pc-public* (options-without-mod *main-options-pc*)))
+             *main-options-pc-public*))))
   (set! (-> *options-remap* (progress-screen game-settings)) *game-options-pc*)
   (set! (-> *options-remap* (progress-screen graphic-settings)) *graphic-options-pc*)
   (let ((max-refresh-rate (pc-get-active-display-refresh-rate)))

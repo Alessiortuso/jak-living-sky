@@ -49,6 +49,22 @@ LINES = [  # group, file, id, it, en
      "TRY THAT AGAIN AND PRICES DOUBLE."),
     ('hit', 'merchant-hit-1', 0x4675, "AHI. QUESTO TE LO METTO SUL CONTO.",
      "OUCH. I'LL PUT THAT ON YOUR TAB."),
+    # (in the arena: his greeting there, instead of the shop's)
+    ('arena-hello', 'merchant-arena-hello-1', 0x467b, "AH, IL MIO CAMPIONE PREFERITO... PER ORA.",
+     "AH, MY FAVOURITE CHAMPION... FOR NOW."),
+    ('arena-hello', 'merchant-arena-hello-2', 0x467c, "ANCORA VIVO? BENE. I CLIENTI MORTI PAGANO MALE.",
+     "STILL ALIVE? GOOD. DEAD CUSTOMERS PAY POORLY."),
+    # (one of his fights won: on the victory screen, arena-victory)
+    ('arena-won', 'merchant-arena-won-1', 0x467e, "IL TUO PREMIO TI ASPETTA AL MIO BANCO. A UN PREZZO DI FAVORE... PER ME, OVVIAMENTE.",
+     "YOUR PRIZE IS WAITING AT MY STALL. AT A SPECIAL PRICE... FOR ME, OF COURSE."),
+    # (in the arena, back after losing one of its fights: instead of the greeting, once)
+    ('arena-lost', 'merchant-arena-lost-1', 0x467d, "OH. SEI TORNATO. A PEZZI, MA SEI TORNATO.",
+     "OH. YOU'RE BACK. IN PIECES, BUT YOU'RE BACK."),
+    # (in the arena: only these when struck, not the shop's ones above)
+    ('arena-hit', 'merchant-arena-hit-1', 0x4679, "EHI! COLPISCI LE BESTIE, NON L'ORGANIZZATORE.",
+     "HEY! HIT THE BEASTS, NOT THE ORGANIZER."),
+    ('arena-hit', 'merchant-arena-hit-2', 0x467a, "RAGAZZO... NON HAI IDEA DI CON CHI HAI A CHE FARE, EH...",
+     "KID... YOU HAVE NO IDEA WHO YOU'RE DEALING WITH, DO YOU..."),
     ('bye-nothing', 'merchant-bye-nothing-1', 0x4676, "TUTTO QUI? UNO SGUARDO E VIA...",
      "THAT'S IT? ONE LOOK AND OFF YOU GO..."),
     ('offer', 'merchant-offer', 0x4678, "HO VISTO COME TE LA SEI CAVATA NELL'ARENA DI MISTY ISLAND. LÀ DENTRO ORGANIZZO DELLE LOTTE. VINCI, E TI VENDO MERCE CHE NON VENDO A NESSUN ALTRO. IL TELETRASPORTO QUI ACCANTO TI PORTA DAVANTI ALL'ARENA. CI VEDIAMO AL CENTRO.",
@@ -87,7 +103,7 @@ for g, f, i, it, en in LINES:
 out.append(';; a group\'s lines said ("first": all, in order; the others: one at random)')
 out.append('(defun merchant-group-say ((group symbol))')
 out.append('  ;; (in the arena, his shop\'s lines not: only the arena\'s, and his answer when struck)')
-arena_groups = ' '.join(g for g in groups if g.startswith('arena')) + ' hit'
+arena_groups = ' '.join(g for g in groups if g.startswith('arena'))  # (struck there: 'arena-hit')
 out.append("  (when (or (!= *merchant-at* 5) (member group '(%s)))" % arena_groups)
 out.append('  (case group')
 for g, fs in groups.items():

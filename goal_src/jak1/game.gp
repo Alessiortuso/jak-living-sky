@@ -1736,6 +1736,13 @@
 (build-actor "darkjak-claw")
 ;; Jak Living Sky: the dark eco pump in Abandoned Caves, the fisherman's mission (scripts/enhanced/darkpump_model.py)
 (build-actor "darkpump")
+;; Jak Living Sky: the mud pools of the first arena fight's quicksand lurkers, a copy of one of Misty's
+;; (scripts/enhanced/arenapool_model.py)
+(build-actor "arenapool" :gen-mesh #t)
+;; (scripts/enhanced/arenapusher_model.py: the second arena fight's pillars, Snowy's pistons on end)
+(build-actor "arenapusher" :gen-mesh #t)
+;; (scripts/enhanced/arenahole_model.py: the holes they rise out of)
+(build-actor "arenahole" :gen-mesh #t)
 ;; Jak Living Sky: the white eco merchant and his stall (scripts/enhanced/merchant_import.py)
 (build-actor "merchant")
 ;; Jak Living Sky: him alone on his stool, the arena's middle (scripts/enhanced/merchant_import.py)

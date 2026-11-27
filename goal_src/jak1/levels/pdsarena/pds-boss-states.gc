@@ -94,6 +94,13 @@
     (forward-up->quaternion (-> self collide-info quat) dir *up-vector*))
   (vector-identity! (-> self collide-info scale))
   (nav-enemy-method-48 self)
+  ;; Jak Living Sky: they stand on the fight's floor (its traps: ground-objects in the hit-by-player list), not in
+  ;; Misty's groove under it: their (shared) info's ground probe on those too, for the fight (pds-arena-ground)
+  (pds-arena-ground #t)
+  ;; Jak Living Sky: some of them corrupted by dark eco (their eyes, their dark tricks, their hits)
+  (set! (-> self dark) (rand-vu-percent? 0.3))
+  (set! (-> self dark-eye 0) -2)
+  (set! (-> self dark-eye 1) -2)
   (logclear! (-> self nav-enemy-flags) (nav-enemy-flags navenmf12))
   (go-virtual nav-enemy-chase))
 
@@ -174,7 +181,7 @@
   :virtual #t
   :enter
     (behavior ()
-      (send-event *tfl-music-player* 'boss 'pds-sentinel)
+      (pds-music-boss 'pds-sentinel)
       (set! (-> (get-init-spec-by-id 4170 num) initial-valuef) 0.0)
       (process-spawn pov-camera (-> *pds-master* root trans) *pds-cam-sg* "wake" 0 self '() :to self))
   :code
@@ -203,7 +210,8 @@
     (behavior ()
       (ja-channel-push! 1 (seconds 0.1))
       (ja-no-eval :group! pds-sentinel-moving-ja :num! min)
-      (let ((pos (-> self resume-path-pos)))
+      ;; Jak Living Sky: a copy on the stack, not a pointer into the process (it moves when actors are compacted)
+      (let ((pos (vector-copy! (new-stack-vector0) (-> self resume-path-pos))))
         (until (and (= (-> self root trans x) (-> pos x)) (= (-> self root trans z) (-> pos z)))
           (ja :num! (loop!))
           (seek! (-> self root trans x) (-> pos x) (* (meters 17.5) (seconds-per-frame)))
@@ -223,7 +231,7 @@
       (set-state-time))
   :code
     (behavior ()
-      (send-event *tfl-music-player* 'boss #f)
+      (pds-music-boss #f)
       (when (not (= (ja-group) pds-sentinel-moving-ja))
         (ja-channel-push! 1 (seconds 0.1))
         (ja-no-eval :group! pds-sentinel-moving-ja :num! min))
@@ -231,7 +239,7 @@
         (send-event *pds-master* 'reset-gems)
         (ja :num! (loop!))
         (suspend))
-      (send-event *tfl-music-player* 'boss 'pds-sentinel)
+      (pds-music-boss 'pds-sentinel)
       (send-event *pds-master* 'spawn-pickup)
       (go-virtual spawn-enemies)))
 
@@ -316,8 +324,9 @@
   :code
     (behavior ()
       (when (and (-> self current-gem) (-> self current-gem extra process))
+        ;; Jak Living Sky: the gem's spot copied on the stack (a pointer into its process goes stale when compacted)
         (let* ((gem (the pds-gem (-> self current-gem extra process)))
-               (pos (-> gem charging-spot)))
+               (pos (vector-copy! (new-stack-vector0) (-> gem charging-spot))))
           ;; move to gem cvert
           (let ((speed (/ (fabs (- (-> self path-pos) (-> self gem-path-pos))) (/ (-> self gem-seek-time) TICKS_PER_SECOND))))
             (until (= (-> self path-pos) (-> self gem-path-pos))
@@ -430,6 +439,9 @@
                  ;; Jak Living Sky: no power cell: the merchant's third fight won (the JET-Board on sale)
                  (pds-arena-won)
                  (sound-stop (-> self sound-id))
+                 ;; (its music off for the fanfare)
+                 (pds-music-boss #f)
+                 ;; (its fanfare where the mod plays it, at the blast: arena-victory's own doesn't, for this fight)
                  (sound-play "cell-prize" :vol 110 :position (the symbol (ear-trans)))
                  (activate! *camera-smush-control* 1600.0 37 (seconds 1.5) 1.0 1.0)
                  (sound-play "explosion" :vol 120 :position (the symbol (ear-trans)))
@@ -446,6 +458,8 @@
         (vector-copy! (-> *camera-combiner* trans) (camera-pos))
         (matrix-copy! (-> *camera-combiner* inv-camera-rot) rot)
         (send-event *camera* 'change-state cam-string 0))
+      ;; Jak Living Sky: the merchant's third fight won: its fanfare, the prize on screen, back before him
+      (arena-victory 2)
       (go-virtual beaten)))
 
 (defstate beaten (pds-sentinel)
@@ -454,7 +468,8 @@
     (behavior ()
       (ja-no-eval :group! pds-sentinel-sleep-ja :num! min)
       (hide! self)
-      (send-event *tfl-music-player* 'boss #f)
+      (pds-music-boss #f)
       (vector-copy! (-> self root trans) (-> self entity extra trans))
       (loop
         (suspend))))
+

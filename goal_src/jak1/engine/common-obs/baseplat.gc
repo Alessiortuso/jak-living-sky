@@ -146,6 +146,13 @@
 
 eco-door-event-handler
 
+;; Jak Living Sky: Misty's arena doors shut during the merchant's fights there (set by arena-steps-update)
+(define *arena-doors-shut* #f)
+(defun eco-door-shut? ((door eco-door))
+  (and *arena-doors-shut*
+       (< (vector-vector-xz-distance (-> door root trans) (new 'static 'vector :x (meters -197.28) :z (meters 958.28)))
+          (meters 75))))
+
 (defstate door-closed (eco-door)
   :virtual #t
   :event eco-door-event-handler
@@ -159,6 +166,7 @@ eco-door-event-handler
         (when (and *target* (>= (-> self open-distance) (vector-vector-distance (-> self root trans) (-> *target* control trans))))
           (eco-door-method-26 self)
           (if (and (not (-> self locked))
+                   (not (eco-door-shut? self))
                    (or (and (-> self entity) (logtest? (-> self entity extra perm status) (entity-perm-status complete)))
                        (send-event *target* 'query 'powerup (pickup-type eco-blue))
                        (and (-> self one-way) (< (vector4-dot (-> self out-dir) (target-pos 0)) -8192.0))))
@@ -197,6 +205,7 @@ eco-door-event-handler
       (update-transforms! (-> self root))
       (ja-post)
       (loop
+        (if (eco-door-shut? self) (go-virtual door-closing))
         (let ((f30-0 (vector4-dot (-> self out-dir) (target-pos 0)))
               (f28-0 (vector4-dot (-> self out-dir) (camera-pos))))
           (when (and (-> self auto-close)

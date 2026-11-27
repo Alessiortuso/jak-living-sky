@@ -235,10 +235,28 @@
   ((scale float)))
 
 
+;; Jak Living Sky: the slow health back (the first arena fight's prize, bought: collectables.gc, a mark each 30 s since
+;; *regen-time*): the mark coming back (the next past his health, within his most) blinks, faded (off) and lit (on),
+;; faster as it comes; its alpha then, or -1.0 for any other
+(defun soul-regen-alpha ((slot float) (off float) (on float))
+  (if (and *target*
+           (arena-bought? 0)
+           (< (-> *target* fact health) (-> *target* fact health-max))
+           (not (logtest? (-> *target* state-flags) (state-flags dying)))
+           (= slot (+ 1.0 (the float (the int (-> *target* fact health)))))
+           (<= slot (-> *target* fact health-max)))
+    (let* ((k (fmax 0.0 (fmin 1.0 (/ (the float (- (current-time) *regen-time*)) (the float (seconds 30))))))
+           ;; (once a second at first, four times at the end)
+           (rate (+ 1.0 (* 3.0 k)))
+           (ph (* rate (/ (the float (- (current-time) *regen-time*)) (the float (seconds 1))))))
+      (if (< (- ph (the float (the int ph))) 0.5) on off))
+    -1.0))
+
 (defun part-hud-health-01-func ((arg0 sparticle-system) (arg1 sparticle-cpuinfo) (arg2 matrix))
   (let ((f0-0 (-> *hud-parts* health 0 scale))) (set! (-> arg2 vector 0 w) f0-0) (set! (-> arg2 vector 1 w) f0-0))
   (cond
-    ((and *target* (< (-> *target* fact health) 1.0)) (set! (-> arg2 vector 2 w) 32.0))
+    ((and *target* (< (-> *target* fact health) 1.0))
+     (set! (-> arg2 vector 2 w) (fmax 32.0 (soul-regen-alpha 1.0 32.0 128.0))))
     (else
      (let ((f0-3 128.0))
        ;; low health flashing
@@ -259,13 +277,17 @@
 
 (defun part-hud-health-02-func ((arg0 sparticle-system) (arg1 sparticle-cpuinfo) (arg2 matrix))
   (let ((f0-0 (-> *hud-parts* health 0 scale))) (set! (-> arg2 vector 0 w) f0-0) (set! (-> arg2 vector 1 w) f0-0))
-  (if (and *target* (< (-> *target* fact health) 2.0)) (set! (-> arg2 vector 2 w) 32.0) (set! (-> arg2 vector 2 w) 128.0))
+  (if (and *target* (< (-> *target* fact health) 2.0))
+    (set! (-> arg2 vector 2 w) (fmax 32.0 (soul-regen-alpha 2.0 32.0 128.0)))
+    (set! (-> arg2 vector 2 w) 128.0))
   0
   (none))
 
 (defun part-hud-health-03-func ((arg0 sparticle-system) (arg1 sparticle-cpuinfo) (arg2 matrix))
   (let ((f0-0 (-> *hud-parts* health 0 scale))) (set! (-> arg2 vector 0 w) f0-0) (set! (-> arg2 vector 1 w) f0-0))
-  (if (and *target* (< (-> *target* fact health) 3.0)) (set! (-> arg2 vector 2 w) 32.0) (set! (-> arg2 vector 2 w) 128.0))
+  (if (and *target* (< (-> *target* fact health) 3.0))
+    (set! (-> arg2 vector 2 w) (fmax 32.0 (soul-regen-alpha 3.0 32.0 128.0)))
+    (set! (-> arg2 vector 2 w) 128.0))
   0
   (none))
 
@@ -395,7 +417,8 @@
     ((or (not *target*) (< (-> *target* fact health-max) (-> arg1 user-float)))
      (set-vector! (-> arg2 vector 2) 22.0 22.0 22.0 110.0))
     ((< (-> *target* fact health) (-> arg1 user-float))
-     (set-vector! (-> arg2 vector 2) 128.0 128.0 128.0 36.0))
+     ;; (the one coming back, with the slow health back, filling in)
+     (set-vector! (-> arg2 vector 2) 128.0 128.0 128.0 (fmax 36.0 (soul-regen-alpha (-> arg1 user-float) 36.0 128.0))))
     (else
      (set-vector! (-> arg2 vector 2) 128.0 128.0 128.0 128.0)))
   (none))
@@ -844,6 +867,11 @@
 
 (define *soul-hud* (the-as (pointer hud) #f))
 
+;; Jak Living Sky: a boss's health bar on screen (Ossobello's, misty-obs.gc: at the foot, where this is), last drawn
+;; then: this at the top's middle meanwhile, where the power cells' is (under it while that shows too: R2), coming in
+;; from above
+(define *soul-hud-top-time* (the-as time-frame 0))
+
 (defmethod deactivate ((this hud-soul-eco))
   (set! *soul-hud* (the-as (pointer hud) #f))
   ((method-of-type hud deactivate) this)
@@ -868,6 +896,16 @@
 (defmethod hud-update ((this hud-soul-eco))
   ;; (not in the title's intro: R2 would show it there)
   (if (soul-in-play?) (tally-value this (the int *soul-eco*) 0))
+  ;; (at the top's middle while a boss's bar is at the foot)
+  ;; (in the power cells' place; under theirs while they show too: R2 held, or they're on screen)
+  (let* ((top (not (time-elapsed? *soul-hud-top-time* (seconds 0.2))))
+         (cells (-> *hud-parts* fuel-cell))
+         (under (and top
+                     (or (cpad-hold? 0 r2)
+                         (and cells (not (hidden? (the-as hud (ppointer->process cells)))))))))
+    (set! (-> this text-y) (cond (under 100) (top 45) (else 367)))
+    (set! (-> this y-sgn) (if top -1 1))
+    (if (> (-> this nb-of-particles) 0) (set! (-> this particles 0 init-pos y) (cond (under 113.0) (top 58.0) (else 380.0)))))
   0
   (none))
 

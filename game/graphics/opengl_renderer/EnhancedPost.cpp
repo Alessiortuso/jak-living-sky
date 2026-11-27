@@ -6034,7 +6034,8 @@ void EnhancedPost::draw_menu() {
     ImGui::BeginDisabled(!s.lights);
     ImGui::SetNextItemWidth(200);
     ImGui::SliderFloat("Lamp strength", &s.lamp_strength, 0.f, 3.f, "%.2f");
-    if (ImGui::TreeNode("Place a light")) {
+    // (not in the published mod: an editor's)
+    if (!enhanced_light() && ImGui::TreeNode("Place a light")) {
       // a light of your own where Jak stands, 2.5 m up (saved in game/assets/enhanced/lights.json)
       static float color[3] = {1.f, 0.62f, 0.32f};
       static float radius = 8.f;
@@ -6094,14 +6095,16 @@ void EnhancedPost::draw_menu() {
     }
     ImGui::EndDisabled();
   }
-  if (ImGui::CollapsingHeader("View", ImGuiTreeNodeFlags_DefaultOpen)) {
+  // (the published mod, OpenGOAL's launcher's build: only Living Sky's own settings, the time of day and the
+  // menu's key; no view, rules, scenes or teleport)
+  if (!enhanced_light() && ImGui::CollapsingHeader("View", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::SetNextItemWidth(200);
     int fov = g_enhanced_menu.fov;
     if (ImGui::SliderInt("Field of view %", &fov, 80, 140)) {
       g_enhanced_menu.fov = fov;
     }
   }
-  if (ImGui::CollapsingHeader("Gameplay", ImGuiTreeNodeFlags_DefaultOpen)) {
+  if (!enhanced_light() && ImGui::CollapsingHeader("Gameplay", ImGuiTreeNodeFlags_DefaultOpen)) {
     bool hard_rules = g_enhanced_menu.hard_rules;
     if (ImGui::Checkbox("Hard rules (white eco, fewer hits, after a restart)", &hard_rules)) {
       g_enhanced_menu.hard_rules = hard_rules;
@@ -6177,8 +6180,10 @@ void EnhancedPost::draw_menu() {
     ImGui::TextDisabled("The game's own buttons: its Options menu.");
   }
   // Jak Living Sky: the scenes made in the game
-  enhanced_cutscene::draw_menu();
-  if (ImGui::CollapsingHeader("Teleport", ImGuiTreeNodeFlags_DefaultOpen)) {
+  if (!enhanced_light()) {
+    enhanced_cutscene::draw_menu();
+  }
+  if (!enhanced_light() && ImGui::CollapsingHeader("Teleport", ImGuiTreeNodeFlags_DefaultOpen)) {
     int shown = 0;
     for (const auto& p : enhanced_places()) {
       if (shown++ % 2) {

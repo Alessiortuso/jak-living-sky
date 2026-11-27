@@ -61,8 +61,71 @@
 
 (defconstant DEFAULT_PATH_FLAGS (path-control-flag display draw-line draw-point draw-text))
 
-;; the mod's music player isn't here: its messages go nowhere
+;; the fight's music, as The Forgotten Lands plays it (its tfl-music-player, by Kuitar5): its
+;; custom_assets/jak1/audio/tfl/music/pds-sentinel.mp3 looping from the sentinel's waking ('boss 'pds-sentinel) to its
+;; end ('boss #f), Misty's own music silent the while, paused with the game; a child of the fight's master (gone with
+;; the level: the music stops). The sentinel asks by pds-music-boss, a global: it wakes as the fight's level comes in,
+;; maybe before the master (and its player) is born, and a message to a player not there yet was lost
 (define *tfl-music-player* (the-as process #f))
+(define *pds-music-want* (the-as symbol #f))  ;; (#f again each time the level's linked)
+(define-extern *main-music-busy* symbol)
+(define-extern *last-music-level* symbol)
+
+(defun pds-music-boss ((music symbol))
+  (format 0 "[music] boss ~A (player ~A)~%" music *tfl-music-player*)
+  (set! *pds-music-want* music)
+  (none))
+
+(deftype pds-music (process)
+  ((playing symbol)
+   (paused  symbol))
+  (:state-methods
+   active))
+
+(defmethod deactivate ((this pds-music))
+  (when (-> this playing)
+    (stop-main-music)
+    (set! *main-music-busy* #f)
+    (set! *last-music-level* #f))
+  (set! *pds-music-want* #f)
+  (set! *tfl-music-player* (the-as process #f))
+  (call-parent-method this)
+  (none))
+
+(defstate active (pds-music)
+  :virtual #t
+  :code
+    (behavior ()
+      (loop
+        (cond
+          ((and *pds-music-want* (not (-> self playing)))
+           (set! *main-music-busy* #t)
+           (format 0 "[music] play pds-sentinel.mp3 at ~D~%" (the int (-> *setting-control* default music-volume)))
+           (play-main-music "tfl/music/pds-sentinel.mp3" (the int (-> *setting-control* default music-volume)))
+           (set-setting! 'music-volume 'abs 0.0 0)
+           (set! (-> self playing) #t)
+           (set! (-> self paused) #f))
+          ((and (not *pds-music-want*) (-> self playing))
+           (format 0 "[music] stop~%")
+           (stop-main-music)
+           (remove-setting! 'music-volume)
+           (set! *main-music-busy* #f)
+           (set! *last-music-level* #f)
+           (set! (-> self playing) #f)))
+        (when (-> self playing)
+          (let ((p (if (paused?) #t #f)))
+            (when (!= p (-> self paused))
+              (if p (pause-main-music) (resume-main-music))
+              (set! (-> self paused) p))))
+        (suspend))))
+
+(defbehavior pds-music-init-by-other pds-music ()
+  (process-mask-clear! (-> self mask) pause menu)
+  (set! (-> self playing) #f)
+  (set! (-> self paused) #f)
+  (set! *tfl-music-player* self)
+  (format 0 "[music] player born, want ~A~%" *pds-music-want*)
+  (go-virtual active))
 
 (defun pds-reset-part ()
   (set! (-> (get-init-spec-by-id 4133 scale-x) initial-valuef) (meters 4.0))
@@ -83,4 +146,16 @@
 (defun deactivate-handle ((h handle))
   (let ((p (handle->process h)))
     (if p (deactivate p)))
+  (none))
+
+;; the fight's enemies (Misty's babak and bonelurker) standing on its floor: their nav info's ground probe on the
+;; traps too while the fight's on (on: an enemy's born; off: the master's gone, the level unloading)
+(define-extern *bonelurker-nav-enemy-info* nav-enemy-info)
+(defun pds-arena-ground ((on symbol))
+  (dolist (sym '(*babak-nav-enemy-info* *bonelurker-nav-enemy-info*))
+    (let ((info (the-as nav-enemy-info (-> (the-as symbol (car sym)) value))))
+      (when (and info (nonzero? info))
+        (if on
+          (logior! (-> info gnd-collide-with) (collide-kind cak-1 ground-object))
+          (logclear! (-> info gnd-collide-with) (collide-kind cak-1 ground-object))))))
   (none))

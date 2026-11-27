@@ -185,9 +185,9 @@
 (define-extern soul-dark-enemy? (function process symbol))
 
 (defun soul-hit-of ((proc process))
-  (if (and *soul-on* proc *target* (type-type? (-> proc type) nav-enemy))
+  (if (and proc *target* (type-type? (-> proc type) nav-enemy) (or *soul-on* (soul-dark-enemy? proc)))
     (if (soul-dark-enemy? proc)
-      3.0 ;; corrupted by dark eco, anywhere
+      3.0 ;; corrupted by dark eco, anywhere, Living Sky's rules or not
     (case (-> *target* current-level name)
       (('village2 'sunken 'sunkenb 'swamp 'rolling 'ogre 'brume 'abandon 'mount 'preundg
         'village3 'maincave 'darkcave 'robocave 'snow 'lavatube 'citadel 'finalboss) 2.0)
